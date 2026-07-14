@@ -1,0 +1,17 @@
+# Dependency directories
+node_modules/
+**/node_modules/
+
+# Local SQLite databases and logs
+*.sqlite
+*.sqlite-wal
+*.sqlite-shm
+server/data/avesis.sqlite*
+
+# Environment files
+.env
+.env.local
+
+# Build outputs
+dist/
+build/
