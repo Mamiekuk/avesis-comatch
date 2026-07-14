@@ -42,6 +42,8 @@ export default function DashboardPage({ onNavigate, routeParam }) {
   const [chatLoading, setChatLoading] = useState(false);
   const [chatContactsLoading, setChatContactsLoading] = useState(false);
   const messagesContainerRef = useRef(null);
+  const lastMessagesCountRef = useRef(0);
+  const lastContactIdRef = useRef(null);
 
   const loadData = () => {
     if (!token) return;
@@ -308,12 +310,22 @@ export default function DashboardPage({ onNavigate, routeParam }) {
   // Auto Scroll to Bottom of Chat (without scrolling the main page)
   useEffect(() => {
     if (activeTab === 'chat' && messagesContainerRef.current) {
-      messagesContainerRef.current.scrollTo({
-        top: messagesContainerRef.current.scrollHeight,
-        behavior: 'smooth'
-      });
+      const currentCount = chatMessages.length;
+      const contactChanged = lastContactIdRef.current !== (selectedContact ? selectedContact.id : null);
+      const messageAdded = currentCount > lastMessagesCountRef.current;
+
+      if (contactChanged || messageAdded) {
+        messagesContainerRef.current.scrollTo({
+          top: messagesContainerRef.current.scrollHeight,
+          behavior: contactChanged ? 'auto' : 'smooth'
+        });
+      }
+
+      // Update refs
+      lastMessagesCountRef.current = currentCount;
+      lastContactIdRef.current = selectedContact ? selectedContact.id : null;
     }
-  }, [chatMessages, activeTab]);
+  }, [chatMessages, activeTab, selectedContact]);
 
   if (!user) {
     return (
