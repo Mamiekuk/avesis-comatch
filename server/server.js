@@ -11,6 +11,31 @@ const JWT_SECRET = process.env.JWT_SECRET || 'avesis-comatch-super-secret-key-20
 app.use(cors());
 app.use(express.json());
 
+const fs = require('fs');
+const path = require('path');
+const multer = require('multer');
+
+// Ensure upload directory exists
+const uploadDir = path.join(__dirname, 'uploads', 'chat');
+if (!fs.existsSync(uploadDir)) {
+  fs.mkdirSync(uploadDir, { recursive: true });
+}
+
+// Serve uploaded files statically
+app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
+
+// Multer configuration
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, uploadDir);
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + path.extname(file.originalname));
+  }
+});
+const upload = multer({ storage: storage });
+
 // Authentication Middleware
 function authMiddleware(req, res, next) {
   const header = req.headers.authorization;
@@ -21,6 +46,10 @@ function authMiddleware(req, res, next) {
   try {
     const decoded = jwt.verify(token, JWT_SECRET);
     req.user = decoded;
+    // Update last active time in background
+    try {
+      db.prepare("UPDATE users SET last_active_at = datetime('now', 'localtime') WHERE id = ?").run(decoded.id);
+    } catch (e) {}
     next();
   } catch (err) {
     return res.status(401).json({ error: 'Geçersiz veya süresi dolmuş oturum.' });
@@ -989,6 +1018,7 @@ app.get('/api/chat/contacts', authMiddleware, (req, res) => {
         u.full_name, 
         u.title, 
         u.photo_url,
+        u.last_active_at,
         (
           SELECT m.message 
           FROM messages m 
@@ -1051,16 +1081,18 @@ app.get('/api/chat/messages/:contactId', authMiddleware, (req, res) => {
 app.post('/api/chat/messages', authMiddleware, (req, res) => {
   try {
     const userId = req.user.id;
-    const { receiverId, message } = req.body;
+    const { receiverId, message, fileUrl, fileName } = req.body;
 
-    if (!receiverId || !message || !message.trim()) {
-      return res.status(400).json({ error: 'Alıcı ve mesaj içeriği zorunludur.' });
+    if (!receiverId || (!message && !fileUrl)) {
+      return res.status(400).json({ error: 'Alıcı ve mesaj içeriği veya dosya zorunludur.' });
     }
 
+    const msgText = message ? message.trim() : (fileName || 'Dosya gönderdi');
+
     const result = db.prepare(`
-      INSERT INTO messages (sender_id, receiver_id, message)
-      VALUES (?, ?, ?)
-    `).run(userId, receiverId, message.trim());
+      INSERT INTO messages (sender_id, receiver_id, message, file_url, file_name)
+      VALUES (?, ?, ?, ?, ?)
+    `).run(userId, receiverId, msgText, fileUrl || null, fileName || null);
 
     const messageId = result.lastInsertRowid;
 
@@ -1074,7 +1106,7 @@ app.post('/api/chat/messages', authMiddleware, (req, res) => {
     `).run(
       receiverId,
       'Yeni Bir Mesajınız Var!',
-      `${senderName} size bir mesaj gönderdi: "${message.trim().substring(0, 40)}${message.trim().length > 40 ? '...' : ''}"`,
+      `${senderName} size bir mesaj gönderdi: "${msgText.substring(0, 40)}${msgText.length > 40 ? '...' : ''}"`,
       '/dashboard?tab=chat'
     );
 
@@ -1084,7 +1116,9 @@ app.post('/api/chat/messages', authMiddleware, (req, res) => {
         id: messageId,
         sender_id: userId,
         receiver_id: Number(receiverId),
-        message: message.trim(),
+        message: msgText,
+        file_url: fileUrl || null,
+        file_name: fileName || null,
         is_read: 0,
         created_at: new Date().toISOString()
       } 
@@ -1116,6 +1150,140 @@ app.delete('/api/chat/messages/:id', authMiddleware, (req, res) => {
     res.status(500).json({ error: err.message });
   }
 });
+
+// 5. Upload File for Chat
+app.post('/api/chat/upload', authMiddleware, upload.single('file'), (req, res) => {
+  try {
+    if (!req.file) {
+      return res.status(400).json({ error: 'Lütfen yüklenecek bir dosya seçin.' });
+    }
+    const fileUrl = `/uploads/chat/${req.file.filename}`;
+    res.json({ fileUrl, fileName: req.file.originalname });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 6. Clear Chat History
+app.delete('/api/chat/messages/clear/:contactId', authMiddleware, (req, res) => {
+  try {
+    const userId = req.user.id;
+    const contactId = req.params.contactId;
+
+    db.prepare(`
+      DELETE FROM messages
+      WHERE (sender_id = ? AND receiver_id = ?)
+         OR (sender_id = ? AND receiver_id = ?)
+    `).run(userId, contactId, contactId, userId);
+
+    res.json({ success: true, message: 'Sohbet geçmişi başarıyla temizlendi.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// MEETING SCHEDULER / CALENDAR API
+// ==========================================
+
+// 1. Get Meetings List
+app.get('/api/meetings', authMiddleware, (req, res) => {
+  try {
+    const userId = req.user.id;
+    const meetings = db.prepare(`
+      SELECT m.*, 
+             uo.full_name as organizer_name, uo.title as organizer_title, uo.photo_url as organizer_photo,
+             ug.full_name as guest_name, ug.title as guest_title, ug.photo_url as guest_photo,
+             p.title as project_title
+      FROM meetings m
+      JOIN users uo ON uo.id = m.organizer_id
+      JOIN users ug ON ug.id = m.guest_id
+      LEFT JOIN projects p ON p.id = m.project_id
+      WHERE m.organizer_id = ? OR m.guest_id = ?
+      ORDER BY m.meeting_date ASC, m.meeting_time ASC
+    `).all(userId, userId);
+    res.json({ meetings });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2. Schedule a Meeting
+app.post('/api/meetings', authMiddleware, (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { projectId, guestId, title, description, meetingType, meetingDate, meetingTime } = req.body;
+
+    if (!guestId || !title || !meetingDate || !meetingTime) {
+      return res.status(400).json({ error: 'Toplantı başlığı, konuk akademisyen, tarih ve saat zorunludur.' });
+    }
+
+    const result = db.prepare(`
+      INSERT INTO meetings (project_id, organizer_id, guest_id, title, description, meeting_type, meeting_date, meeting_time, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+    `).run(projectId || null, userId, guestId, title.trim(), description ? description.trim() : null, meetingType || 'zoom', meetingDate, meetingTime);
+
+    // Create notification for guest
+    const organizer = db.prepare('SELECT title, full_name FROM users WHERE id = ?').get(userId);
+    const orgName = organizer ? `${organizer.title || ''} ${organizer.full_name}`.trim() : 'Bir Kullanıcı';
+    
+    db.prepare(`
+      INSERT INTO notifications (user_id, title, body, link)
+      VALUES (?, ?, ?, ?)
+    `).run(
+      guestId,
+      'Yeni Görüşme Daveti Aldınız!',
+      `${orgName} sizinle bir görüşme ayarlamak istiyor: "${title.trim()}"`,
+      '/dashboard?tab=calendar'
+    );
+
+    res.status(201).json({ success: true, meetingId: result.lastInsertRowid });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3. Respond to Meeting Invitation
+app.post('/api/meetings/:id/respond', authMiddleware, (req, res) => {
+  try {
+    const userId = req.user.id;
+    const meetingId = req.params.id;
+    const { status } = req.body; // 'accepted' | 'declined'
+
+    if (!['accepted', 'declined'].includes(status)) {
+      return res.status(400).json({ error: 'Geçersiz yanıt statüsü.' });
+    }
+
+    const meeting = db.prepare('SELECT * FROM meetings WHERE id = ?').get(meetingId);
+    if (!meeting) return res.status(404).json({ error: 'Toplantı bulunamadı.' });
+
+    if (meeting.guest_id !== userId) {
+      return res.status(403).json({ error: 'Bu toplantı davetine yanıt verme yetkiniz yoktur.' });
+    }
+
+    db.prepare('UPDATE meetings SET status = ? WHERE id = ?').run(status, meetingId);
+
+    // Notify organizer
+    const guest = db.prepare('SELECT title, full_name FROM users WHERE id = ?').get(userId);
+    const guestName = guest ? `${guest.title || ''} ${guest.full_name}`.trim() : 'Bir Kullanıcı';
+    const statusTxt = status === 'accepted' ? 'kabul etti' : 'reddetti';
+
+    db.prepare(`
+      INSERT INTO notifications (user_id, title, body, link)
+      VALUES (?, ?, ?, ?)
+    `).run(
+      meeting.organizer_id,
+      'Toplantı Davetiniz Yanıtlandı',
+      `${guestName} "${meeting.title}" konulu toplantı davetinizi ${statusTxt}.`,
+      '/dashboard?tab=calendar'
+    );
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 
 
 app.listen(PORT, () => {

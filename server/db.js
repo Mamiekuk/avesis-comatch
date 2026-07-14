@@ -39,6 +39,19 @@ try {
   if (fs.existsSync(schemaPath)) {
     const schema = fs.readFileSync(schemaPath, 'utf8');
     db.exec(schema);
+
+    // Dynamic schema updates for existing database instances
+    try {
+      db.prepare("ALTER TABLE messages ADD COLUMN file_url TEXT").run();
+    } catch (e) {}
+
+    try {
+      db.prepare("ALTER TABLE messages ADD COLUMN file_name TEXT").run();
+    } catch (e) {}
+
+    try {
+      db.prepare("ALTER TABLE users ADD COLUMN last_active_at DATETIME").run();
+    } catch (e) {}
   }
 } catch (error) {
   console.error("❌ VERİTABANI BAŞLATILIRKEN HATA OLUŞTU:");

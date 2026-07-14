@@ -48,6 +48,7 @@ CREATE TABLE IF NOT EXISTS users (
     thesis_advising INTEGER DEFAULT 0,
     open_access INTEGER DEFAULT 0,
     other_metrics TEXT,
+    last_active_at DATETIME,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(faculty_id) REFERENCES faculties(id),
     FOREIGN KEY(department_id) REFERENCES departments(id)
@@ -131,9 +132,28 @@ CREATE TABLE IF NOT EXISTS messages (
     sender_id INTEGER NOT NULL,
     receiver_id INTEGER NOT NULL,
     message TEXT NOT NULL,
+    file_url TEXT,
+    file_name TEXT,
     is_read INTEGER DEFAULT 0,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     FOREIGN KEY(sender_id) REFERENCES users(id) ON DELETE CASCADE,
     FOREIGN KEY(receiver_id) REFERENCES users(id) ON DELETE CASCADE
+);
+
+CREATE TABLE IF NOT EXISTS meetings (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    project_id INTEGER,
+    organizer_id INTEGER NOT NULL,
+    guest_id INTEGER NOT NULL,
+    title TEXT NOT NULL,
+    description TEXT,
+    meeting_type TEXT DEFAULT 'zoom',
+    meeting_date TEXT NOT NULL,
+    meeting_time TEXT NOT NULL,
+    status TEXT DEFAULT 'pending',
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(project_id) REFERENCES projects(id) ON DELETE CASCADE,
+    FOREIGN KEY(organizer_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(guest_id) REFERENCES users(id) ON DELETE CASCADE
 );
 

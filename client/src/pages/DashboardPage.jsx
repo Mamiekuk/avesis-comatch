@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { fetchDashboard, respondToInvitation, fetchMetadata, updateUserProfile, updateProject, fetchProjectById, fetchChatContacts, fetchChatHistory, sendChatMessage, deleteChatMessage } from '../services/api';
+import { fetchDashboard, respondToInvitation, fetchMetadata, updateUserProfile, updateProject, fetchProjectById, fetchChatContacts, fetchChatHistory, sendChatMessage, deleteChatMessage, uploadChatFile, clearChatHistory, fetchMeetings, createMeeting, respondToMeeting, BACKEND_URL } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, FolderGit2, Mail, Bell, CheckCircle2, XCircle, ArrowRight, Sparkles, Building2, Edit3, Save, X, Plus, BookOpen, AlertCircle, MessageSquare, Trash2 } from 'lucide-react';
+import { LayoutDashboard, FolderGit2, Mail, Bell, CheckCircle2, XCircle, ArrowRight, Sparkles, Building2, Edit3, Save, X, Plus, BookOpen, AlertCircle, MessageSquare, Trash2, Paperclip, Calendar, FileText, Image, Download, MapPin, Video, Clock } from 'lucide-react';
 
 export default function DashboardPage({ onNavigate, routeParam }) {
   const { user, token, updateUser } = useAuth();
@@ -45,6 +45,21 @@ export default function DashboardPage({ onNavigate, routeParam }) {
   const lastMessagesCountRef = useRef(0);
   const lastContactIdRef = useRef(null);
 
+  // Meetings / Calendar States
+  const [meetings, setMeetings] = useState([]);
+  const [meetingsLoading, setMeetingsLoading] = useState(false);
+  const [meetingModalOpen, setMeetingModalOpen] = useState(false);
+  const [meetingTitle, setMeetingTitle] = useState('');
+  const [meetingDesc, setMeetingDesc] = useState('');
+  const [meetingType, setMeetingType] = useState('zoom');
+  const [meetingDate, setMeetingDate] = useState('');
+  const [meetingTime, setMeetingTime] = useState('');
+  const [meetingProjectId, setMeetingProjectId] = useState('');
+
+  // File Upload State & Ref
+  const [uploadingFile, setUploadingFile] = useState(false);
+  const fileInputRef = useRef(null);
+
   const loadData = () => {
     if (!token) return;
     setLoading(true);
@@ -67,9 +82,19 @@ export default function DashboardPage({ onNavigate, routeParam }) {
     }
   };
 
+  const loadMeetings = () => {
+    if (!token) return;
+    setMeetingsLoading(true);
+    fetchMeetings(token)
+      .then(res => setMeetings(res.meetings || []))
+      .catch(err => console.error("Toplantılar yüklenemedi:", err))
+      .finally(() => setMeetingsLoading(false));
+  };
+
   useEffect(() => {
     loadData();
     loadChatContacts();
+    loadMeetings();
     fetchMetadata()
       .then(d => setAllTags(d.research_areas || []))
       .catch(() => {});
@@ -255,6 +280,105 @@ export default function DashboardPage({ onNavigate, routeParam }) {
     }
   };
 
+  // Handle File Upload
+  const handleFileUpload = async (e) => {
+    const file = e.target.files[0];
+    if (!file || !token || !selectedContact) return;
+
+    setUploadingFile(true);
+    try {
+      const uploadRes = await uploadChatFile(file, token);
+      if (uploadRes.fileUrl) {
+        const res = await sendChatMessage(selectedContact.id, '', token, uploadRes.fileUrl, uploadRes.fileName);
+        if (res.success && res.message) {
+          setChatMessages(prev => [...prev, res.message]);
+          loadChatContacts();
+        }
+      }
+    } catch (err) {
+      alert('Dosya yüklenemedi: ' + err.message);
+    } finally {
+      setUploadingFile(false);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+    }
+  };
+
+  // Handle Clear Chat
+  const handleClearChat = async () => {
+    if (!selectedContact || !token) return;
+    if (!confirm(`${selectedContact.title} ${selectedContact.full_name} ile olan tüm sohbet geçmişinizi silmek istediğinize emin misiniz?`)) return;
+
+    try {
+      await clearChatHistory(selectedContact.id, token);
+      setChatMessages([]);
+      loadChatContacts();
+    } catch (err) {
+      alert('Sohbet temizlenemedi: ' + err.message);
+    }
+  };
+
+  // Handle Schedule Meeting
+  const handleScheduleMeeting = async (e) => {
+    e.preventDefault();
+    if (!token || !selectedContact || !meetingTitle || !meetingDate || !meetingTime) return;
+
+    try {
+      await createMeeting({
+        projectId: meetingProjectId ? Number(meetingProjectId) : null,
+        guestId: selectedContact.id,
+        title: meetingTitle,
+        description: meetingDesc,
+        meetingType: meetingType,
+        meetingDate: meetingDate,
+        meetingTime: meetingTime
+      }, token);
+
+      alert('Toplantı daveti başarıyla gönderildi!');
+      setMeetingModalOpen(false);
+      setMeetingTitle('');
+      setMeetingDesc('');
+      setMeetingDate('');
+      setMeetingTime('');
+      setMeetingProjectId('');
+      loadMeetings();
+    } catch (err) {
+      alert('Toplantı daveti gönderilemedi: ' + err.message);
+    }
+  };
+
+  // Handle Respond to Meeting
+  const handleRespondToMeeting = async (meetingId, status) => {
+    try {
+      await respondToMeeting(meetingId, status, token);
+      alert(status === 'accepted' ? 'Görüşme daveti kabul edildi!' : 'Görüşme daveti reddedildi.');
+      loadMeetings();
+    } catch (err) {
+      alert('İşlem gerçekleştirilemedi: ' + err.message);
+    }
+  };
+
+  // Calculate Online / Last Active Status
+  const getOnlineStatus = (lastActiveAt) => {
+    if (!lastActiveAt) return { isOnline: false, text: 'Çevrimdışı' };
+    const lastActive = new Date(lastActiveAt);
+    const now = new Date();
+    const diffMins = Math.abs(Math.floor((now - lastActive) / 60000));
+    
+    if (diffMins < 5) {
+      return { isOnline: true, text: 'Çevrimiçi' };
+    } else if (diffMins < 60) {
+      return { isOnline: false, text: `${diffMins} dakika önce aktifti` };
+    } else {
+      const diffHours = Math.floor(diffMins / 60);
+      if (diffHours < 24) {
+        return { isOnline: false, text: `${diffHours} saat önce aktifti` };
+      } else {
+        const diffDays = Math.floor(diffHours / 24);
+        return { isOnline: false, text: `${diffDays || 1} gün önce aktifti` };
+      }
+    }
+  };
+
   // Load chat history when selected contact changes
   useEffect(() => {
     if (selectedContact) {
@@ -345,6 +469,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
 
   const { myProjects = [], joinedProjects = [], incomingRequests = [], notifications = [] } = data || {};
   const totalUnreadMessages = chatContacts.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+  const pendingMeetingsCount = meetings.filter(m => m.guest_id === user.id && m.status === 'pending').length;
 
   return (
     <div style={{ maxWidth: '1240px', margin: '0 auto', padding: '2.5rem 2rem 5rem' }}>
@@ -489,6 +614,35 @@ export default function DashboardPage({ onNavigate, routeParam }) {
               fontWeight: 800
             }}>
               {totalUnreadMessages}
+            </span>
+          )}
+        </button>
+
+        <button
+          onClick={() => setActiveTab('calendar')}
+          style={{
+            padding: '0.85rem 1.5rem',
+            fontWeight: 700,
+            borderBottom: activeTab === 'calendar' ? '3px solid var(--accent-primary)' : '3px solid transparent',
+            color: activeTab === 'calendar' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+            marginBottom: '-2px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}
+        >
+          <Calendar size={18} />
+          <span>Görüşme Takvimi</span>
+          {pendingMeetingsCount > 0 && (
+            <span style={{
+              background: 'var(--danger)',
+              color: '#fff',
+              fontSize: '0.7rem',
+              padding: '0.15rem 0.5rem',
+              borderRadius: '9999px',
+              fontWeight: 800
+            }}>
+              {pendingMeetingsCount}
             </span>
           )}
         </button>
@@ -736,29 +890,43 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                       className="chat-contact-item"
                     >
                       {/* Avatar */}
-                      {c.photo_url ? (
-                        <img
-                          src={c.photo_url}
-                          alt={c.full_name}
-                          style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }}
-                        />
-                      ) : (
-                        <div style={{
-                          width: '42px',
-                          height: '42px',
-                          borderRadius: '50%',
-                          background: isSelected ? 'var(--accent-primary)' : 'var(--bg-secondary)',
-                          color: isSelected ? '#fff' : 'var(--text-secondary)',
-                          display: 'flex',
-                          alignItems: 'center',
-                          justifyContent: 'center',
-                          fontWeight: 700,
-                          fontSize: '0.9rem',
-                          border: '1px solid var(--border-color)'
-                        }}>
-                          {initials}
-                        </div>
-                      )}
+                      <div style={{ position: 'relative' }}>
+                        {c.photo_url ? (
+                          <img
+                            src={c.photo_url}
+                            alt={c.full_name}
+                            style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }}
+                          />
+                        ) : (
+                          <div style={{
+                            width: '42px',
+                            height: '42px',
+                            borderRadius: '50%',
+                            background: isSelected ? 'var(--accent-primary)' : 'var(--bg-secondary)',
+                            color: isSelected ? '#fff' : 'var(--text-secondary)',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            fontWeight: 700,
+                            fontSize: '0.9rem',
+                            border: '1px solid var(--border-color)'
+                          }}>
+                            {initials}
+                          </div>
+                        )}
+                        {getOnlineStatus(c.last_active_at).isOnline && (
+                          <div style={{
+                            position: 'absolute',
+                            bottom: 0,
+                            right: 0,
+                            width: '12px',
+                            height: '12px',
+                            borderRadius: '50%',
+                            background: '#10b981',
+                            border: '2px solid var(--border-color)'
+                          }} />
+                        )}
+                      </div>
 
                       {/* Details */}
                       <div style={{ flex: 1, minWidth: 0 }}>
@@ -815,12 +983,47 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                     <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
                       {selectedContact.title} {selectedContact.full_name}
                     </h4>
-                    <span
-                      onClick={() => onNavigate('academician-detail', selectedContact.id)}
-                      style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'underline' }}
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginTop: '0.2rem' }}>
+                      <span
+                        onClick={() => onNavigate('academician-detail', selectedContact.id)}
+                        style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'underline' }}
+                      >
+                        Profili Görüntüle
+                      </span>
+                      <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>•</span>
+                      <span style={{ 
+                        fontSize: '0.75rem', 
+                        color: getOnlineStatus(selectedContact.last_active_at).isOnline ? '#10b981' : 'var(--text-muted)', 
+                        fontWeight: getOnlineStatus(selectedContact.last_active_at).isOnline ? 600 : 400,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.25rem'
+                      }}>
+                        {getOnlineStatus(selectedContact.last_active_at).isOnline && (
+                          <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#10b981', display: 'inline-block' }} />
+                        )}
+                        {getOnlineStatus(selectedContact.last_active_at).text}
+                      </span>
+                    </div>
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button
+                      onClick={() => setMeetingModalOpen(true)}
+                      className="btn-secondary"
+                      style={{ padding: '0.45rem 0.85rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.35rem', margin: 0 }}
                     >
-                      Profili Görüntüle →
-                    </span>
+                      <Calendar size={14} />
+                      <span>Görüşme Planla</span>
+                    </button>
+                    <button
+                      onClick={handleClearChat}
+                      className="btn-secondary"
+                      style={{ padding: '0.45rem 0.85rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.35rem', margin: 0 }}
+                    >
+                      <Trash2 size={14} />
+                      <span>Sohbeti Temizle</span>
+                    </button>
                   </div>
                 </div>
 
@@ -836,6 +1039,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                     chatMessages.map(msg => {
                       const isMe = msg.sender_id === user.id;
                       const msgTime = msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                      const isImage = msg.file_url && /\.(jpg|jpeg|png|webp|gif)$/i.test(msg.file_url);
                       return (
                         <div
                           key={msg.id}
@@ -857,9 +1061,44 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                               lineHeight: 1.45,
                               boxShadow: 'var(--shadow-sm)',
                               border: isMe ? 'none' : '1px solid var(--border-color)',
-                              wordBreak: 'break-word'
+                              wordBreak: 'break-word',
+                              minWidth: msg.file_url ? '200px' : 'auto'
                             }}>
-                              {msg.message}
+                              {msg.file_url ? (
+                                isImage ? (
+                                  <div style={{ display: 'flex', flexDirection: 'column', gap: '0.4rem' }}>
+                                    <img
+                                      src={`${BACKEND_URL}${msg.file_url}`}
+                                      alt={msg.file_name}
+                                      style={{ maxWidth: '100%', maxHeight: '180px', borderRadius: '8px', cursor: 'pointer', objectFit: 'cover' }}
+                                      onClick={() => window.open(`${BACKEND_URL}${msg.file_url}`, '_blank')}
+                                    />
+                                    {msg.message && <p style={{ margin: 0, fontSize: '0.9rem' }}>{msg.message}</p>}
+                                  </div>
+                                ) : (
+                                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                                    <div style={{ background: 'rgba(255,255,255,0.1)', padding: '8px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                                      <FileText size={20} />
+                                    </div>
+                                    <div style={{ flex: 1, minWidth: 0 }}>
+                                      <p style={{ margin: 0, fontSize: '0.88rem', fontWeight: 600, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                                        {msg.file_name}
+                                      </p>
+                                      <a
+                                        href={`${BACKEND_URL}${msg.file_url}`}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        style={{ fontSize: '0.78rem', color: isMe ? '#fff' : 'var(--accent-primary)', textDecoration: 'underline', display: 'flex', alignItems: 'center', gap: '0.2rem', marginTop: '2px' }}
+                                      >
+                                        <Download size={12} />
+                                        <span>İndir / Görüntüle</span>
+                                      </a>
+                                    </div>
+                                  </div>
+                                )
+                              ) : (
+                                msg.message
+                              )}
                             </div>
                             {isMe && (
                               <button
@@ -898,18 +1137,42 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                   )}
                 </div>
 
+                {/* Hidden File Input */}
+                <input
+                  type="file"
+                  ref={fileInputRef}
+                  onChange={handleFileUpload}
+                  style={{ display: 'none' }}
+                />
+
                 {/* Message Input Footer */}
-                <form onSubmit={handleSendChatMessage} style={{ padding: '1.25rem', borderTop: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)', display: 'flex', gap: '0.75rem' }}>
+                <form onSubmit={handleSendChatMessage} style={{ padding: '1.25rem', borderTop: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)', display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                  <button
+                    type="button"
+                    disabled={uploadingFile}
+                    onClick={() => fileInputRef.current && fileInputRef.current.click()}
+                    className="btn-secondary"
+                    title="Dosya veya Resim Ekle"
+                    style={{ padding: '0.75rem', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: 0, height: '42px', width: '42px', minWidth: '42px' }}
+                  >
+                    {uploadingFile ? (
+                      <div className="spinner" style={{ width: '16px', height: '16px', border: '2px solid var(--text-muted)', borderTop: '2px solid transparent', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+                    ) : (
+                      <Paperclip size={18} />
+                    )}
+                  </button>
+
                   <input
                     type="text"
-                    required
+                    required={!uploadingFile}
                     className="form-input"
-                    placeholder="Mesajınızı yazın..."
+                    placeholder={uploadingFile ? "Dosya yükleniyor..." : "Mesajınızı yazın..."}
                     value={chatInput}
                     onChange={e => setChatInput(e.target.value)}
-                    style={{ margin: 0 }}
+                    disabled={uploadingFile}
+                    style={{ margin: 0, flex: 1 }}
                   />
-                  <button type="submit" className="btn-primary" style={{ padding: '0.75rem 1.5rem' }}>
+                  <button type="submit" className="btn-primary" style={{ padding: '0.75rem 1.5rem', height: '42px' }}>
                     <span>Gönder</span>
                   </button>
                 </form>
@@ -1152,6 +1415,286 @@ export default function DashboardPage({ onNavigate, routeParam }) {
         </div>
       )}
 
+      {/* TAB: CALENDAR / MEETINGS */}
+      {activeTab === 'calendar' && (
+        <div>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '2rem' }}>
+            <div>
+              <h2 style={{ fontSize: '1.75rem', fontWeight: 800, marginBottom: '0.4rem' }}>Görüşme Takvimi</h2>
+              <p style={{ color: 'var(--text-secondary)' }}>Diğer akademisyenlerle planladığınız online veya yüz yüze görüşmelerinizi buradan yönetin.</p>
+            </div>
+            <button
+              onClick={() => {
+                if (selectedContact) {
+                  setMeetingModalOpen(true);
+                } else {
+                  alert('Toplantı ayarlamak için lütfen Mesajlar sekmesinden bir akademisyen seçin ve "Görüşme Planla" butonuna tıklayın.');
+                  setActiveTab('chat');
+                }
+              }}
+              className="btn-primary"
+              style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+            >
+              <Calendar size={18} />
+              <span>Görüşme Planla</span>
+            </button>
+          </div>
+
+          {meetingsLoading ? (
+            <div style={{ textAlign: 'center', padding: '4rem' }}>
+              <div className="spinner" style={{ width: '40px', height: '40px', border: '3px solid var(--border-color)', borderTop: '3px solid var(--accent-primary)', borderRadius: '50%', animation: 'spin 1s linear infinite', margin: '0 auto 1.5rem' }} />
+              <p style={{ color: 'var(--text-secondary)' }}>Toplantılar yükleniyor...</p>
+            </div>
+          ) : meetings.length === 0 ? (
+            <div className="card-glass" style={{ textAlign: 'center', padding: '5rem 2rem' }}>
+              <Calendar size={48} color="var(--text-muted)" style={{ margin: '0 auto 1.5rem' }} />
+              <h3 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Henüz Görüşme Planlanmadı</h3>
+              <p style={{ color: 'var(--text-secondary)', maxWidth: '420px', margin: '0 auto 1.5rem' }}>
+                Diğer akademisyenlerin profilleri veya mesajlaşma ekranı üzerinden toplantı talebi gönderebilir, gelen talepleri onaylayabilirsiniz.
+              </p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: '2.5rem' }}>
+              
+              {/* 1. PENDING INVITATIONS FOR ME */}
+              {meetings.some(m => m.guest_id === user.id && m.status === 'pending') && (
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--warning)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                    <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: 'var(--warning)' }} />
+                    Gelen Görüşme Davetleri
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.5rem' }}>
+                    {meetings.filter(m => m.guest_id === user.id && m.status === 'pending').map(m => {
+                      const initials = m.organizer_name ? m.organizer_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '?';
+                      return (
+                        <div key={m.id} className="card-glass" style={{ borderLeft: '4px solid var(--warning)', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
+                          <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                {m.organizer_photo ? (
+                                  <img src={m.organizer_photo} alt={m.organizer_name} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                                ) : (
+                                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>{initials}</div>
+                                )}
+                                <div>
+                                  <h4 style={{ fontSize: '0.95rem', margin: 0 }}>{m.organizer_title} {m.organizer_name}</h4>
+                                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>Toplantı Sahibi</p>
+                                </div>
+                              </div>
+                              <span className="badge" style={{ background: m.meeting_type === 'zoom' ? 'rgba(56,149,255,0.15)' : 'rgba(16,185,129,0.15)', color: m.meeting_type === 'zoom' ? 'var(--accent-primary)' : '#10b981' }}>
+                                {m.meeting_type === 'zoom' ? 'Zoom (Online)' : 'Yüz Yüze'}
+                              </span>
+                            </div>
+
+                            <h4 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', fontWeight: 700 }}>{m.title}</h4>
+                            {m.description && <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>{m.description}</p>}
+                            {m.project_title && (
+                              <p style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', marginBottom: '1rem' }}>
+                                <strong>Proje:</strong> {m.project_title}
+                              </p>
+                            )}
+
+                            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: '8px', display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem', border: '1px solid var(--border-color)' }}>
+                              <div>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Tarih</span>
+                                <strong style={{ fontSize: '0.9rem' }}>{m.meeting_date}</strong>
+                              </div>
+                              <div>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Saat</span>
+                                <strong style={{ fontSize: '0.9rem' }}>{m.meeting_time}</strong>
+                              </div>
+                            </div>
+                          </div>
+
+                          <div style={{ display: 'flex', gap: '0.75rem', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                            <button
+                              type="button"
+                              onClick={() => handleRespondToMeeting(m.id, 'accepted')}
+                              className="btn-primary"
+                              style={{ flex: 1, padding: '0.5rem', fontSize: '0.85rem', background: '#10b981', borderColor: '#10b981' }}
+                            >
+                              Kabul Et
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => handleRespondToMeeting(m.id, 'declined')}
+                              className="btn-secondary"
+                              style={{ flex: 1, padding: '0.5rem', fontSize: '0.85rem', color: 'var(--danger)' }}
+                            >
+                              Reddet
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 2. UPCOMING CONFIRMED MEETINGS */}
+              <div>
+                <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <span style={{ width: '8px', height: '8px', borderRadius: '50%', background: '#10b981' }} />
+                  Planlanmış Gelecek Görüşmeler
+                </h3>
+                {meetings.filter(m => m.status === 'accepted').length === 0 ? (
+                  <div className="card-glass" style={{ padding: '2rem', textAlign: 'center', color: 'var(--text-secondary)' }}>
+                    Onaylanmış aktif bir görüşme bulunmuyor.
+                  </div>
+                ) : (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.5rem' }}>
+                    {meetings.filter(m => m.status === 'accepted').map(m => {
+                      const isOrganizer = m.organizer_id === user.id;
+                      const partnerName = isOrganizer ? m.guest_name : m.organizer_name;
+                      const partnerTitle = isOrganizer ? m.guest_title : m.organizer_title;
+                      const partnerPhoto = isOrganizer ? m.guest_photo : m.organizer_photo;
+                      const initials = partnerName ? partnerName.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '?';
+
+                      return (
+                        <div key={m.id} className="card-glass" style={{ borderLeft: '4px solid #10b981', display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
+                          <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                {partnerPhoto ? (
+                                  <img src={partnerPhoto} alt={partnerName} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                                ) : (
+                                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>{initials}</div>
+                                )}
+                                <div>
+                                  <h4 style={{ fontSize: '0.95rem', margin: 0 }}>{partnerTitle} {partnerName}</h4>
+                                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>{isOrganizer ? 'Davet Edilen Konuk' : 'Davet Eden Sahibi'}</p>
+                                </div>
+                              </div>
+                              <span className="badge" style={{ background: m.meeting_type === 'zoom' ? 'rgba(56,149,255,0.15)' : 'rgba(16,185,129,0.15)', color: m.meeting_type === 'zoom' ? 'var(--accent-primary)' : '#10b981' }}>
+                                {m.meeting_type === 'zoom' ? 'Zoom (Online)' : 'Yüz Yüze'}
+                              </span>
+                            </div>
+
+                            <h4 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', fontWeight: 700 }}>{m.title}</h4>
+                            {m.description && <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>{m.description}</p>}
+                            {m.project_title && (
+                              <p style={{ fontSize: '0.8rem', color: 'var(--accent-primary)', marginBottom: '1rem' }}>
+                                <strong>Proje:</strong> {m.project_title}
+                              </p>
+                            )}
+
+                            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: '8px', display: 'flex', flexWrap: 'wrap', gap: '1rem', marginBottom: '1.25rem', border: '1px solid var(--border-color)' }}>
+                              <div>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Tarih</span>
+                                <strong style={{ fontSize: '0.9rem' }}>{m.meeting_date}</strong>
+                              </div>
+                              <div>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Saat</span>
+                                <strong style={{ fontSize: '0.9rem' }}>{m.meeting_time}</strong>
+                              </div>
+                            </div>
+                          </div>
+
+                          {m.meeting_type === 'zoom' && (
+                            <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
+                              <button
+                                type="button"
+                                onClick={() => window.open('https://zoom.us/join', '_blank')}
+                                className="btn-primary"
+                                style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', margin: 0 }}
+                              >
+                                <Video size={16} />
+                                <span>Görüşmeye Katıl (Zoom)</span>
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {/* 3. SENT PENDING REQUESTS */}
+              {meetings.some(m => m.organizer_id === user.id && m.status === 'pending') && (
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.5rem', color: 'var(--text-secondary)' }}>
+                    Gönderilen Bekleyen Talepler
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.5rem' }}>
+                    {meetings.filter(m => m.organizer_id === user.id && m.status === 'pending').map(m => {
+                      const initials = m.guest_name ? m.guest_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '?';
+                      return (
+                        <div key={m.id} className="card-glass" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'space-between', height: '100%' }}>
+                          <div>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '1rem' }}>
+                              <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                                {m.guest_photo ? (
+                                  <img src={m.guest_photo} alt={m.guest_name} style={{ width: '40px', height: '40px', borderRadius: '50%', objectFit: 'cover' }} />
+                                ) : (
+                                  <div style={{ width: '40px', height: '40px', borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>{initials}</div>
+                                )}
+                                <div>
+                                  <h4 style={{ fontSize: '0.95rem', margin: 0 }}>{m.guest_title} {m.guest_name}</h4>
+                                  <p style={{ fontSize: '0.75rem', color: 'var(--text-secondary)', margin: 0 }}>Davet Edilen Konuk</p>
+                                </div>
+                              </div>
+                              <span className="badge" style={{ background: 'rgba(245,158,11,0.15)', color: 'var(--warning)' }}>
+                                Yanıt Bekleniyor
+                              </span>
+                            </div>
+
+                            <h4 style={{ fontSize: '1.1rem', marginBottom: '0.5rem', fontWeight: 700 }}>{m.title}</h4>
+                            {m.description && <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>{m.description}</p>}
+
+                            <div style={{ background: 'rgba(255,255,255,0.02)', padding: '0.75rem 1rem', borderRadius: '8px', display: 'flex', flexWrap: 'wrap', gap: '1rem', border: '1px solid var(--border-color)' }}>
+                              <div>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Tarih</span>
+                                <strong style={{ fontSize: '0.9rem' }}>{m.meeting_date}</strong>
+                              </div>
+                              <div>
+                                <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'block' }}>Saat</span>
+                                <strong style={{ fontSize: '0.9rem' }}>{m.meeting_time}</strong>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+              {/* 4. PAST OR DECLINED MEETINGS */}
+              {meetings.some(m => m.status === 'declined') && (
+                <div>
+                  <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1rem', color: 'var(--text-muted)' }}>
+                    Geçmiş / İptal Edilen Görüşmeler
+                  </h3>
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(360px, 1fr))', gap: '1.5rem' }}>
+                    {meetings.filter(m => m.status === 'declined').map(m => {
+                      const isOrganizer = m.organizer_id === user.id;
+                      const partnerName = isOrganizer ? m.guest_name : m.organizer_name;
+                      const partnerTitle = isOrganizer ? m.guest_title : m.organizer_title;
+                      return (
+                        <div key={m.id} className="card-glass" style={{ opacity: 0.6 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.5rem' }}>
+                            <span style={{ fontSize: '0.85rem', fontWeight: 600 }}>{partnerTitle} {partnerName}</span>
+                            <span className="badge" style={{ background: 'rgba(239,68,68,0.15)', color: 'var(--danger)' }}>
+                              Reddedildi
+                            </span>
+                          </div>
+                          <h4 style={{ fontSize: '1rem', fontWeight: 700, margin: '0.25rem 0' }}>{m.title}</h4>
+                          <p style={{ fontSize: '0.78rem', color: 'var(--text-muted)', margin: 0 }}>
+                            {m.meeting_date} • {m.meeting_time}
+                          </p>
+                        </div>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
+            </div>
+          )}
+        </div>
+      )}
+
       {/* EDIT PROJECT MODAL */}
       {editingProject && (
         <div className="modal-overlay" onClick={() => setEditingProject(null)}>
@@ -1328,6 +1871,147 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                   </button>
                 </div>
               )}
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* SCHEDULE MEETING MODAL */}
+      {meetingModalOpen && selectedContact && (
+        <div className="modal-overlay" onClick={() => setMeetingModalOpen(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '580px', width: '90%', padding: '2rem' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+              <h3 style={{ fontSize: '1.35rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Calendar size={20} color="var(--accent-primary)" />
+                <span>Görüşme Planla</span>
+              </h3>
+              <button onClick={() => setMeetingModalOpen(false)} style={{ color: 'var(--text-secondary)' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <form onSubmit={handleScheduleMeeting}>
+              {/* Organizer & Guest info */}
+              <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>
+                <strong>Davetli Akademisyen:</strong> {selectedContact.title} {selectedContact.full_name}
+              </p>
+
+              {/* Project Link (Optional) */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.88rem', marginBottom: '0.4rem' }}>
+                  İlgili Proje (İsteğe Bağlı)
+                </label>
+                <select
+                  className="form-select"
+                  value={meetingProjectId}
+                  onChange={e => setMeetingProjectId(e.target.value)}
+                >
+                  <option value="">-- Proje Seçilmedi --</option>
+                  {myProjects.map(p => (
+                    <option key={p.id} value={p.id}>{p.title}</option>
+                  ))}
+                  {joinedProjects.map(p => (
+                    <option key={p.id} value={p.id}>{p.title}</option>
+                  ))}
+                </select>
+              </div>
+
+              {/* Title */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.88rem', marginBottom: '0.4rem' }}>
+                  Görüşme Konusu *
+                </label>
+                <input
+                  type="text"
+                  required
+                  placeholder="Örn: Proje İş Paketi Dağıtımı"
+                  className="form-input"
+                  value={meetingTitle}
+                  onChange={e => setMeetingTitle(e.target.value)}
+                />
+              </div>
+
+              {/* Description */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.88rem', marginBottom: '0.4rem' }}>
+                  Açıklama / Notlar
+                </label>
+                <textarea
+                  rows={3}
+                  placeholder="Toplantı gündemi, görüşülecek maddeler..."
+                  className="form-textarea"
+                  value={meetingDesc}
+                  onChange={e => setMeetingDesc(e.target.value)}
+                />
+              </div>
+
+              {/* Meeting Type */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.88rem', marginBottom: '0.4rem' }}>
+                  Görüşme Türü *
+                </label>
+                <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.25rem' }}>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="meetingType"
+                      value="zoom"
+                      checked={meetingType === 'zoom'}
+                      onChange={() => setMeetingType('zoom')}
+                    />
+                    <Video size={16} color="var(--accent-primary)" />
+                    <span>Zoom Görüşmesi (Online)</span>
+                  </label>
+                  <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
+                    <input
+                      type="radio"
+                      name="meetingType"
+                      value="face_to_face"
+                      checked={meetingType === 'face_to_face'}
+                      onChange={() => setMeetingType('face_to_face')}
+                    />
+                    <MapPin size={16} color="var(--accent-primary)" />
+                    <span>Yüz Yüze Görüşme</span>
+                  </label>
+                </div>
+              </div>
+
+              {/* Date and Time */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: '1rem', marginBottom: '2rem' }}>
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.4rem' }}>
+                    Tarih *
+                  </label>
+                  <input
+                    type="date"
+                    required
+                    className="form-input"
+                    value={meetingDate}
+                    onChange={e => setMeetingDate(e.target.value)}
+                  />
+                </div>
+                <div>
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.4rem' }}>
+                    Saat *
+                  </label>
+                  <input
+                    type="time"
+                    required
+                    className="form-input"
+                    value={meetingTime}
+                    onChange={e => setMeetingTime(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div style={{ display: 'flex', gap: '1rem', justifyContent: 'flex-end' }}>
+                <button type="button" className="btn-secondary" onClick={() => setMeetingModalOpen(false)}>
+                  İptal
+                </button>
+                <button type="submit" className="btn-primary">
+                  Davet Gönder
+                </button>
+              </div>
             </form>
           </div>
         </div>

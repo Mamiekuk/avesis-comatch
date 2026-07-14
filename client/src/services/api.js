@@ -1,4 +1,5 @@
 const API_BASE = import.meta.env.VITE_API_BASE || 'http://localhost:5000/api';
+export const BACKEND_URL = API_BASE.replace('/api', '');
 
 function getHeaders(token) {
   const headers = { 'Content-Type': 'application/json' };
@@ -195,11 +196,11 @@ export async function fetchChatHistory(contactId, token) {
   return parseResponse(res, 'Sohbet geçmişi yüklenemedi.');
 }
 
-export async function sendChatMessage(receiverId, message, token) {
+export async function sendChatMessage(receiverId, message, token, fileUrl = null, fileName = null) {
   const res = await fetch(`${API_BASE}/chat/messages`, {
     method: 'POST',
     headers: getHeaders(token),
-    body: JSON.stringify({ receiverId, message })
+    body: JSON.stringify({ receiverId, message, fileUrl, fileName })
   });
   return parseResponse(res, 'Mesaj gönderilemedi.');
 }
@@ -210,4 +211,50 @@ export async function deleteChatMessage(messageId, token) {
     headers: getHeaders(token)
   });
   return parseResponse(res, 'Mesaj silinemedi.');
+}
+
+export async function uploadChatFile(file, token) {
+  const formData = new FormData();
+  formData.append('file', file);
+  const res = await fetch(`${API_BASE}/chat/upload`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    },
+    body: formData
+  });
+  return parseResponse(res, 'Dosya yüklenemedi.');
+}
+
+export async function clearChatHistory(contactId, token) {
+  const res = await fetch(`${API_BASE}/chat/messages/clear/${contactId}`, {
+    method: 'DELETE',
+    headers: getHeaders(token)
+  });
+  return parseResponse(res, 'Sohbet geçmişi temizlenemedi.');
+}
+
+export async function fetchMeetings(token) {
+  const res = await fetch(`${API_BASE}/meetings`, {
+    headers: getHeaders(token)
+  });
+  return parseResponse(res, 'Toplantılar alınamadı.');
+}
+
+export async function createMeeting(meetingData, token) {
+  const res = await fetch(`${API_BASE}/meetings`, {
+    method: 'POST',
+    headers: getHeaders(token),
+    body: JSON.stringify(meetingData)
+  });
+  return parseResponse(res, 'Toplantı planlanamadı.');
+}
+
+export async function respondToMeeting(meetingId, status, token) {
+  const res = await fetch(`${API_BASE}/meetings/${meetingId}/respond`, {
+    method: 'POST',
+    headers: getHeaders(token),
+    body: JSON.stringify({ status })
+  });
+  return parseResponse(res, 'Toplantı daveti yanıtlanamadı.');
 }
