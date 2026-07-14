@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { fetchDashboard, respondToInvitation, fetchMetadata, updateUserProfile, updateProject, fetchProjectById, fetchChatContacts, fetchChatHistory, sendChatMessage } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, FolderGit2, Mail, Bell, CheckCircle2, XCircle, ArrowRight, Sparkles, Building2, Edit3, Save, X, Plus, BookOpen, AlertCircle, MessageSquare } from 'lucide-react';
@@ -41,6 +41,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [chatContactsLoading, setChatContactsLoading] = useState(false);
+  const messagesEndRef = useRef(null);
 
   const loadData = () => {
     if (!token) return;
@@ -292,6 +293,13 @@ export default function DashboardPage({ onNavigate, routeParam }) {
     }
     return () => clearInterval(interval);
   }, [activeTab, selectedContact, token]);
+
+  // Auto Scroll to Bottom of Chat
+  useEffect(() => {
+    if (activeTab === 'chat' && messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    }
+  }, [chatMessages, activeTab]);
 
   if (!user) {
     return (
@@ -663,7 +671,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
       {activeTab === 'chat' && (
         <div className="card-glass" style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 320px) 1fr', minHeight: '600px', height: 'calc(100vh - 350px)', padding: 0, overflow: 'hidden', marginBottom: '2.5rem' }}>
           {/* Contacts Pane (Left) */}
-          <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', height: '100%' }}>
+          <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
             <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
               <h3 style={{ fontSize: '1.15rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <MessageSquare size={18} color="var(--accent-primary)" />
@@ -765,7 +773,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
           </div>
 
           {/* Chat Window (Right) */}
-          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'rgba(0,0,0,0.1)' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'rgba(0,0,0,0.1)', overflow: 'hidden' }}>
             {selectedContact ? (
               <>
                 {/* Chat Header */}
@@ -833,6 +841,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                       );
                     })
                   )}
+                  <div ref={messagesEndRef} />
                 </div>
 
                 {/* Message Input Footer */}
