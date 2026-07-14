@@ -3,7 +3,7 @@ import { fetchDashboard, respondToInvitation, fetchMetadata, updateUserProfile, 
 import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, FolderGit2, Mail, Bell, CheckCircle2, XCircle, ArrowRight, Sparkles, Building2, Edit3, Save, X, Plus, BookOpen, AlertCircle, MessageSquare } from 'lucide-react';
 
-export default function DashboardPage({ onNavigate }) {
+export default function DashboardPage({ onNavigate, routeParam }) {
   const { user, token, updateUser } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
