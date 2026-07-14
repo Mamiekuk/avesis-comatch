@@ -11,6 +11,7 @@ export default function AcademicianDetailPage({ id, onNavigate, onOpenClaimModal
   // Invite Modal
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [myProjects, setMyProjects] = useState([]);
+  const [hasNoProjects, setHasNoProjects] = useState(false);
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [inviteMsg, setInviteMsg] = useState('');
   const [inviteSuccess, setInviteSuccess] = useState(false);
@@ -26,8 +27,16 @@ export default function AcademicianDetailPage({ id, onNavigate, onOpenClaimModal
     if (!token) return;
     fetchDashboard(token).then(res => {
       const projs = res.myProjects || [];
-      setMyProjects(projs);
-      if (projs.length > 0) setSelectedProjectId(projs[0].id);
+      setHasNoProjects(projs.length === 0);
+      
+      const alreadyInIds = (data && data.projects) ? data.projects.map(p => p.id) : [];
+      const eligibleProjs = projs.filter(p => !alreadyInIds.includes(p.id));
+      setMyProjects(eligibleProjs);
+      if (eligibleProjs.length > 0) {
+        setSelectedProjectId(eligibleProjs[0].id);
+      } else {
+        setSelectedProjectId('');
+      }
       setInviteModalOpen(true);
     });
   };
@@ -408,9 +417,13 @@ export default function AcademicianDetailPage({ id, onNavigate, onOpenClaimModal
         <div className="modal-overlay" onClick={() => setInviteModalOpen(false)}>
           <div className="modal-content" onClick={e => e.stopPropagation()}>
             <h3 style={{ fontSize: '1.35rem', marginBottom: '1rem' }}>Projeye Davet Gönder</h3>
-            {myProjects.length === 0 ? (
+            {hasNoProjects ? (
               <p style={{ color: 'var(--text-secondary)' }}>
                 Önce bir proje oluşturmanız gerekmektedir.
+              </p>
+            ) : myProjects.length === 0 ? (
+              <p style={{ color: 'var(--text-secondary)' }}>
+                Bu akademisyen zaten oluşturduğunuz tüm projelerde yer almaktadır.
               </p>
             ) : (
               <form onSubmit={handleSendInvite}>

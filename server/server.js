@@ -820,6 +820,11 @@ app.post('/api/projects/:id/invite', authMiddleware, (req, res) => {
     return res.status(400).json({ error: 'Bu akademisyene zaten bekleyen bir davet gönderdiniz.' });
   }
 
+  const isMember = db.prepare('SELECT 1 FROM project_members WHERE project_id = ? AND user_id = ?').get(projectId, receiverId);
+  if (isMember) {
+    return res.status(400).json({ error: 'Bu akademisyen zaten bu projenin üyesidir.' });
+  }
+
   db.prepare(`
     INSERT INTO applications_invitations (project_id, sender_id, receiver_id, type, status, message)
     VALUES (?, ?, ?, 'invitation', 'pending', ?)
@@ -854,6 +859,11 @@ app.post('/api/projects/:id/apply', authMiddleware, (req, res) => {
 
   if (existing) {
     return res.status(400).json({ error: 'Bu projeye zaten başvuru yaptınız.' });
+  }
+
+  const isMember = db.prepare('SELECT 1 FROM project_members WHERE project_id = ? AND user_id = ?').get(projectId, req.user.id);
+  if (isMember) {
+    return res.status(400).json({ error: 'Zaten bu projenin üyesisiniz.' });
   }
 
   db.prepare(`
