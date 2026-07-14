@@ -4,9 +4,26 @@ const fs = require('fs');
 
 let db;
 try {
-  const dbDir = process.env.DATABASE_DIR || path.join(__dirname, 'data');
-  if (!fs.existsSync(dbDir)) {
-    fs.mkdirSync(dbDir, { recursive: true });
+  let dbDir = process.env.DATABASE_DIR;
+  let useFallback = !dbDir;
+
+  if (dbDir) {
+    try {
+      if (!fs.existsSync(dbDir)) {
+        fs.mkdirSync(dbDir, { recursive: true });
+      }
+    } catch (mkdirError) {
+      console.warn(`⚠️ UYARI: Belirtilen DATABASE_DIR (${dbDir}) oluşturulamadı veya erişilemedi. Yerel 'data' klasörüne geçiş yapılıyor.`);
+      console.warn(mkdirError.message);
+      useFallback = true;
+    }
+  }
+
+  if (useFallback) {
+    dbDir = path.join(__dirname, 'data');
+    if (!fs.existsSync(dbDir)) {
+      fs.mkdirSync(dbDir, { recursive: true });
+    }
   }
 
   const dbPath = path.join(dbDir, 'avesis.sqlite');
