@@ -75,6 +75,7 @@ export default function App() {
         {route === 'dashboard' && (
           <DashboardPage
             onNavigate={handleNavigate}
+            routeParam={routeParam}
           />
         )}
       </main>

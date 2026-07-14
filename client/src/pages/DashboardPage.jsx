@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { fetchDashboard, respondToInvitation, fetchMetadata, updateUserProfile, updateProject, fetchProjectById } from '../services/api';
+import { fetchDashboard, respondToInvitation, fetchMetadata, updateUserProfile, updateProject, fetchProjectById, fetchChatContacts, fetchChatHistory, sendChatMessage } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, FolderGit2, Mail, Bell, CheckCircle2, XCircle, ArrowRight, Sparkles, Building2, Edit3, Save, X, Plus, BookOpen, AlertCircle } from 'lucide-react';
+import { LayoutDashboard, FolderGit2, Mail, Bell, CheckCircle2, XCircle, ArrowRight, Sparkles, Building2, Edit3, Save, X, Plus, BookOpen, AlertCircle, MessageSquare } from 'lucide-react';
 
 export default function DashboardPage({ onNavigate }) {
   const { user, token, updateUser } = useAuth();
@@ -34,6 +34,14 @@ export default function DashboardPage({ onNavigate }) {
   const [editProjLoading, setEditProjLoading] = useState(false);
   const [editProjSuccess, setEditProjSuccess] = useState(false);
 
+  // Chat States
+  const [chatContacts, setChatContacts] = useState([]);
+  const [selectedContact, setSelectedContact] = useState(null);
+  const [chatMessages, setChatMessages] = useState([]);
+  const [chatInput, setChatInput] = useState('');
+  const [chatLoading, setChatLoading] = useState(false);
+  const [chatContactsLoading, setChatContactsLoading] = useState(false);
+
   const loadData = () => {
     if (!token) return;
     setLoading(true);
@@ -43,8 +51,22 @@ export default function DashboardPage({ onNavigate }) {
       .finally(() => setLoading(false));
   };
 
+  const loadChatContacts = async () => {
+    if (!token) return;
+    setChatContactsLoading(true);
+    try {
+      const res = await fetchChatContacts(token);
+      setChatContacts(res.contacts || []);
+    } catch (err) {
+      console.error('Sohbet kişileri yüklenemedi:', err);
+    } finally {
+      setChatContactsLoading(false);
+    }
+  };
+
   useEffect(() => {
     loadData();
+    loadChatContacts();
     fetchMetadata()
       .then(d => setAllTags(d.research_areas || []))
       .catch(() => {});
@@ -184,6 +206,93 @@ export default function DashboardPage({ onNavigate }) {
       ).slice(0, 8)
     : [];
 
+  // Load Chat History
+  const loadChatHistory = async (contactId) => {
+    if (!token || !contactId) return;
+    setChatLoading(true);
+    try {
+      const res = await fetchChatHistory(contactId, token);
+      setChatMessages(res.history || []);
+      // Refresh contacts to update unread badge
+      loadChatContacts();
+    } catch (err) {
+      console.error('Sohbet geçmişi yüklenemedi:', err);
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  // Send Message
+  const handleSendChatMessage = async (e) => {
+    e.preventDefault();
+    if (!token || !selectedContact || !chatInput.trim()) return;
+
+    const msgText = chatInput.trim();
+    setChatInput(''); // smooth UX
+
+    try {
+      const res = await sendChatMessage(selectedContact.id, msgText, token);
+      if (res.success && res.message) {
+        setChatMessages(prev => [...prev, res.message]);
+        loadChatContacts();
+      }
+    } catch (err) {
+      alert('Mesaj gönderilemedi: ' + err.message);
+    }
+  };
+
+  // Load chat history when selected contact changes
+  useEffect(() => {
+    if (selectedContact) {
+      loadChatHistory(selectedContact.id);
+    }
+  }, [selectedContact]);
+
+  // Handle routeParam (for deep linking to chat from other pages)
+  useEffect(() => {
+    if (routeParam && routeParam.tab === 'chat') {
+      setActiveTab('chat');
+      const targetContact = routeParam.contact;
+      if (targetContact) {
+        setSelectedContact(targetContact);
+        setChatContacts(prev => {
+          if (!prev.some(c => c.id === targetContact.id)) {
+            return [
+              {
+                id: targetContact.id,
+                full_name: targetContact.full_name,
+                title: targetContact.title,
+                photo_url: targetContact.photo_url,
+                last_message: 'Sohbeti başlatın...',
+                unread_count: 0
+              },
+              ...prev
+            ];
+          }
+          return prev;
+        });
+      }
+    }
+  }, [routeParam]);
+
+  // Chat Polling loop (real-time experience)
+  useEffect(() => {
+    let interval;
+    if (activeTab === 'chat' && token) {
+      interval = setInterval(() => {
+        loadChatContacts();
+        if (selectedContact) {
+          fetchChatHistory(selectedContact.id, token)
+            .then(res => {
+              setChatMessages(res.history || []);
+            })
+            .catch(() => {});
+        }
+      }, 4000);
+    }
+    return () => clearInterval(interval);
+  }, [activeTab, selectedContact, token]);
+
   if (!user) {
     return (
       <div style={{ textAlign: 'center', padding: '6rem' }}>
@@ -201,6 +310,7 @@ export default function DashboardPage({ onNavigate }) {
   }
 
   const { myProjects = [], joinedProjects = [], incomingRequests = [], notifications = [] } = data || {};
+  const totalUnreadMessages = chatContacts.reduce((sum, c) => sum + (c.unread_count || 0), 0);
 
   return (
     <div style={{ maxWidth: '1240px', margin: '0 auto', padding: '2.5rem 2rem 5rem' }}>
@@ -321,6 +431,35 @@ export default function DashboardPage({ onNavigate }) {
         </button>
 
         <button
+          onClick={() => setActiveTab('chat')}
+          style={{
+            padding: '0.85rem 1.5rem',
+            fontWeight: 700,
+            borderBottom: activeTab === 'chat' ? '3px solid var(--accent-primary)' : '3px solid transparent',
+            color: activeTab === 'chat' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+            marginBottom: '-2px',
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.5rem'
+          }}
+        >
+          <MessageSquare size={18} />
+          <span>Mesajlarım</span>
+          {totalUnreadMessages > 0 && (
+            <span style={{
+              background: 'var(--danger)',
+              color: '#fff',
+              fontSize: '0.7rem',
+              padding: '0.15rem 0.5rem',
+              borderRadius: '9999px',
+              fontWeight: 800
+            }}>
+              {totalUnreadMessages}
+            </span>
+          )}
+        </button>
+
+        <button
           onClick={() => setActiveTab('edit-profile')}
           style={{
             padding: '0.85rem 1.5rem',
@@ -434,7 +573,11 @@ export default function DashboardPage({ onNavigate }) {
                       <strong style={{ color: 'var(--text-primary)' }}>{reqItem.sender_title} {reqItem.sender_name}</strong>
                     </div>
 
-                    <h4 style={{ fontSize: '1.15rem', marginBottom: '0.35rem' }}>
+                    <h4 
+                      onClick={() => onNavigate('project-detail', reqItem.project_id)}
+                      style={{ fontSize: '1.15rem', marginBottom: '0.35rem', cursor: 'pointer', color: 'var(--accent-primary)', textDecoration: 'underline' }}
+                      title="Proje detaylarını görüntülemek için tıklayın"
+                    >
                       Proje: {reqItem.project_title}
                     </h4>
 
@@ -513,6 +656,209 @@ export default function DashboardPage({ onNavigate }) {
               </div>
             ))
           )}
+        </div>
+      )}
+
+      {/* TAB: CHAT / MESSAGING */}
+      {activeTab === 'chat' && (
+        <div className="card-glass" style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 320px) 1fr', minHeight: '600px', height: 'calc(100vh - 350px)', padding: 0, overflow: 'hidden', marginBottom: '2.5rem' }}>
+          {/* Contacts Pane (Left) */}
+          <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', height: '100%' }}>
+            <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
+              <h3 style={{ fontSize: '1.15rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <MessageSquare size={18} color="var(--accent-primary)" />
+                <span>Mesajlaşmalarım</span>
+              </h3>
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
+              {chatContactsLoading && chatContacts.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2rem', color: 'var(--text-secondary)', fontSize: '0.9rem' }}>Yükleniyor...</div>
+              ) : chatContacts.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '3rem 1rem', color: 'var(--text-muted)', fontSize: '0.88rem' }}>
+                  <p>Henüz aktif bir sohbetiniz bulunmamaktadır.</p>
+                  <p style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>Akademisyenlerin profil sayfalarındaki "Mesaj Gönder" butonunu kullanarak sohbet başlatabilirsiniz.</p>
+                </div>
+              ) : (
+                chatContacts.map(c => {
+                  const isSelected = selectedContact && selectedContact.id === c.id;
+                  const initials = c.full_name ? c.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '?';
+                  return (
+                    <div
+                      key={c.id}
+                      onClick={() => setSelectedContact(c)}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.75rem',
+                        padding: '0.85rem 1rem',
+                        borderRadius: '8px',
+                        cursor: 'pointer',
+                        background: isSelected ? 'rgba(56,149,255,0.1)' : 'transparent',
+                        borderLeft: isSelected ? '3px solid var(--accent-primary)' : '3px solid transparent',
+                        transition: 'all 0.2s',
+                        marginBottom: '0.25rem'
+                      }}
+                      className="chat-contact-item"
+                    >
+                      {/* Avatar */}
+                      {c.photo_url ? (
+                        <img
+                          src={c.photo_url}
+                          alt={c.full_name}
+                          style={{ width: '42px', height: '42px', borderRadius: '50%', objectFit: 'cover' }}
+                        />
+                      ) : (
+                        <div style={{
+                          width: '42px',
+                          height: '42px',
+                          borderRadius: '50%',
+                          background: isSelected ? 'var(--accent-primary)' : 'var(--bg-secondary)',
+                          color: isSelected ? '#fff' : 'var(--text-secondary)',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'center',
+                          fontWeight: 700,
+                          fontSize: '0.9rem',
+                          border: '1px solid var(--border-color)'
+                        }}>
+                          {initials}
+                        </div>
+                      )}
+
+                      {/* Details */}
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline', marginBottom: '0.15rem' }}>
+                          <span style={{ fontWeight: 700, fontSize: '0.92rem', color: isSelected ? 'var(--text-primary)' : 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                            {c.title} {c.full_name}
+                          </span>
+                          {c.unread_count > 0 && (
+                            <span style={{
+                              background: 'var(--danger)',
+                              color: '#fff',
+                              fontSize: '0.68rem',
+                              padding: '0.1rem 0.4rem',
+                              borderRadius: '9999px',
+                              fontWeight: 800
+                            }}>
+                              {c.unread_count}
+                            </span>
+                          )}
+                        </div>
+                        <p style={{
+                          fontSize: '0.78rem',
+                          color: c.unread_count > 0 ? 'var(--text-primary)' : 'var(--text-muted)',
+                          margin: 0,
+                          whiteSpace: 'nowrap',
+                          overflow: 'hidden',
+                          textOverflow: 'ellipsis',
+                          fontWeight: c.unread_count > 0 ? 600 : 400
+                        }}>
+                          {c.last_message}
+                        </p>
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+          </div>
+
+          {/* Chat Window (Right) */}
+          <div style={{ display: 'flex', flexDirection: 'column', height: '100%', background: 'rgba(0,0,0,0.1)' }}>
+            {selectedContact ? (
+              <>
+                {/* Chat Header */}
+                <div style={{
+                  padding: '0.85rem 1.5rem',
+                  borderBottom: '1px solid var(--border-color)',
+                  display: 'flex',
+                  justifyContent: 'space-between',
+                  alignItems: 'center',
+                  background: 'rgba(255,255,255,0.02)'
+                }}>
+                  <div>
+                    <h4 style={{ margin: 0, fontSize: '1.05rem', fontWeight: 700 }}>
+                      {selectedContact.title} {selectedContact.full_name}
+                    </h4>
+                    <span
+                      onClick={() => onNavigate('academician-detail', selectedContact.id)}
+                      style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', cursor: 'pointer', textDecoration: 'underline' }}
+                    >
+                      Profili Görüntüle →
+                    </span>
+                  </div>
+                </div>
+
+                {/* Messages Body */}
+                <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                  {chatLoading && chatMessages.length === 0 ? (
+                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>Mesajlar yükleniyor...</div>
+                  ) : chatMessages.length === 0 ? (
+                    <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '3rem 1rem', fontSize: '0.9rem' }}>
+                      Henüz mesaj bulunmuyor. İlk mesajı göndererek sohbeti başlatın!
+                    </div>
+                  ) : (
+                    chatMessages.map(msg => {
+                      const isMe = msg.sender_id === user.id;
+                      const msgTime = msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                      return (
+                        <div
+                          key={msg.id}
+                          style={{
+                            alignSelf: isMe ? 'flex-end' : 'flex-start',
+                            maxWidth: '70%',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            alignItems: isMe ? 'flex-end' : 'flex-start'
+                          }}
+                        >
+                          <div style={{
+                            background: isMe ? 'var(--accent-primary)' : 'var(--bg-secondary)',
+                            color: isMe ? '#fff' : 'var(--text-primary)',
+                            padding: '0.75rem 1rem',
+                            borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                            fontSize: '0.92rem',
+                            lineHeight: 1.45,
+                            boxShadow: 'var(--shadow-sm)',
+                            border: isMe ? 'none' : '1px solid var(--border-color)',
+                            wordBreak: 'break-word'
+                          }}>
+                            {msg.message}
+                          </div>
+                          <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px', padding: '0 4px' }}>
+                            {msgTime}
+                          </span>
+                        </div>
+                      );
+                    })
+                  )}
+                </div>
+
+                {/* Message Input Footer */}
+                <form onSubmit={handleSendChatMessage} style={{ padding: '1.25rem', borderTop: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.01)', display: 'flex', gap: '0.75rem' }}>
+                  <input
+                    type="text"
+                    required
+                    className="form-input"
+                    placeholder="Mesajınızı yazın..."
+                    value={chatInput}
+                    onChange={e => setChatInput(e.target.value)}
+                    style={{ margin: 0 }}
+                  />
+                  <button type="submit" className="btn-primary" style={{ padding: '0.75rem 1.5rem' }}>
+                    <span>Gönder</span>
+                  </button>
+                </form>
+              </>
+            ) : (
+              <div style={{ flex: 1, display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', color: 'var(--text-muted)', padding: '2rem', textAlign: 'center' }}>
+                <MessageSquare size={48} color="var(--border-color)" style={{ marginBottom: '1rem' }} />
+                <h4 style={{ fontSize: '1.15rem', color: 'var(--text-secondary)', marginBottom: '0.25rem' }}>Sohbet Seçilmedi</h4>
+                <p style={{ fontSize: '0.85rem', maxWidth: '320px' }}>Soldaki listeden bir akademisyen seçin veya yeni bir sohbet başlatmak için akademisyen profil sayfasına gidin.</p>
+              </div>
+            )}
+          </div>
         </div>
       )}
 

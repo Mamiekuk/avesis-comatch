@@ -125,3 +125,15 @@ CREATE INDEX IF NOT EXISTS idx_users_claimed ON users(is_claimed);
 CREATE INDEX IF NOT EXISTS idx_users_name ON users(full_name);
 CREATE INDEX IF NOT EXISTS idx_user_research_areas_user ON user_research_areas(user_id);
 CREATE INDEX IF NOT EXISTS idx_user_research_areas_area ON user_research_areas(research_area_id);
+
+CREATE TABLE IF NOT EXISTS messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    sender_id INTEGER NOT NULL,
+    receiver_id INTEGER NOT NULL,
+    message TEXT NOT NULL,
+    is_read INTEGER DEFAULT 0,
+    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY(sender_id) REFERENCES users(id) ON DELETE CASCADE,
+    FOREIGN KEY(receiver_id) REFERENCES users(id) ON DELETE CASCADE
+);
+

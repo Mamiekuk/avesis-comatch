@@ -964,6 +964,126 @@ app.post('/api/notifications/read-all', authMiddleware, (req, res) => {
   res.json({ success: true });
 });
 
+// ==========================================
+// CHAT / MESSAGING SYSTEM API
+// ==========================================
+
+// 1. Get Chat Contacts
+app.get('/api/chat/contacts', authMiddleware, (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    const contacts = db.prepare(`
+      SELECT DISTINCT 
+        u.id, 
+        u.full_name, 
+        u.title, 
+        u.photo_url,
+        (
+          SELECT m.message 
+          FROM messages m 
+          WHERE (m.sender_id = u.id AND m.receiver_id = ?) 
+             OR (m.sender_id = ? AND m.receiver_id = u.id)
+          ORDER BY m.id DESC LIMIT 1
+        ) as last_message,
+        (
+          SELECT m.created_at 
+          FROM messages m 
+          WHERE (m.sender_id = u.id AND m.receiver_id = ?) 
+             OR (m.sender_id = ? AND m.receiver_id = u.id)
+          ORDER BY m.id DESC LIMIT 1
+        ) as last_message_time,
+        (
+          SELECT COUNT(*) 
+          FROM messages m 
+          WHERE m.sender_id = u.id AND m.receiver_id = ? AND m.is_read = 0
+        ) as unread_count
+      FROM users u
+      JOIN messages msg ON (msg.sender_id = u.id AND msg.receiver_id = ?) 
+                       OR (msg.sender_id = ? AND msg.receiver_id = u.id)
+      WHERE u.id != ?
+      ORDER BY last_message_time DESC
+    `).all(userId, userId, userId, userId, userId, userId, userId, userId);
+
+    res.json({ contacts });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 2. Get Message History between current user and contactId
+app.get('/api/chat/messages/:contactId', authMiddleware, (req, res) => {
+  try {
+    const userId = req.user.id;
+    const contactId = req.params.contactId;
+
+    // Mark messages from contact to current user as read
+    db.prepare(`
+      UPDATE messages SET is_read = 1 
+      WHERE sender_id = ? AND receiver_id = ?
+    `).run(contactId, userId);
+
+    // Fetch history
+    const history = db.prepare(`
+      SELECT * FROM messages
+      WHERE (sender_id = ? AND receiver_id = ?)
+         OR (sender_id = ? AND receiver_id = ?)
+      ORDER BY id ASC
+    `).all(userId, contactId, contactId, userId);
+
+    res.json({ history });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// 3. Send Message
+app.post('/api/chat/messages', authMiddleware, (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { receiverId, message } = req.body;
+
+    if (!receiverId || !message || !message.trim()) {
+      return res.status(400).json({ error: 'Alıcı ve mesaj içeriği zorunludur.' });
+    }
+
+    const result = db.prepare(`
+      INSERT INTO messages (sender_id, receiver_id, message)
+      VALUES (?, ?, ?)
+    `).run(userId, receiverId, message.trim());
+
+    const messageId = result.lastInsertRowid;
+
+    // Create a notification for the receiver
+    const sender = db.prepare('SELECT title, full_name FROM users WHERE id = ?').get(userId);
+    const senderName = sender ? `${sender.title || ''} ${sender.full_name}`.trim() : 'Bir Kullanıcı';
+    
+    db.prepare(`
+      INSERT INTO notifications (user_id, title, body, link)
+      VALUES (?, ?, ?, ?)
+    `).run(
+      receiverId,
+      'Yeni Bir Mesajınız Var!',
+      `${senderName} size bir mesaj gönderdi: "${message.trim().substring(0, 40)}${message.trim().length > 40 ? '...' : ''}"`,
+      '/dashboard?tab=chat'
+    );
+
+    res.status(201).json({ 
+      success: true, 
+      message: {
+        id: messageId,
+        sender_id: userId,
+        receiver_id: Number(receiverId),
+        message: message.trim(),
+        is_read: 0,
+        created_at: new Date().toISOString()
+      } 
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 app.listen(PORT, () => {
   console.log(`🚀 AVESİS CoMatch API Server http://localhost:${PORT} adresinde çalışıyor!`);
 });

@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchAcademicianById, inviteToProject, fetchDashboard } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { ExternalLink, CheckCircle2, ShieldAlert, Award, Send, UserCheck, ArrowLeft, Building2, BookOpen } from 'lucide-react';
+import { ExternalLink, CheckCircle2, ShieldAlert, Award, Send, UserCheck, ArrowLeft, Building2, BookOpen, MessageSquare } from 'lucide-react';
 
 export default function AcademicianDetailPage({ id, onNavigate, onOpenClaimModal }) {
   const { user, token } = useAuth();
@@ -158,10 +158,21 @@ export default function AcademicianDetailPage({ id, onNavigate, onOpenClaimModal
               )}
 
               {user && user.id !== academician.id && (
-                <button onClick={openInviteModal} className="btn-primary">
-                  <Send size={18} />
-                  <span>Projeme Davet Et</span>
-                </button>
+                <>
+                  <button onClick={openInviteModal} className="btn-primary">
+                    <Send size={18} />
+                    <span>Projeme Davet Et</span>
+                  </button>
+
+                  <button
+                    onClick={() => onNavigate('dashboard', { tab: 'chat', contact: academician })}
+                    className="btn-secondary"
+                    style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}
+                  >
+                    <MessageSquare size={18} color="var(--accent-primary)" />
+                    <span>Mesaj Gönder</span>
+                  </button>
+                </>
               )}
             </div>
           </div>

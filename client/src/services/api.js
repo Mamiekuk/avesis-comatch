@@ -180,3 +180,26 @@ export async function fetchDashboard(token) {
   if (!res.ok) throw new Error(data.error || 'Kontrol paneli verisi alınamadı.');
   return data;
 }
+
+export async function fetchChatContacts(token) {
+  const res = await fetch(`${API_BASE}/chat/contacts`, {
+    headers: getHeaders(token)
+  });
+  return parseResponse(res, 'Sohbet kişileri yüklenemedi.');
+}
+
+export async function fetchChatHistory(contactId, token) {
+  const res = await fetch(`${API_BASE}/chat/messages/${contactId}`, {
+    headers: getHeaders(token)
+  });
+  return parseResponse(res, 'Sohbet geçmişi yüklenemedi.');
+}
+
+export async function sendChatMessage(receiverId, message, token) {
+  const res = await fetch(`${API_BASE}/chat/messages`, {
+    method: 'POST',
+    headers: getHeaders(token),
+    body: JSON.stringify({ receiverId, message })
+  });
+  return parseResponse(res, 'Mesaj gönderilemedi.');
+}
