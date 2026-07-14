@@ -130,9 +130,7 @@ export async function updateProject(projectId, payload, token) {
     headers: getHeaders(token),
     body: JSON.stringify(payload)
   });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Proje güncellenemedi.');
-  return data;
+  return parseResponse(res, 'Proje güncellenemedi.');
 }
 
 export async function fetchProjectSmartMatches(projectId) {
