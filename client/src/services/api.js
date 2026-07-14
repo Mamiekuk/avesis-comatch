@@ -124,6 +124,17 @@ export async function createProject(payload, token) {
   return data;
 }
 
+export async function updateProject(projectId, payload, token) {
+  const res = await fetch(`${API_BASE}/projects/${projectId}`, {
+    method: 'PUT',
+    headers: getHeaders(token),
+    body: JSON.stringify(payload)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Proje güncellenemedi.');
+  return data;
+}
+
 export async function fetchProjectSmartMatches(projectId) {
   const res = await fetch(`${API_BASE}/projects/${projectId}/match`);
   if (!res.ok) throw new Error('Akıllı eşleştirmeler yüklenemedi.');

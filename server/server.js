@@ -686,6 +686,45 @@ app.post('/api/projects', authMiddleware, (req, res) => {
   res.status(201).json({ message: 'Proje başarıyla oluşturuldu!', projectId });
 });
 
+// Update Project
+app.put('/api/projects/:id', authMiddleware, (req, res) => {
+  const { title, description, objectives, teamSize = 3, duration, budget, researchAreaIds = [] } = req.body;
+  const projectId = req.params.id;
+
+  const project = db.prepare('SELECT owner_id FROM projects WHERE id = ?').get(projectId);
+  if (!project) {
+    return res.status(404).json({ error: 'Proje bulunamadı.' });
+  }
+
+  if (project.owner_id !== req.user.id) {
+    return res.status(403).json({ error: 'Bu projeyi düzenleme yetkiniz bulunmamaktadır.' });
+  }
+
+  if (!title || !description) {
+    return res.status(400).json({ error: 'Proje başlığı ve açıklaması zorunludur.' });
+  }
+
+  db.prepare(`
+    UPDATE projects SET
+      title = ?,
+      description = ?,
+      objectives = ?,
+      team_size = ?,
+      duration = ?,
+      budget = ?
+    WHERE id = ?
+  `).run(title, description, objectives || null, teamSize, duration || null, budget || null, projectId);
+
+  db.prepare('DELETE FROM project_research_areas WHERE project_id = ?').run(projectId);
+  const insertProjArea = db.prepare('INSERT OR IGNORE INTO project_research_areas (project_id, research_area_id) VALUES (?, ?)');
+  for (const tagId of researchAreaIds) {
+    insertProjArea.run(projectId, tagId);
+  }
+
+  res.json({ message: 'Proje başarıyla güncellendi!' });
+});
+
+
 // Akıllı Eşleştirme Motoru (/api/projects/:id/match)
 app.get('/api/projects/:id/match', (req, res) => {
   try {
