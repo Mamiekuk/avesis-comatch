@@ -1094,6 +1094,30 @@ app.post('/api/chat/messages', authMiddleware, (req, res) => {
   }
 });
 
+// 4. Delete Chat Message
+app.delete('/api/chat/messages/:id', authMiddleware, (req, res) => {
+  try {
+    const messageId = req.params.id;
+    const userId = req.user.id;
+
+    // Verify ownership
+    const message = db.prepare('SELECT sender_id FROM messages WHERE id = ?').get(messageId);
+    if (!message) {
+      return res.status(404).json({ error: 'Mesaj bulunamadı.' });
+    }
+
+    if (message.sender_id !== userId) {
+      return res.status(403).json({ error: 'Bu mesajı silme yetkiniz bulunmamaktadır.' });
+    }
+
+    db.prepare('DELETE FROM messages WHERE id = ?').run(messageId);
+    res.json({ success: true, message: 'Mesaj başarıyla silindi.' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+
 app.listen(PORT, () => {
   console.log(`🚀 AVESİS CoMatch API Server http://localhost:${PORT} adresinde çalışıyor!`);
 });

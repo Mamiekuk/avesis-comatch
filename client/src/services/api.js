@@ -203,3 +203,11 @@ export async function sendChatMessage(receiverId, message, token) {
   });
   return parseResponse(res, 'Mesaj gönderilemedi.');
 }
+
+export async function deleteChatMessage(messageId, token) {
+  const res = await fetch(`${API_BASE}/chat/messages/${messageId}`, {
+    method: 'DELETE',
+    headers: getHeaders(token)
+  });
+  return parseResponse(res, 'Mesaj silinemedi.');
+}

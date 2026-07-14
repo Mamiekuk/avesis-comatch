@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { fetchDashboard, respondToInvitation, fetchMetadata, updateUserProfile, updateProject, fetchProjectById, fetchChatContacts, fetchChatHistory, sendChatMessage } from '../services/api';
+import { fetchDashboard, respondToInvitation, fetchMetadata, updateUserProfile, updateProject, fetchProjectById, fetchChatContacts, fetchChatHistory, sendChatMessage, deleteChatMessage } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, FolderGit2, Mail, Bell, CheckCircle2, XCircle, ArrowRight, Sparkles, Building2, Edit3, Save, X, Plus, BookOpen, AlertCircle, MessageSquare } from 'lucide-react';
+import { LayoutDashboard, FolderGit2, Mail, Bell, CheckCircle2, XCircle, ArrowRight, Sparkles, Building2, Edit3, Save, X, Plus, BookOpen, AlertCircle, MessageSquare, Trash2 } from 'lucide-react';
 
 export default function DashboardPage({ onNavigate, routeParam }) {
   const { user, token, updateUser } = useAuth();
@@ -41,7 +41,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [chatContactsLoading, setChatContactsLoading] = useState(false);
-  const messagesEndRef = useRef(null);
+  const messagesContainerRef = useRef(null);
 
   const loadData = () => {
     if (!token) return;
@@ -242,6 +242,17 @@ export default function DashboardPage({ onNavigate, routeParam }) {
     }
   };
 
+  // Delete Message
+  const handleDeleteMessage = async (messageId) => {
+    try {
+      await deleteChatMessage(messageId, token);
+      setChatMessages(prev => prev.filter(m => m.id !== messageId));
+      loadChatContacts();
+    } catch (err) {
+      alert('Mesaj silinemedi: ' + err.message);
+    }
+  };
+
   // Load chat history when selected contact changes
   useEffect(() => {
     if (selectedContact) {
@@ -294,10 +305,13 @@ export default function DashboardPage({ onNavigate, routeParam }) {
     return () => clearInterval(interval);
   }, [activeTab, selectedContact, token]);
 
-  // Auto Scroll to Bottom of Chat
+  // Auto Scroll to Bottom of Chat (without scrolling the main page)
   useEffect(() => {
-    if (activeTab === 'chat' && messagesEndRef.current) {
-      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+    if (activeTab === 'chat' && messagesContainerRef.current) {
+      messagesContainerRef.current.scrollTo({
+        top: messagesContainerRef.current.scrollHeight,
+        behavior: 'smooth'
+      });
     }
   }, [chatMessages, activeTab]);
 
@@ -799,7 +813,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                 </div>
 
                 {/* Messages Body */}
-                <div style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                <div ref={messagesContainerRef} style={{ flex: 1, overflowY: 'auto', padding: '1.5rem', display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
                   {chatLoading && chatMessages.length === 0 ? (
                     <div style={{ textAlign: 'center', color: 'var(--text-muted)', padding: '2rem' }}>Mesajlar yükleniyor...</div>
                   ) : chatMessages.length === 0 ? (
@@ -821,18 +835,47 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                             alignItems: isMe ? 'flex-end' : 'flex-start'
                           }}
                         >
-                          <div style={{
-                            background: isMe ? 'var(--accent-primary)' : 'var(--bg-secondary)',
-                            color: isMe ? '#fff' : 'var(--text-primary)',
-                            padding: '0.75rem 1rem',
-                            borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
-                            fontSize: '0.92rem',
-                            lineHeight: 1.45,
-                            boxShadow: 'var(--shadow-sm)',
-                            border: isMe ? 'none' : '1px solid var(--border-color)',
-                            wordBreak: 'break-word'
-                          }}>
-                            {msg.message}
+                          <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', flexDirection: isMe ? 'row-reverse' : 'row', maxWidth: '100%' }}>
+                            <div style={{
+                              background: isMe ? 'var(--accent-primary)' : 'var(--bg-secondary)',
+                              color: isMe ? '#fff' : 'var(--text-primary)',
+                              padding: '0.75rem 1rem',
+                              borderRadius: isMe ? '16px 16px 4px 16px' : '16px 16px 16px 4px',
+                              fontSize: '0.92rem',
+                              lineHeight: 1.45,
+                              boxShadow: 'var(--shadow-sm)',
+                              border: isMe ? 'none' : '1px solid var(--border-color)',
+                              wordBreak: 'break-word'
+                            }}>
+                              {msg.message}
+                            </div>
+                            {isMe && (
+                              <button
+                                onClick={() => {
+                                  if (confirm('Bu mesajı silmek istediğinize emin misiniz?')) {
+                                    handleDeleteMessage(msg.id);
+                                  }
+                                }}
+                                title="Mesajı Sil"
+                                style={{
+                                  background: 'transparent',
+                                  border: 'none',
+                                  color: 'var(--text-muted)',
+                                  cursor: 'pointer',
+                                  padding: '4px',
+                                  borderRadius: '6px',
+                                  display: 'flex',
+                                  alignItems: 'center',
+                                  justifyContent: 'center',
+                                  transition: 'all 0.2s',
+                                  alignSelf: 'center'
+                                }}
+                                onMouseEnter={e => e.currentTarget.style.color = 'var(--danger)'}
+                                onMouseLeave={e => e.currentTarget.style.color = 'var(--text-muted)'}
+                              >
+                                <Trash2 size={14} />
+                              </button>
+                            )}
                           </div>
                           <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '4px', padding: '0 4px' }}>
                             {msgTime}
@@ -841,7 +884,6 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                       );
                     })
                   )}
-                  <div ref={messagesEndRef} />
                 </div>
 
                 {/* Message Input Footer */}
