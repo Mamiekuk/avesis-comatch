@@ -19,7 +19,14 @@ export async function createResearchArea(label, token) {
     headers: getHeaders(token),
     body: JSON.stringify({ label })
   });
-  if (!res.ok) throw new Error('Yeni araştırma alanı oluşturulamadı.');
+  if (!res.ok) {
+    let errMsg = 'Yeni araştırma alanı oluşturulamadı.';
+    try {
+      const errJson = await res.json();
+      if (errJson.error) errMsg = errJson.error;
+    } catch (_) {}
+    throw new Error(errMsg);
+  }
   return res.json();
 }
 
