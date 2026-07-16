@@ -111,6 +111,35 @@ app.get('/api/metadata', (req, res) => {
   }
 });
 
+// Create Custom Research Area Tag
+app.post('/api/metadata/research-areas', authMiddleware, (req, res) => {
+  try {
+    const { label } = req.body;
+    if (!label || !label.trim()) {
+      return res.status(400).json({ error: 'Etiket adı boş olamaz.' });
+    }
+
+    const cleanLabel = label.trim();
+
+    // Check if it already exists case-insensitively
+    let existing = db.prepare('SELECT id, label FROM research_areas WHERE LOWER(label) = LOWER(?)').get(cleanLabel);
+    if (existing) {
+      return res.json({ success: true, tag: existing });
+    }
+
+    // Insert new
+    const result = db.prepare('INSERT INTO research_areas (label) VALUES (?)').run(cleanLabel);
+    const newTag = {
+      id: result.lastInsertRowid,
+      label: cleanLabel
+    };
+
+    res.status(201).json({ success: true, tag: newTag });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // ==========================================
 // 2. KİMLİK DOĞRULAMA & PROFİL SAHİPLENME
 // ==========================================

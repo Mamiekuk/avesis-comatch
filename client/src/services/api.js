@@ -13,6 +13,16 @@ export async function fetchMetadata() {
   return res.json();
 }
 
+export async function createResearchArea(label, token) {
+  const res = await fetch(`${API_BASE}/metadata/research-areas`, {
+    method: 'POST',
+    headers: getHeaders(token),
+    body: JSON.stringify({ label })
+  });
+  if (!res.ok) throw new Error('Yeni araştırma alanı oluşturulamadı.');
+  return res.json();
+}
+
 export async function loginUser(email, password) {
   const res = await fetch(`${API_BASE}/auth/login`, {
     method: 'POST',

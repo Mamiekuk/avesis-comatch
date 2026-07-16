@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { fetchDashboard, respondToInvitation, fetchMetadata, updateUserProfile, updateProject, fetchProjectById, fetchChatContacts, fetchChatHistory, sendChatMessage, deleteChatMessage, uploadChatFile, clearChatHistory, fetchMeetings, createMeeting, respondToMeeting, BACKEND_URL } from '../services/api';
+import { fetchDashboard, respondToInvitation, fetchMetadata, updateUserProfile, updateProject, fetchProjectById, fetchChatContacts, fetchChatHistory, sendChatMessage, deleteChatMessage, uploadChatFile, clearChatHistory, fetchMeetings, createMeeting, respondToMeeting, BACKEND_URL, createResearchArea } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, FolderGit2, Mail, Bell, CheckCircle2, XCircle, ArrowRight, Sparkles, Building2, Edit3, Save, X, Plus, BookOpen, AlertCircle, MessageSquare, Trash2, Paperclip, Calendar, FileText, Image, Download, MapPin, Video, Clock } from 'lucide-react';
 
@@ -137,6 +137,30 @@ export default function DashboardPage({ onNavigate, routeParam }) {
         !editTags.some(st => st.id === t.id)
       ).slice(0, 10)
     : [];
+
+  const exactMatch = tagSearchInput.trim()
+    ? allTags.some(t => t.label.toLowerCase() === tagSearchInput.trim().toLowerCase())
+    : true;
+
+  const handleCreateCustomTag = async () => {
+    const label = tagSearchInput.trim();
+    if (!label) return;
+    try {
+      const res = await createResearchArea(label, token);
+      if (res.success && res.tag) {
+        setAllTags(prev => {
+          if (prev.some(t => t.id === res.tag.id)) return prev;
+          return [...prev, res.tag].sort((a, b) => a.label.localeCompare(b.label));
+        });
+        if (!editTags.some(t => t.id === res.tag.id)) {
+          setEditTags(prev => [...prev, res.tag]);
+        }
+        setTagSearchInput('');
+      }
+    } catch (err) {
+      alert('Etiket oluşturulamadı: ' + err.message);
+    }
+  };
 
   const handleSaveProfile = async (e) => {
     e.preventDefault();
@@ -1285,7 +1309,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                   onChange={e => setTagSearchInput(e.target.value)}
                 />
 
-                {filteredTagSuggestions.length > 0 && (
+                {(filteredTagSuggestions.length > 0 || (tagSearchInput.trim() && !exactMatch)) && (
                   <div style={{
                     position: 'absolute',
                     top: '100%',
@@ -1300,6 +1324,25 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                     maxHeight: '260px',
                     overflowY: 'auto'
                   }}>
+                    {tagSearchInput.trim() && !exactMatch && (
+                      <div
+                        onClick={handleCreateCustomTag}
+                        style={{
+                          padding: '0.75rem 1rem',
+                          borderBottom: '1px solid var(--border-color)',
+                          cursor: 'pointer',
+                          color: 'var(--accent-primary)',
+                          fontWeight: 'bold',
+                          background: 'rgba(56,149,255,0.05)',
+                          display: 'flex',
+                          justifyContent: 'space-between',
+                          alignItems: 'center'
+                        }}
+                      >
+                        <span>+ "{tagSearchInput.trim()}" etiketini yeni oluştur ve ekle</span>
+                        <span style={{ fontSize: '0.75rem', opacity: 0.8, color: 'var(--accent-primary)', fontWeight: 800 }}>YENİ OLUŞTUR</span>
+                      </div>
+                    )}
                     {filteredTagSuggestions.map(tag => (
                       <div
                         key={tag.id}
