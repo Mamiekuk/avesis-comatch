@@ -156,23 +156,25 @@ export default function ProjectDetailPage({ id, onNavigate }) {
           Proje Hedefleri & Ekip Üyeleri
         </button>
 
-        <button
-          onClick={() => setActiveTab('matching')}
-          style={{
-            padding: '0.85rem 1.5rem',
-            fontSize: '1rem',
-            fontWeight: 700,
-            borderBottom: activeTab === 'matching' ? '3px solid var(--accent-primary)' : '3px solid transparent',
-            color: activeTab === 'matching' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-            marginBottom: '-2px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
-        >
-          <Sparkles size={18} />
-          <span>Akıllı Eşleştirme Önerileri</span>
-        </button>
+        {isOwnerOrLeader && (
+          <button
+            onClick={() => setActiveTab('matching')}
+            style={{
+              padding: '0.85rem 1.5rem',
+              fontSize: '1rem',
+              fontWeight: 700,
+              borderBottom: activeTab === 'matching' ? '3px solid var(--accent-primary)' : '3px solid transparent',
+              color: activeTab === 'matching' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+              marginBottom: '-2px',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.5rem'
+            }}
+          >
+            <Sparkles size={18} />
+            <span>Akıllı Eşleştirme Önerileri</span>
+          </button>
+        )}
       </div>
 
       {/* TAB CONTENT */}
@@ -225,13 +227,13 @@ export default function ProjectDetailPage({ id, onNavigate }) {
             </div>
           </div>
         </div>
-      ) : (
+      ) : isOwnerOrLeader ? (
         /* SMART MATCHING TAB */
         <SmartMatchingPanel
           projectId={project.id}
           onNavigateAcademician={id => onNavigate('academician-detail', id)}
         />
-      )}
+      ) : null}
 
       {/* APPLY MODAL */}
       {applyModalOpen && (

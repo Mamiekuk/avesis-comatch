@@ -8,9 +8,12 @@ import ProjectsPage from './pages/ProjectsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import CreateProjectPage from './pages/CreateProjectPage';
 import DashboardPage from './pages/DashboardPage';
+import FloatingChatWidget from './components/FloatingChatWidget';
+import { useAuth } from './context/AuthContext';
 import './styles/design-system.css';
 
 export default function App() {
+  const { token } = useAuth();
   const [route, setRoute] = useState('home'); // 'home' | 'academicians' | 'academician-detail' | 'projects' | 'project-detail' | 'create-project' | 'dashboard'
   const [routeParam, setRouteParam] = useState(null); // ID for detail pages
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -131,6 +134,9 @@ export default function App() {
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
       />
+
+      {/* Floating LinkedIn Chat Widget */}
+      {token && <FloatingChatWidget />}
     </div>
   );
 }

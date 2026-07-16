@@ -778,6 +778,30 @@ export default function DashboardPage({ onNavigate, routeParam }) {
 
                   <div style={{ display: 'flex', gap: '0.75rem' }}>
                     <button
+                      onClick={() => {
+                        setSelectedContact({
+                          id: reqItem.sender_id,
+                          full_name: reqItem.sender_name,
+                          title: reqItem.sender_title,
+                          photo_url: reqItem.sender_photo
+                        });
+                        setActiveTab('chat');
+                      }}
+                      className="btn-secondary"
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        padding: '0.65rem 1.25rem',
+                        borderRadius: '8px',
+                        margin: 0
+                      }}
+                    >
+                      <MessageSquare size={16} color="var(--accent-primary)" />
+                      <span>İletişime Geç</span>
+                    </button>
+
+                    <button
                       onClick={() => handleResponse(reqItem.id, 'accepted')}
                       style={{
                         display: 'flex',

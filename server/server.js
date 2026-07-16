@@ -755,12 +755,16 @@ app.put('/api/projects/:id', authMiddleware, (req, res) => {
 
 
 // Akıllı Eşleştirme Motoru (/api/projects/:id/match)
-app.get('/api/projects/:id/match', (req, res) => {
+app.get('/api/projects/:id/match', authMiddleware, (req, res) => {
   try {
     const projectId = req.params.id;
     const project = db.prepare('SELECT id, owner_id, title FROM projects WHERE id = ?').get(projectId);
     if (!project) {
       return res.status(404).json({ error: 'Proje bulunamadı.' });
+    }
+
+    if (project.owner_id !== req.user.id) {
+      return res.status(403).json({ error: 'Bu projenin eşleştirme verilerine erişim yetkiniz bulunmamaktadır.' });
     }
 
     // Get project tags
@@ -838,6 +842,10 @@ app.post('/api/projects/:id/invite', authMiddleware, (req, res) => {
 
   const project = db.prepare('SELECT owner_id, title FROM projects WHERE id = ?').get(projectId);
   if (!project) return res.status(404).json({ error: 'Proje bulunamadı.' });
+
+  if (project.owner_id !== req.user.id) {
+    return res.status(403).json({ error: 'Bu projeye davet gönderme yetkiniz bulunmamaktadır.' });
+  }
 
   // Check if already invited or member
   const existing = db.prepare(`

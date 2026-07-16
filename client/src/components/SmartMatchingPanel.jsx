@@ -11,11 +11,11 @@ export default function SmartMatchingPanel({ projectId, onNavigateAcademician })
   const [invitedMap, setInvitedMap] = useState({});
 
   useEffect(() => {
-    fetchProjectSmartMatches(projectId)
+    fetchProjectSmartMatches(projectId, token)
       .then(d => { setData(d); })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [projectId]);
+  }, [projectId, token]);
 
   const handleQuickInvite = async (academicianId, name) => {
     if (!token) return alert('Lütfen önce giriş yapın.');
