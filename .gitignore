@@ -15,3 +15,6 @@ server/data/avesis.sqlite*
 # Build outputs
 dist/
 build/
+
+# Secret key files
+smtpkey.md

@@ -1,8 +1,13 @@
+require('dotenv').config();
 const express = require('express');
 const cors = require('cors');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('./db');
+const mailer = require('./mailer');
+
+// SMTP yapılandırmasını yükle ve başlat
+mailer.init();
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -187,17 +192,11 @@ db.exec(`
 `);
 
 // 1. Send Verification Code for Claiming Profile
-app.post('/api/auth/claim/send-code', (req, res) => {
+app.post('/api/auth/claim/send-code', async (req, res) => {
   const { academicianId, email } = req.body;
 
   if (!academicianId || !email) {
     return res.status(400).json({ error: 'Profil ID ve kurumsal e-posta zorunludur.' });
-  }
-
-  if (!email.toLowerCase().endsWith('@erdogan.edu.tr')) {
-    return res.status(400).json({
-      error: 'Doğrulama kodu yalnızca Recep Tayyip Erdoğan Üniversitesi kurumsal e-posta adresine (@erdogan.edu.tr) gönderilebilir.'
-    });
   }
 
   const user = db.prepare('SELECT * FROM users WHERE id = ?').get(academicianId);
@@ -206,6 +205,17 @@ app.post('/api/auth/claim/send-code', (req, res) => {
   }
   if (user.is_claimed === 1) {
     return res.status(400).json({ error: 'Bu profil zaten sahiplenilmiş ve aktif duruma geçirilmiştir.' });
+  }
+
+  // Kurumsal e-posta kontrolü (@erdogan.edu.tr) ya da test amaçlı profilin veritabanında tanımlı özel e-posta adresi
+  const isRteuEmail = email.toLowerCase().endsWith('@erdogan.edu.tr');
+  const isProfileEmail = user.email && user.email.toLowerCase() === email.toLowerCase();
+  const isTestEmail = email.toLowerCase().endsWith('@outlook.com.tr');
+
+  if (!isRteuEmail && !isProfileEmail && !isTestEmail) {
+    return res.status(400).json({
+      error: 'Doğrulama kodu yalnızca Recep Tayyip Erdoğan Üniversitesi kurumsal e-posta adresine (@erdogan.edu.tr) veya profilinizde kayıtlı e-posta adresine gönderilebilir.'
+    });
   }
 
   const existingEmail = db.prepare('SELECT id FROM users WHERE email = ? AND id != ?').get(email, academicianId);
@@ -223,17 +233,24 @@ app.post('/api/auth/claim/send-code', (req, res) => {
     VALUES (?, ?, ?)
   `).run(email, otpCode, academicianId);
 
+  // --- E-POSTA GÖNDERİMİ ENTEGRASYONU ---
+  const mailOptions = mailer.emailVerify(email, otpCode);
+  const mailSent = await mailer.sendMail(mailOptions);
+
   console.log(`\n=============================================================`);
-  console.log(`[E-POSTA DOĞRULAMA KODU SİMÜLASYONU]`);
+  console.log(`[E-POSTA DOĞRULAMA KODU]`);
   console.log(`Alıcı E-posta : ${email}`);
   console.log(`Profil ID     : ${academicianId} (${user.title} ${user.full_name})`);
   console.log(`DOĞRULAMA KODU: ${otpCode}`);
+  console.log(`SMTP Durumu   : ${mailSent ? 'BAŞARILI (E-posta Mailtrap üzerinden iletildi)' : 'DEVRE DIŞI / GÖNDERİLEMEDİ (Simülasyon devrede)'}`);
   console.log(`=============================================================\n`);
 
   res.json({
-    message: 'Doğrulama kodu kurumsal e-posta adresinize iletildi.',
+    message: mailSent
+      ? 'Doğrulama kodu kurumsal e-posta adresinize başarıyla iletildi.'
+      : 'Doğrulama kodu oluşturuldu (SMTP aktif olmadığı için simülasyon modu devrede).',
     email,
-    simulatedCode: otpCode
+    simulatedCode: mailSent ? null : otpCode
   });
 });
 

@@ -1,0 +1,86 @@
+================================================================================
+               AVESİS CoMatch - RENDER.COM CANLI (PRODUCTION) KURULUM REHBERİ
+================================================================================
+
+Bu rehber, AVESİS CoMatch projesinin backend (Node.js/Express + SQLite + Resend)
+kısmını Render.com üzerinde canlıya alırken dikkat edilmesi gereken adımları ve
+gereken ortam değişkenlerini (Environment Variables) içerir.
+
+--------------------------------------------------------------------------------
+1. RENDER PANELİNE EKLENECEK ORTAM DEĞİŞKENLERİ (ENVIRONMENT VARIABLES)
+--------------------------------------------------------------------------------
+Render'daki sunucunuzun "Environment" sekmesine girip aşağıdaki anahtar ve
+değerleri "Add Environment Variable" butonuna basarak birebir ekleyin:
+
+Key: RESEND_API_KEY
+Value: re_a1aSgs5n_JAabFr7rAtoQLf2na8dzpp3r
+
+Key: SMTP_HOST
+Value: smtp.gmail.com
+
+Key: SMTP_PORT
+Value: 465
+
+Key: SMTP_SECURE
+Value: true
+
+Key: SMTP_USER
+Value: ali.ban.1903@gmail.com
+
+Key: SMTP_PASS
+Value: bsxsvmnnygufeskv
+
+Key: MAIL_FROM
+Value: AVESİS CoMatch <onboarding@resend.dev>
+
+Key: JWT_SECRET
+Value: avesis-comatch-super-secret-key-2026
+
+(NOT: PORT değişkenini girmeye gerek yoktur, Render otomatik ayarlar ve
+process.env.PORT kodu bu portu kendisi algılar.)
+
+--------------------------------------------------------------------------------
+2. BUILD VE START KOMUTLARI (SETTINGS SEKME AYARLARI)
+--------------------------------------------------------------------------------
+Render projesinin "Settings" menüsünde şu yapılandırmayı sağlayın:
+
+* Root Directory (Ana Dizin) : server
+* Build Command              : npm install
+* Start Command              : node server.js
+
+(Eğer GitHub deponuzda backend kodu 'server' klasöründe duruyorsa Root Directory
+kısmına mutlaka 'server' yazılmalıdır. Sadece backend için ayrı repo açıldıysa
+Root Directory boş bırakılır.)
+
+--------------------------------------------------------------------------------
+3. SQLITE VERİTABANI VE KALICI DİSK (PERSISTENT STORAGE) UYARISI
+--------------------------------------------------------------------------------
+Projemiz verilerini depolamak için 'better-sqlite3' (server/data/avesis.sqlite)
+kullanmaktadır.
+
+* Render Ücretsiz (Free Tier) Sunucularında:
+  Sunucular "Stateless (Geçici)" çalışır. Yani sunucu uyku moduna geçtiğinde
+  veya yeni bir kod deploy edildiğinde dosya sistemi sıfırlanır ve sonradan
+  eklenen veriler kaybolabilir. Demo ve sunumlar için bu durum sorun yaratmaz.
+
+* Kalıcı Çözüm (Ücretli Plan $7/ay veya Üstü):
+  Render panelindeki "Disks" menüsünden bir Persistent Disk oluşturup
+  Mount Path alanına: /opt/render/project/src/server/data
+  (veya projenin sunucudaki data yolu neyse) bağlarsanız veritabanı asla silinmez.
+
+--------------------------------------------------------------------------------
+4. FRONTEND PROJESİNİN BAĞLANMASI (VITE_API_BASE)
+--------------------------------------------------------------------------------
+Backend sunucunuz Render'da aktif olup canlı adresini aldıktan sonra
+(Örn: https://avesis-comatch-api.onrender.com),
+
+Frontend projenizi (Vercel, Netlify veya Render üzerine) yüklerken,
+Frontend ortam değişkenlerine (Environment Variables) şu değeri eklemelisiniz:
+
+Key: VITE_API_BASE
+Value: https://sizin-render-backend-adresiniz.onrender.com/api
+
+Bu adımlarla birlikte projemiz canlı ortamda, ağ port engellerine takılmayan
+Resend HTTPS e-posta altyapısı ve güvenli oturum yönetimiyle tam kapasite
+çalışacaktır!
+================================================================================
