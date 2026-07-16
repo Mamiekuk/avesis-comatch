@@ -343,10 +343,27 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
                 {/* Badge Header */}
                 <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
                   {item.is_claimed ? (
-                    <span className="badge badge-claimed">
-                      <CheckCircle2 size={13} />
-                      Aktif Hesap
-                    </span>
+                    <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
+                      <span className="badge badge-claimed" style={{ margin: 0 }}>
+                        <CheckCircle2 size={13} />
+                        Aktif Hesap
+                      </span>
+                      {(!item.collaboration_status || item.collaboration_status === 'open') && (
+                        <span className="badge" style={{ margin: 0, padding: '0.15rem 0.5rem', fontSize: '0.72rem', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--success)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                          ● Açık
+                        </span>
+                      )}
+                      {item.collaboration_status === 'looking' && (
+                        <span className="badge" style={{ margin: 0, padding: '0.15rem 0.5rem', fontSize: '0.72rem', background: 'rgba(56, 149, 255, 0.15)', color: 'var(--accent-primary)', border: '1px solid rgba(56, 149, 255, 0.3)' }}>
+                          ● İş Birliği
+                        </span>
+                      )}
+                      {item.collaboration_status === 'busy' && (
+                        <span className="badge" style={{ margin: 0, padding: '0.15rem 0.5rem', fontSize: '0.72rem', background: 'rgba(239, 68, 68, 0.15)', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                          ● Yoğun
+                        </span>
+                      )}
+                    </div>
                   ) : (
                     <span className="badge badge-unclaimed">
                       AVESİS Arşivi (Sahiplenilmedi)
@@ -445,7 +462,24 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
                 <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.3rem' }}>
                   <h4 style={{ fontSize: '1.1rem' }}>{item.title} {item.full_name}</h4>
                   {item.is_claimed ? (
-                    <span className="badge badge-claimed" style={{ fontSize: '0.7rem' }}>Aktif</span>
+                    <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                      <span className="badge badge-claimed" style={{ fontSize: '0.7rem' }}>Aktif</span>
+                      {(!item.collaboration_status || item.collaboration_status === 'open') && (
+                        <span className="badge" style={{ padding: '0.1rem 0.4rem', fontSize: '0.68rem', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--success)' }}>
+                          ● Açık
+                        </span>
+                      )}
+                      {item.collaboration_status === 'looking' && (
+                        <span className="badge" style={{ padding: '0.1rem 0.4rem', fontSize: '0.68rem', background: 'rgba(56, 149, 255, 0.15)', color: 'var(--accent-primary)' }}>
+                          ● İş Birliği
+                        </span>
+                      )}
+                      {item.collaboration_status === 'busy' && (
+                        <span className="badge" style={{ padding: '0.1rem 0.4rem', fontSize: '0.68rem', background: 'rgba(239, 68, 68, 0.15)', color: 'var(--danger)' }}>
+                          ● Yoğun
+                        </span>
+                      )}
+                    </div>
                   ) : (
                     <span className="badge badge-unclaimed" style={{ fontSize: '0.7rem' }}>Sahiplenilmeyi Bekliyor</span>
                   )}

@@ -439,7 +439,7 @@ app.get('/api/auth/me', authMiddleware, (req, res) => {
 
 // Update Profile & Research Areas (Kullanıcı Profil ve Araştırma Alanı Düzenleme)
 app.put('/api/auth/profile', authMiddleware, (req, res) => {
-  const { title, bio, photo_url, avesis_profile_url, faculty_id, department_id, researchAreaIds } = req.body;
+  const { title, bio, photo_url, avesis_profile_url, faculty_id, department_id, researchAreaIds, collaborationStatus } = req.body;
 
   db.prepare(`
     UPDATE users SET
@@ -449,6 +449,7 @@ app.put('/api/auth/profile', authMiddleware, (req, res) => {
       avesis_profile_url = COALESCE(?, avesis_profile_url),
       faculty_id = COALESCE(?, faculty_id),
       department_id = COALESCE(?, department_id),
+      collaboration_status = COALESCE(?, collaboration_status),
       has_research_fields = ?
     WHERE id = ?
   `).run(
@@ -458,6 +459,7 @@ app.put('/api/auth/profile', authMiddleware, (req, res) => {
     avesis_profile_url !== undefined ? avesis_profile_url : null,
     faculty_id !== undefined ? faculty_id : null,
     department_id !== undefined ? department_id : null,
+    collaborationStatus !== undefined ? collaborationStatus : null,
     Array.isArray(researchAreaIds) && researchAreaIds.length > 0 ? 1 : 1,
     req.user.id
   );

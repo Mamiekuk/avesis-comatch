@@ -182,7 +182,7 @@ export default function ProjectDetailPage({ id, onNavigate }) {
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
           {/* Objectives */}
           <div className="card-glass">
-            <h3 style={{ fontSize: '1.4rem', marginBottom: '1rem' }}>Proje Hedefleri & İş Paketi</h3>
+            <h3 style={{ fontSize: '1.4rem', marginBottom: '1rem' }}>Başvurulan Proje</h3>
             <pre style={{
               fontFamily: 'var(--font-body)',
               color: 'var(--text-secondary)',

@@ -52,6 +52,10 @@ try {
     try {
       db.prepare("ALTER TABLE users ADD COLUMN last_active_at DATETIME").run();
     } catch (e) {}
+
+    try {
+      db.prepare("ALTER TABLE users ADD COLUMN collaboration_status TEXT DEFAULT 'open'").run();
+    } catch (e) {}
   }
 } catch (error) {
   console.error("❌ VERİTABANI BAŞLATILIRKEN HATA OLUŞTU:");

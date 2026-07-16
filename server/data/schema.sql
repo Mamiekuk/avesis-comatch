@@ -31,6 +31,8 @@ CREATE TABLE IF NOT EXISTS users (
     is_claimed INTEGER DEFAULT 0,
     is_active INTEGER DEFAULT 0,
     has_research_fields INTEGER DEFAULT 1,
+    collaboration_status TEXT DEFAULT 'open',
+    last_active_at DATETIME,
     pub_total INTEGER DEFAULT 0,
     pub_wos INTEGER DEFAULT 0,
     pub_scopus INTEGER DEFAULT 0,

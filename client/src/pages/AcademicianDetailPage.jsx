@@ -117,10 +117,27 @@ export default function AcademicianDetailPage({ id, onNavigate, onOpenClaimModal
               </h1>
 
               {academician.is_claimed ? (
-                <span className="badge badge-claimed">
-                  <CheckCircle2 size={14} />
-                  Doğrulanmış Aktif Profil
-                </span>
+                <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', alignItems: 'center' }}>
+                  <span className="badge badge-claimed" style={{ margin: 0 }}>
+                    <CheckCircle2 size={14} />
+                    Doğrulanmış Aktif Profil
+                  </span>
+                  {(!academician.collaboration_status || academician.collaboration_status === 'open') && (
+                    <span className="badge" style={{ margin: 0, background: 'rgba(16, 185, 129, 0.15)', color: 'var(--success)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                      ● Projelere Açık
+                    </span>
+                  )}
+                  {academician.collaboration_status === 'looking' && (
+                    <span className="badge" style={{ margin: 0, background: 'rgba(56, 149, 255, 0.15)', color: 'var(--accent-primary)', border: '1px solid rgba(56, 149, 255, 0.3)' }}>
+                      ● İş Birliğine Hazır
+                    </span>
+                  )}
+                  {academician.collaboration_status === 'busy' && (
+                    <span className="badge" style={{ margin: 0, background: 'rgba(239, 68, 68, 0.15)', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                      ● Yoğun (Projeye Kapalı)
+                    </span>
+                  )}
+                </div>
               ) : (
                 <span className="badge badge-unclaimed">
                   AVESİS Arşiv Profili — Henüz Sahiplenilmedi

@@ -121,7 +121,7 @@ export default function CreateProjectPage({ onNavigate }) {
           {/* Objectives */}
           <div style={{ marginBottom: '1.75rem' }}>
             <label style={{ display: 'block', fontWeight: 600, fontSize: '0.92rem', marginBottom: '0.4rem' }}>
-              İş Paketi ve Hedefler
+              Başvurulan Proje
             </label>
             <textarea
               rows={3}

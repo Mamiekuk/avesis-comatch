@@ -15,6 +15,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
   const [editPhoto, setEditPhoto] = useState('');
   const [editAvesisUrl, setEditAvesisUrl] = useState('');
   const [editTags, setEditTags] = useState([]);
+  const [editCollaborationStatus, setEditCollaborationStatus] = useState('open');
   const [allTags, setAllTags] = useState([]);
   const [tagSearchInput, setTagSearchInput] = useState('');
   const [saveLoading, setSaveLoading] = useState(false);
@@ -108,6 +109,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
       setEditPhoto(user.photo_url || '');
       setEditAvesisUrl(user.avesis_profile_url || '');
       setEditTags(user.research_areas || []);
+      setEditCollaborationStatus(user.collaboration_status || 'open');
     }
   }, [user]);
 
@@ -174,7 +176,8 @@ export default function DashboardPage({ onNavigate, routeParam }) {
         bio: editBio,
         photo_url: editPhoto,
         avesis_profile_url: editAvesisUrl,
-        researchAreaIds: editTags.map(t => t.id)
+        researchAreaIds: editTags.map(t => t.id),
+        collaborationStatus: editCollaborationStatus
       }, token);
 
       if (res.user) {
@@ -501,9 +504,26 @@ export default function DashboardPage({ onNavigate, routeParam }) {
       <div className="card-glass" style={{ marginBottom: '2.5rem', padding: '2rem' }}>
         <div style={{ display: 'flex', flexWrap: 'wrap', justifyContent: 'space-between', alignItems: 'center', gap: '1.5rem' }}>
           <div>
-            <span className="badge badge-claimed" style={{ marginBottom: '0.6rem' }}>
-              Aktif Akademisyen Hesabı
-            </span>
+            <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap', marginBottom: '0.6rem' }}>
+              <span className="badge badge-claimed" style={{ margin: 0 }}>
+                Aktif Akademisyen Hesabı
+              </span>
+              {(!user.collaboration_status || user.collaboration_status === 'open') && (
+                <span className="badge" style={{ margin: 0, background: 'rgba(16, 185, 129, 0.15)', color: 'var(--success)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
+                  ● Projelere Açık
+                </span>
+              )}
+              {user.collaboration_status === 'looking' && (
+                <span className="badge" style={{ margin: 0, background: 'rgba(56, 149, 255, 0.15)', color: 'var(--accent-primary)', border: '1px solid rgba(56, 149, 255, 0.3)' }}>
+                  ● İş Birliğine Hazır
+                </span>
+              )}
+              {user.collaboration_status === 'busy' && (
+                <span className="badge" style={{ margin: 0, background: 'rgba(239, 68, 68, 0.15)', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
+                  ● Yoğun (Projeye Kapalı)
+                </span>
+              )}
+            </div>
             <h1 style={{ fontSize: '2rem', marginBottom: '0.35rem' }}>
               {user.title} {user.full_name}
             </h1>
@@ -596,22 +616,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
           )}
         </button>
 
-        <button
-          onClick={() => setActiveTab('notifications')}
-          style={{
-            padding: '0.85rem 1.5rem',
-            fontWeight: 700,
-            borderBottom: activeTab === 'notifications' ? '3px solid var(--accent-primary)' : '3px solid transparent',
-            color: activeTab === 'notifications' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-            marginBottom: '-2px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
-        >
-          <Bell size={18} />
-          <span>Bildirimlerim ({notifications.length})</span>
-        </button>
+
 
         <button
           onClick={() => setActiveTab('chat')}
@@ -671,22 +676,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
           )}
         </button>
 
-        <button
-          onClick={() => setActiveTab('edit-profile')}
-          style={{
-            padding: '0.85rem 1.5rem',
-            fontWeight: 700,
-            borderBottom: activeTab === 'edit-profile' ? '3px solid var(--accent-primary)' : '3px solid transparent',
-            color: activeTab === 'edit-profile' ? 'var(--accent-primary)' : 'var(--text-secondary)',
-            marginBottom: '-2px',
-            display: 'flex',
-            alignItems: 'center',
-            gap: '0.5rem'
-          }}
-        >
-          <Edit3 size={18} />
-          <span>Uzmanlık Alanları & Profil Ayarları</span>
-        </button>
+
       </div>
 
       {/* TAB 1: PROJECTS */}
@@ -1435,6 +1425,21 @@ export default function DashboardPage({ onNavigate, routeParam }) {
 
             <div style={{ marginBottom: '1.5rem' }}>
               <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.4rem' }}>
+                İş Birliği & Projelere Katılım Durumu
+              </label>
+              <select
+                className="form-select"
+                value={editCollaborationStatus}
+                onChange={e => setEditCollaborationStatus(e.target.value)}
+              >
+                <option value="open">Projelere Açık (Yeni teklif ve davetleri kabul ediyor)</option>
+                <option value="looking">İş Birliğine Hazır (Aktif proje ortağı arıyor)</option>
+                <option value="busy">Yoğun (Yeni projelere kapalı)</option>
+              </select>
+            </div>
+
+            <div style={{ marginBottom: '1.5rem' }}>
+              <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.4rem' }}>
                 Profil Fotoğrafı URL (Opsiyonel)
               </label>
               <input
@@ -1808,7 +1813,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
               {/* Objectives */}
               <div style={{ marginBottom: '1.25rem' }}>
                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.88rem', marginBottom: '0.4rem' }}>
-                  İş Paketi ve Hedefler
+                  Başvurulan Proje
                 </label>
                 <textarea
                   rows={3}
