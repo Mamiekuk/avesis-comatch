@@ -181,17 +181,19 @@ export default function ProjectDetailPage({ id, onNavigate }) {
       {activeTab === 'info' ? (
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: '2rem' }}>
           {/* Objectives */}
-          <div className="card-glass">
-            <h3 style={{ fontSize: '1.4rem', marginBottom: '1rem' }}>Başvurulan Proje</h3>
-            <pre style={{
-              fontFamily: 'var(--font-body)',
-              color: 'var(--text-secondary)',
-              whiteSpace: 'pre-wrap',
-              lineHeight: 1.7,
-              fontSize: '0.95rem'
+          <div className="card-glass" style={{ display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+            <h3 style={{ fontSize: '1.4rem', marginBottom: '1rem' }}>Başvurulan Proje Türü</h3>
+            <span className="badge" style={{
+              alignSelf: 'flex-start',
+              fontSize: '1.1rem',
+              padding: '0.6rem 1.25rem',
+              background: 'rgba(56, 149, 255, 0.15)',
+              color: 'var(--accent-primary)',
+              border: '1px solid rgba(56, 149, 255, 0.3)',
+              fontWeight: 700
             }}>
-              {project.objectives || 'Proje hedefleri yakında güncellenecektir.'}
-            </pre>
+              {project.objectives || 'GAP'}
+            </span>
           </div>
 
           {/* Members */}

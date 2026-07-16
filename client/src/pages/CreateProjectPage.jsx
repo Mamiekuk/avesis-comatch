@@ -7,7 +7,7 @@ export default function CreateProjectPage({ onNavigate }) {
   const { token, user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [objectives, setObjectives] = useState('');
+  const [objectives, setObjectives] = useState('GAP');
   const [teamSize, setTeamSize] = useState(4);
   const [duration, setDuration] = useState('24 Ay');
   const [budget, setBudget] = useState('');
@@ -118,18 +118,41 @@ export default function CreateProjectPage({ onNavigate }) {
             />
           </div>
 
-          {/* Objectives */}
+          {/* Objectives (Başvurulan Proje Selection) */}
           <div style={{ marginBottom: '1.75rem' }}>
-            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.92rem', marginBottom: '0.4rem' }}>
-              Başvurulan Proje
+            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.92rem', marginBottom: '0.6rem' }}>
+              Başvurulan Proje Türü
             </label>
-            <textarea
-              rows={3}
-              className="form-textarea"
-              placeholder="1. Sayısal modelleme ve simülasyon&#10;2. Malzeme sentezi ve karakterizasyon..."
-              value={objectives}
-              onChange={e => setObjectives(e.target.value)}
-            />
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
+              {['GAP', 'TÜBİTAK', 'Uluslararası', 'Diğer Projeler'].map(opt => (
+                <label 
+                  key={opt}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.5rem',
+                    background: 'var(--bg-secondary)',
+                    border: objectives === opt ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                    padding: '0.65rem 1.25rem',
+                    borderRadius: '8px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    color: objectives === opt ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                    transition: 'all 0.2s'
+                  }}
+                >
+                  <input
+                    type="radio"
+                    name="projectType"
+                    value={opt}
+                    checked={objectives === opt}
+                    onChange={e => setObjectives(e.target.value)}
+                    style={{ accentColor: 'var(--accent-primary)' }}
+                  />
+                  <span>{opt}</span>
+                </label>
+              ))}
+            </div>
           </div>
 
           {/* RESEARCH AREA TAG PICKER */}

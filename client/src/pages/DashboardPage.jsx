@@ -1810,17 +1810,42 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                 />
               </div>
 
-              {/* Objectives */}
+              {/* Objectives (Başvurulan Proje Selection) */}
               <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.88rem', marginBottom: '0.4rem' }}>
-                  Başvurulan Proje
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.88rem', marginBottom: '0.5rem' }}>
+                  Başvurulan Proje Türü
                 </label>
-                <textarea
-                  rows={3}
-                  className="form-textarea"
-                  value={editProjObjectives}
-                  onChange={e => setEditProjObjectives(e.target.value)}
-                />
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+                  {['GAP', 'TÜBİTAK', 'Uluslararası', 'Diğer Projeler'].map(opt => (
+                    <label 
+                      key={opt}
+                      style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        background: 'var(--bg-secondary)',
+                        border: editProjObjectives === opt ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                        padding: '0.5rem 1rem',
+                        borderRadius: '6px',
+                        cursor: 'pointer',
+                        fontWeight: 600,
+                        fontSize: '0.88rem',
+                        color: editProjObjectives === opt ? 'var(--accent-primary)' : 'var(--text-secondary)',
+                        transition: 'all 0.2s'
+                      }}
+                    >
+                      <input
+                        type="radio"
+                        name="editProjectType"
+                        value={opt}
+                        checked={editProjObjectives === opt}
+                        onChange={e => setEditProjObjectives(e.target.value)}
+                        style={{ accentColor: 'var(--accent-primary)' }}
+                      />
+                      <span>{opt}</span>
+                    </label>
+                  ))}
+                </div>
               </div>
 
               {/* RESEARCH AREA TAG PICKER */}
