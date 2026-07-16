@@ -27,9 +27,9 @@ function init() {
         auth: process.env.SMTP_USER
             ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASS }
             : undefined,
-        connectionTimeout: 3000,
-        greetingTimeout: 3000,
-        socketTimeout: 3000,
+        connectionTimeout: 8000,
+        greetingTimeout: 8000,
+        socketTimeout: 8000,
     })
     configured = true
     return true
@@ -63,19 +63,42 @@ async function sendMail({ to, subject, text, html }) {
             })
             const data = await res.json()
             if (!res.ok || data.error || data.statusCode) {
+                // Eğer Resend Sandbox (onboarding@resend.dev) kısıtlamasından dolayı (403) sadece hesap sahibine atabiliyorsa,
+                // test akışının bozulmaması ve simülasyona düşmemesi için e-postayı otomatik olarak kayıtlı alıcıya yönlendir:
+                if (data.statusCode === 403 || (data.message && data.message.includes("only send testing emails to your own email address"))) {
+                    console.log(`Resend Sandbox Alıcı Engeli (${to}): E-posta otomatik olarak test sahibine (ali.ban@outlook.com.tr) yönlendiriliyor...`)
+                    const fallbackRes = await fetch("https://api.resend.com/emails", {
+                        method: "POST",
+                        headers: {
+                            "Authorization": `Bearer ${resendApiKey}`,
+                            "Content-Type": "application/json"
+                        },
+                        body: JSON.stringify({
+                            from: process.env.MAIL_FROM || "AVESİS CoMatch <onboarding@resend.dev>",
+                            to: ["ali.ban@outlook.com.tr"],
+                            subject: `[TEST - Asıl Alıcı: ${Array.isArray(to) ? to.join(', ') : to}] ${subject}`,
+                            text: `[NOT: Bu e-posta Resend test modunda olduğu için otomatik olarak ali.ban@outlook.com.tr adresine yönlendirilmiştir. Asıl hedeflenen alıcı: ${Array.isArray(to) ? to.join(', ') : to}]\n\n` + text,
+                            html: `<div style="background:#fff3cd; color:#856404; padding:10px; margin-bottom:15px; border-radius:5px; font-size:13px; border:1px solid #ffeeba;"><strong>⚠️ RESEND TEST YÖNLENDİRMESİ:</strong> Alan adı doğrulaması yapılana kadar bu e-posta otomatik olarak Resend hesap sahibinize (<strong>ali.ban@outlook.com.tr</strong>) yönlendirilmiştir. Asıl hedeflenen alıcı: <strong>${Array.isArray(to) ? to.join(', ') : to}</strong></div>` + html
+                        })
+                    })
+                    const fallbackData = await fallbackRes.json()
+                    if (fallbackRes.ok && !fallbackData.error && !fallbackData.statusCode) {
+                        return true
+                    }
+                }
                 console.error("Resend API failed:", data)
                 return false
             }
             return true
         }
 
-        // SMTP (transporter) kullanılıyorsa, takılmayı kesinlikle önlemek için 3 saniye Promise.race zaman aşımı
+        // SMTP (transporter) kullanılıyorsa, takılmayı kesinlikle önlemek için 8 saniye Promise.race zaman aşımı
         const sendPromise = transporter.sendMail({
             from: process.env.MAIL_FROM || "AVESİS CoMatch <no-reply@avesis-comatch.com>",
             to, subject, text, html,
         })
         const timeoutPromise = new Promise((_, reject) =>
-            setTimeout(() => reject(new Error("SMTP bağlantı zaman aşımı (3 saniye - Ağ port engeli olabilir)")), 3000)
+            setTimeout(() => reject(new Error("SMTP bağlantı zaman aşımı (8 saniye - Ağ port engeli olabilir)")), 8000)
         )
         await Promise.race([sendPromise, timeoutPromise])
         return true
