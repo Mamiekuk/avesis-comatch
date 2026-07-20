@@ -18,7 +18,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
   const [tagSearchInput, setTagSearchInput] = useState('');
   const [selectedMetricCluster, setSelectedMetricCluster] = useState('');
   const [selectedTagCluster, setSelectedTagCluster] = useState('');
-  const [sort, setSort] = useState('claimed_first');
+  const [sort, setSort] = useState('richness_desc');
 
   // View Mode & Pagination
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
@@ -221,6 +221,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
               value={sort}
               onChange={e => setSort(e.target.value)}
             >
+              <option value="richness_desc">Bilgi Doluluğu & Etiket Zenginliği</option>
               <option value="claimed_first">Önce Aktif Profiller & Harf Sırası</option>
               <option value="name_asc">Ad Soyad (A - Z)</option>
               <option value="joined_desc">Kayıt Numarasına Göre</option>

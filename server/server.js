@@ -559,7 +559,7 @@ app.get('/api/academicians', (req, res) => {
       claimed_only,
       metric_cluster,
       tag_cluster,
-      sort = 'claimed_first',
+      sort = 'richness_desc',
       page = 1,
       limit = 24
     } = req.query;
@@ -621,10 +621,11 @@ app.get('/api/academicians', (req, res) => {
 
     const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
 
-    let orderBySQL = 'ORDER BY u.is_claimed DESC, u.id ASC';
+    let orderBySQL = 'ORDER BY u.has_research_fields DESC, u.is_claimed DESC, (SELECT COUNT(*) FROM user_research_areas WHERE user_id = u.id) DESC, (SELECT COUNT(*) FROM project_members WHERE user_id = u.id) DESC, u.full_name ASC';
     if (sort === 'name_asc') orderBySQL = 'ORDER BY u.full_name ASC';
     else if (sort === 'joined_desc') orderBySQL = 'ORDER BY u.id DESC';
     else if (sort === 'claimed_first') orderBySQL = 'ORDER BY u.is_claimed DESC, u.full_name ASC';
+    else if (sort === 'richness_desc') orderBySQL = 'ORDER BY u.has_research_fields DESC, u.is_claimed DESC, (SELECT COUNT(*) FROM user_research_areas WHERE user_id = u.id) DESC, (SELECT COUNT(*) FROM project_members WHERE user_id = u.id) DESC, u.full_name ASC';
 
     // Count query
     const countRow = db.prepare(`SELECT COUNT(*) as count FROM users u ${whereSQL}`).get(...params);
@@ -913,6 +914,10 @@ app.get('/api/projects/:id/match', authMiddleware, (req, res) => {
       const candClusterInfo = kmeansEngine.getUserClusterInfo(cand.id) || {};
       const candTagCluster = candClusterInfo.tag_cluster || null;
       const candMetricCluster = candClusterInfo.metric_cluster || null;
+
+      if (requestedClusterId !== null && (!candTagCluster || candTagCluster.id !== requestedClusterId)) {
+        continue;
+      }
 
       let commonTags = [];
       if (tagIds.length > 0) {
