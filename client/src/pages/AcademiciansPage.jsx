@@ -93,10 +93,10 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
       }}>
         <div>
           <h1 style={{ fontSize: '2.4rem', marginBottom: '0.4rem' }}>
-            Kayıtlı Akademisyenler <span style={{ color: 'var(--accent-primary)', fontSize: '1.5rem' }}>({pagination.total.toLocaleString('tr-TR')} Kayıt)</span>
+            Kayıtlı Akademisyenler <span style={{ color: 'var(--accent-primary)', fontSize: '1.4rem' }}>({pagination.total.toLocaleString('tr-TR')})</span>
           </h1>
-          <p style={{ color: 'var(--text-secondary)' }}>
-            Proje oluşturma zorunluluğu olmadan tüm akademisyenleri araştırma alanlarına ve fakültelerine göre keşfedin.
+          <p style={{ color: 'var(--text-secondary)', margin: 0 }}>
+            RTEÜ akademisyenlerini, araştırma alanlarını ve projelerini keşfedin.
           </p>
         </div>
 
@@ -221,9 +221,9 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
               value={sort}
               onChange={e => setSort(e.target.value)}
             >
-              <option value="name_asc">Standart Ad Soyad (A - Z)</option>
-              <option value="richness_desc">Bilgi Doluluğu & Etiket Zenginliği</option>
-              <option value="claimed_first">Önce Aktif Profiller & Harf Sırası</option>
+              <option value="name_asc">Ad Soyad (A - Z)</option>
+              <option value="richness_desc">Profil Zenginliği (Dolu → Boş)</option>
+              <option value="claimed_first">Önce Aktif Profiller</option>
               <option value="joined_desc">Kayıt Numarasına Göre</option>
             </select>
           </div>
@@ -231,7 +231,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
           {/* K-Means Metric Cluster Filter */}
           <div>
             <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#e879f9', marginBottom: '0.4rem' }}>
-              ⚡ K-Means Yapay Zeka Profili
+              ⚡ Yapay Zeka Profili
             </label>
             <select
               className="form-select"
@@ -249,7 +249,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
           {/* K-Means Tag Cluster Filter */}
           <div>
             <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#c084fc', marginBottom: '0.4rem' }}>
-              🌐 Rize Akademik Yaylası (Küme)
+              🌐 Rize Akademik Yaylası
             </label>
             <select
               className="form-select"
@@ -268,12 +268,12 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
         {/* Research Area Autocomplete Tag Picker */}
         <div style={{ position: 'relative', marginBottom: '1rem' }}>
           <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
-            Araştırma Alanı Etiketine Göre Filtrele (~1.400 Etiket Autocomplete)
+            Araştırma Alanına Göre Filtrele
           </label>
           <input
             type="text"
             className="form-input"
-            placeholder="Etiket adı yazmaya başlayın (Örn: İnşaat, Yapay Zeka, Periodontoloji, Mekanik...)"
+            placeholder="Etiket adı yazın (Örn: Yapay Zeka, İnşaat, Tıp...)"
             value={tagSearchInput}
             onChange={e => setTagSearchInput(e.target.value)}
           />
@@ -409,13 +409,13 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
                     </div>
                   ) : (
                     <span className="badge badge-unclaimed">
-                      AVESİS Arşivi (Sahiplenilmedi)
+                      Sahiplenilmedi
                     </span>
                   )}
 
                   {item.has_research_fields === 0 && (
                     <span className="badge" style={{ background: 'rgba(239,68,68,0.12)', color: 'var(--danger)' }}>
-                      Alan Belirtilmemiş
+                      Alan Yok
                     </span>
                   )}
                 </div>
@@ -537,7 +537,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
                       )}
                     </div>
                   ) : (
-                    <span className="badge badge-unclaimed" style={{ fontSize: '0.7rem' }}>Sahiplenilmeyi Bekliyor</span>
+                    <span className="badge badge-unclaimed" style={{ fontSize: '0.7rem' }}>Sahiplenilmedi</span>
                   )}
                   {item.metric_cluster && (
                     <span style={{ fontSize: '0.72rem', background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.18), rgba(236, 72, 153, 0.18))', color: '#e879f9', padding: '0.15rem 0.55rem', borderRadius: '999px', border: '1px solid rgba(236, 72, 153, 0.35)', fontWeight: 600 }}>

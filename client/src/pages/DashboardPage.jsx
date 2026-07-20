@@ -605,14 +605,14 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                 <UserCheck size={22} />
               </div>
               <div>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>K-Means Yapay Zeka & Rize Yöresi Akademik Yayla Motoru</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>⚡ Yapay Zeka Öneri Motoru</span>
                 <h3 style={{ fontSize: '1.4rem', margin: 0, color: 'var(--text-primary)' }}>
-                  Akademik Yaylanızdaki Benzer Hocalar: <span style={{ color: '#c084fc' }}>{(data?.user || user).tag_cluster.name}</span>
+                  Yayla Komşularınız: <span style={{ color: '#c084fc' }}>{(data?.user || user).tag_cluster.name}</span>
                 </h3>
               </div>
             </div>
             <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-              Araştırma alanı vektör benzerliğine göre aynı Akademik Yaylada (Rize Yöresi Kümesinde) yer alan en yakın meslektaşlarınız
+              Vektör benzerliğine göre aynı yayladaki en yakın meslektaşlarınız.
             </span>
           </div>
 
@@ -671,7 +671,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: '0.55rem', marginTop: 'auto' }}>
                     <span style={{ fontSize: '0.76rem', color: '#c084fc', fontWeight: 600 }}>
-                      ⚡ %{nb.similarity_score} Yayla Benzerliği
+                      ⚡ %{nb.similarity_score} Benzerlik
                     </span>
                     <span style={{ fontSize: '0.73rem', background: 'rgba(168, 85, 247, 0.12)', color: '#e879f9', padding: '0.18rem 0.5rem', borderRadius: '999px' }}>
                       {nb.metric_badge}

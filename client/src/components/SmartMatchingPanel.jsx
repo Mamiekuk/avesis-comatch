@@ -82,24 +82,24 @@ export default function SmartMatchingPanel({ projectId, onNavigateAcademician })
           </div>
           <div>
             <div style={{ fontWeight: 700, fontSize: '1.1rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem', flexWrap: 'wrap' }}>
-              <span>Akıllı Eşleştirme & K-Means Yapay Zeka Motoru</span>
+              <span>⚡ Yapay Zeka Akıllı Eşleştirme</span>
               <span style={{ fontSize: '0.72rem', background: 'rgba(168, 85, 247, 0.2)', color: '#e879f9', padding: '0.15rem 0.6rem', borderRadius: '999px', border: '1px solid rgba(236, 72, 153, 0.3)' }}>
-                Denetimsiz Öğrenme + Etiket Vektör Benzerliği
+                Vektör Benzerliği
               </span>
             </div>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-              Projenizin etiketleri ve K-Means disiplinlerarası Akademik Yaylanız (Rize Yöresi) temel alınarak 1.233 akademisyen analiz edilmiştir.
+              Proje etiketleriniz ve Rize Akademik Yaylanız baz alınarak 1.233 akademisyen tarandı.
             </div>
             {data.owner_cluster && (
               <div style={{ fontSize: '0.82rem', color: '#c084fc', marginTop: '0.4rem', fontWeight: 600 }}>
-                🌐 Proje Yürütücüsünün Akademik Yaylası: <span style={{ color: 'var(--text-primary)' }}>{data.owner_cluster.name}</span>
+                🌐 Yürütücü Yaylası: <span style={{ color: 'var(--text-primary)' }}>{data.owner_cluster.name}</span>
               </div>
             )}
 
             {/* K-Means Cluster Selector Dropdown */}
             <div style={{ marginTop: '0.85rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.6rem' }}>
               <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                🎯 Hedef Akademik Yayla (Disiplin Filtresi):
+                🎯 Hedef Yayla:
               </span>
               <select
                 value={selectedClusterId}
@@ -116,10 +116,10 @@ export default function SmartMatchingPanel({ projectId, onNavigateAcademician })
                   outline: 'none'
                 }}
               >
-                <option value="ALL">🌟 Tüm Akademik Yaylalar (Ortak Etiketlere Göre)</option>
+                <option value="ALL">🌟 Tüm Akademik Yaylalar</option>
                 {data.all_clusters && data.all_clusters.map(c => (
                   <option key={c.id} value={String(c.id)}>
-                    🌐 {c.name} ({c.member_count} Hoca) {data.owner_cluster && data.owner_cluster.id === c.id ? ' [Proje Yürütücüsünün Yaylası]' : ''}
+                    🌐 {c.name} ({c.member_count} Hoca) {data.owner_cluster && data.owner_cluster.id === c.id ? ' [Yürütücü Yaylası]' : ''}
                   </option>
                 ))}
               </select>
