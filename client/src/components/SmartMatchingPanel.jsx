@@ -88,18 +88,18 @@ export default function SmartMatchingPanel({ projectId, onNavigateAcademician })
               </span>
             </div>
             <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginTop: '0.2rem' }}>
-              Projenizin etiketleri ve K-Means disiplinlerarası akademik mahalleniz temel alınarak 1.233 akademisyen analiz edilmiştir.
+              Projenizin etiketleri ve K-Means disiplinlerarası Akademik Yaylanız (Rize Yöresi) temel alınarak 1.233 akademisyen analiz edilmiştir.
             </div>
             {data.owner_cluster && (
               <div style={{ fontSize: '0.82rem', color: '#c084fc', marginTop: '0.4rem', fontWeight: 600 }}>
-                🌐 Proje Yürütücüsünün K-Means Kümesi: <span style={{ color: 'var(--text-primary)' }}>{data.owner_cluster.name}</span>
+                🌐 Proje Yürütücüsünün Akademik Yaylası: <span style={{ color: 'var(--text-primary)' }}>{data.owner_cluster.name}</span>
               </div>
             )}
 
             {/* K-Means Cluster Selector Dropdown */}
             <div style={{ marginTop: '0.85rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.6rem' }}>
               <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
-                🎯 Hedef K-Means Kümesi (Alan Filtresi):
+                🎯 Hedef Akademik Yayla (Disiplin Filtresi):
               </span>
               <select
                 value={selectedClusterId}
@@ -116,10 +116,10 @@ export default function SmartMatchingPanel({ projectId, onNavigateAcademician })
                   outline: 'none'
                 }}
               >
-                <option value="ALL">🌟 Tüm K-Means Akademik Kümeleri (Ortak Etiketlere Göre)</option>
+                <option value="ALL">🌟 Tüm Akademik Yaylalar (Ortak Etiketlere Göre)</option>
                 {data.all_clusters && data.all_clusters.map(c => (
                   <option key={c.id} value={String(c.id)}>
-                    🌐 {c.name} ({c.member_count} Hoca) {data.owner_cluster && data.owner_cluster.id === c.id ? ' [Proje Yürütücüsünün Kümesi]' : ''}
+                    🌐 {c.name} ({c.member_count} Hoca) {data.owner_cluster && data.owner_cluster.id === c.id ? ' [Proje Yürütücüsünün Yaylası]' : ''}
                   </option>
                 ))}
               </select>

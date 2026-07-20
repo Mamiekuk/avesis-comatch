@@ -605,20 +605,20 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                 <UserCheck size={22} />
               </div>
               <div>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>K-Means Kümeleme & Akıllı Öneri Motoru</span>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>K-Means Yapay Zeka & Rize Yöresi Akademik Yayla Motoru</span>
                 <h3 style={{ fontSize: '1.4rem', margin: 0, color: 'var(--text-primary)' }}>
-                  Akademik Mahallenizdeki Benzer Hocalar: <span style={{ color: '#c084fc' }}>{(data?.user || user).tag_cluster.name}</span>
+                  Akademik Yaylanızdaki Benzer Hocalar: <span style={{ color: '#c084fc' }}>{(data?.user || user).tag_cluster.name}</span>
                 </h3>
               </div>
             </div>
             <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-              Araştırma alanı vektör benzerliğine göre hesaplanan en yakın meslektaşlarınız
+              Araştırma alanı vektör benzerliğine göre aynı Akademik Yaylada (Rize Yöresi Kümesinde) yer alan en yakın meslektaşlarınız
             </span>
           </div>
 
           {neighbors.length === 0 ? (
             <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic', margin: 0 }}>
-              Araştırma alanlarınıza en yakın benzer akademisyenler hesaplanıyor...
+              Araştırma alanlarına en yakın benzer akademisyenler hesaplanıyor...
             </p>
           ) : (
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
@@ -661,7 +661,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                         </span>
                       </div>
                     </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.3rem', marginBottom: '0.75rem' }}>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.7rem' }}>
                       {(nb.research_areas || []).slice(0, 3).map(ra => (
                         <span key={ra.id} style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.05)', padding: '0.18rem 0.45rem', borderRadius: '4px', color: 'var(--text-secondary)' }}>
                           {ra.label}
@@ -671,7 +671,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: '0.55rem', marginTop: 'auto' }}>
                     <span style={{ fontSize: '0.76rem', color: '#c084fc', fontWeight: 600 }}>
-                      ⚡ %{nb.similarity_score} Benzerlik
+                      ⚡ %{nb.similarity_score} Yayla Benzerliği
                     </span>
                     <span style={{ fontSize: '0.73rem', background: 'rgba(168, 85, 247, 0.12)', color: '#e879f9', padding: '0.18rem 0.5rem', borderRadius: '999px' }}>
                       {nb.metric_badge}
