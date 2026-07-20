@@ -193,8 +193,29 @@ function clusterUsersByTags(users, k) {
       }
     }
     tagScores.sort((a, b) => b.score - a.score);
-    const topTags = tagScores.slice(0, 4).map(t => t.label);
     
+    // Etiket isimlerindeki tekrarları ve birbirini kapsayan eşanlamlıları eleyelim
+    const uniqueTopTags = [];
+    for (const item of tagScores) {
+      if (!item || !item.label) continue;
+      const clean = s => s.toLowerCase()
+        .replace(/\b(ve|veya|ile|bilimleri|bilimler|alanı|alanları|bölümü)\b/g, '')
+        .replace(/[^a-z0-9çğıöşü]/g, '')
+        .trim();
+      const isRedundant = uniqueTopTags.some(existing => {
+        const cA = clean(existing);
+        const cB = clean(item.label);
+        if (cA === cB) return true;
+        if (cA.length > 3 && cB.length > 3 && (cA.includes(cB) || cB.includes(cA))) return true;
+        return false;
+      });
+      if (!isRedundant) {
+        uniqueTopTags.push(item.label);
+      }
+      if (uniqueTopTags.length >= 4) break;
+    }
+
+    const topTags = uniqueTopTags.length > 0 ? uniqueTopTags : tagScores.slice(0, 4).map(t => t.label);
     let clusterName = topTags.slice(0, 2).join(' & ');
     if (!clusterName) clusterName = `Genel Araştırma Kümesi ${c + 1}`;
     else clusterName = `${clusterName} Kümesi`;
