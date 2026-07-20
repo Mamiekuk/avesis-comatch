@@ -923,7 +923,7 @@ app.get('/api/projects/:id/match', authMiddleware, (req, res) => {
 
       const isSameKMeansCluster = ownerTagClusterId !== null && candTagCluster && candTagCluster.id === ownerTagClusterId;
 
-      if (commonTags.length > 0 || isSameKMeansCluster) {
+      if (commonTags.length > 0) {
         // Get total research areas count of candidate for exact Cosine Vector Similarity (A . B / (|A| * |B|))
         const candTagsCountRow = db.prepare('SELECT COUNT(*) as count FROM user_research_areas WHERE user_id = ?').get(cand.id);
         const candTagsCount = candTagsCountRow ? candTagsCountRow.count : 0;
@@ -934,32 +934,25 @@ app.get('/api/projects/:id/match', authMiddleware, (req, res) => {
 
         const overlapRatio = projectTags.length > 0 ? (commonTags.length / projectTags.length) : 0;
 
-        // K-Means Cosine Vector Similarity & Centroid Proximity formula
+        // K-Means Cosine Vector Similarity & Overlap ratio formula (Mahalle/Küme bonusu tamamen kaldırıldı!)
+        const overlapScore = overlapRatio * 55; // up to 55% tied to direct tag intersection ratio
         const cosineScore = cosSim * 40; // up to 40% directly tied to Cosine Vector Similarity
-        const overlapScore = overlapRatio * 35; // up to 35% tied to direct tag intersection ratio
+        const claimedBonus = cand.is_claimed ? 5 : 0; // +5% active verified account
 
-        let kmeansClusterScore = 0;
-        if (isSameKMeansCluster && candTagCluster) {
-          // If in the exact same K-Means cluster, centroid proximity (1 - distance) contributes up to 25%
-          const centroidProximity = Math.max(0, Math.min(1, 1 - (candTagCluster.distance || 0.25)));
-          kmeansClusterScore = Math.round(centroidProximity * 25);
-        }
+        let score = Math.round(overlapScore + cosineScore + claimedBonus);
 
-        const claimedBonus = cand.is_claimed ? 10 : 0; // +10% active verified account
+        // Quality bounds based on actual tag overlaps
+        if (overlapRatio === 1) score = Math.max(score, 96);
+        else if (overlapRatio >= 0.5) score = Math.max(score, 65);
+        else score = Math.max(score, 35);
 
-        let score = Math.round(cosineScore + overlapScore + kmeansClusterScore + claimedBonus);
-
-        // K-Means guarantee bounds
-        if (overlapRatio === 1) score = Math.max(score, 97);
-        if (isSameKMeansCluster && score < 55) score = 55; // Same K-Means cluster minimum guarantee (%55)
-        if (commonTags.length > 0 && !isSameKMeansCluster && score < 35) score = 35; // At least %35 if sharing tags
         score = Math.min(score, 99);
 
         matches.push({
           academician: cand,
           match_score: score,
           cosine_similarity_pct: Math.round(cosSim * 100),
-          kmeans_cluster_bonus_pct: kmeansClusterScore,
+          kmeans_cluster_bonus_pct: 0,
           overlap_ratio_pct: Math.round(overlapRatio * 100),
           common_tags: commonTags,
           common_count: commonTags.length,

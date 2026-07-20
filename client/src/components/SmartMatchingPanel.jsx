@@ -105,8 +105,8 @@ export default function SmartMatchingPanel({ projectId, onNavigateAcademician })
                 display: 'flex',
                 flexDirection: 'column',
                 justifyContent: 'space-between',
-                border: m.is_same_cluster ? '1px solid rgba(168, 85, 247, 0.45)' : '1px solid var(--border-color)',
-                background: m.is_same_cluster ? 'linear-gradient(135deg, rgba(168, 85, 247, 0.04), var(--bg-primary))' : 'var(--bg-primary)'
+                border: '1px solid var(--border-color)',
+                background: 'var(--bg-primary)'
               }}
             >
               <div>
@@ -150,31 +150,12 @@ export default function SmartMatchingPanel({ projectId, onNavigateAcademician })
                   gap: '0.6rem',
                   alignItems: 'center'
                 }}>
-                  <span style={{ color: '#c084fc', fontWeight: 600 }}>⚡ K-Means Vektör Skoru: %{m.cosine_similarity_pct !== undefined ? m.cosine_similarity_pct : 0}</span>
-                  {m.kmeans_cluster_bonus_pct > 0 && (
-                    <span style={{ color: '#e879f9', fontWeight: 600 }}>● Mahalle Bonusu: +%{m.kmeans_cluster_bonus_pct}</span>
-                  )}
+                  <span style={{ color: '#c084fc', fontWeight: 600 }}>⚡ K-Means Kosinüs Benzerliği: %{m.cosine_similarity_pct !== undefined ? m.cosine_similarity_pct : 0}</span>
                   <span>● Etiket Kesişimi: %{m.overlap_ratio_pct !== undefined ? m.overlap_ratio_pct : 0}</span>
                 </div>
 
-                {/* K-Means Same Cluster & Metric Profile Badges */}
+                {/* Metric Profile & Cluster Badges */}
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.85rem' }}>
-                  {m.is_same_cluster && (
-                    <span style={{
-                      fontSize: '0.72rem',
-                      fontWeight: 700,
-                      background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.25), rgba(236, 72, 153, 0.25))',
-                      color: '#e879f9',
-                      padding: '0.2rem 0.6rem',
-                      borderRadius: '4px',
-                      border: '1px solid rgba(236, 72, 153, 0.4)',
-                      display: 'flex',
-                      alignItems: 'center',
-                      gap: '0.3rem'
-                    }}>
-                      ⚡ K-Means Mahalle Paydaşı (+%25 Bonusu)
-                    </span>
-                  )}
                   {m.metric_badge && (
                     <span style={{
                       fontSize: '0.72rem',
@@ -187,7 +168,7 @@ export default function SmartMatchingPanel({ projectId, onNavigateAcademician })
                       {m.metric_badge}
                     </span>
                   )}
-                  {m.tag_cluster_name && !m.is_same_cluster && (
+                  {m.tag_cluster_name && (
                     <span style={{
                       fontSize: '0.72rem',
                       background: 'rgba(255, 255, 255, 0.05)',
@@ -215,37 +196,23 @@ export default function SmartMatchingPanel({ projectId, onNavigateAcademician })
                 {/* Overlap Tags */}
                 <div style={{ marginBottom: '1.25rem' }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>
-                    {m.common_count > 0 ? `Ortak Araştırma Alanları (${m.common_count})` : `K-Means Vektör Benzerliği (${m.tag_cluster_name || 'Benzer Profil'})`}
+                    Ortak Araştırma Alanları ({m.common_count})
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
-                    {m.common_tags && m.common_tags.length > 0 ? (
-                      m.common_tags.map(t => (
-                        <span
-                          key={t.id}
-                          className="badge"
-                          style={{
-                            background: 'rgba(16, 185, 129, 0.15)',
-                            color: 'var(--success)',
-                            border: '1px solid rgba(16, 185, 129, 0.3)',
-                            fontSize: '0.75rem'
-                          }}
-                        >
-                          ✓ {t.label}
-                        </span>
-                      ))
-                    ) : (
+                    {m.common_tags && m.common_tags.map(t => (
                       <span
+                        key={t.id}
                         className="badge"
                         style={{
-                          background: 'rgba(168, 85, 247, 0.12)',
-                          color: '#c084fc',
-                          border: '1px solid rgba(168, 85, 247, 0.3)',
+                          background: 'rgba(16, 185, 129, 0.15)',
+                          color: 'var(--success)',
+                          border: '1px solid rgba(16, 185, 129, 0.3)',
                           fontSize: '0.75rem'
                         }}
                       >
-                        ⚡ Aynı K-Means Akademik Mahallesinde Yer Alıyor
+                        ✓ {t.label}
                       </span>
-                    )}
+                    ))}
                   </div>
                 </div>
               </div>
