@@ -1117,6 +1117,25 @@ app.get('/api/dashboard', authMiddleware, (req, res) => {
   try {
     const userId = req.user.id;
 
+    const userRow = db.prepare(`
+      SELECT u.*, f.name as faculty_name, d.name as department_name
+      FROM users u
+      LEFT JOIN faculties f ON f.id = u.faculty_id
+      LEFT JOIN departments d ON d.id = u.department_id
+      WHERE u.id = ?
+    `).get(userId);
+
+    const userObj = userRow ? {
+      ...userRow,
+      research_areas: db.prepare(`
+        SELECT ra.* FROM user_research_areas ura
+        JOIN research_areas ra ON ra.id = ura.research_area_id
+        WHERE ura.user_id = ?
+      `).all(userId),
+      tag_cluster: kmeansEngine.getUserClusterInfo(userId)?.tag_cluster || null,
+      metric_cluster: kmeansEngine.getUserClusterInfo(userId)?.metric_cluster || null
+    } : null;
+
     // My Created Projects
     const myProjects = db.prepare(`
       SELECT p.*,
@@ -1154,6 +1173,7 @@ app.get('/api/dashboard', authMiddleware, (req, res) => {
     `).all(userId);
 
     res.json({
+      user: userObj,
       myProjects,
       joinedProjects,
       incomingRequests,

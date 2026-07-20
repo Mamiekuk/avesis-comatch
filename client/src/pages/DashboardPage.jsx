@@ -68,8 +68,9 @@ export default function DashboardPage({ onNavigate, routeParam }) {
     fetchDashboard(token)
       .then(d => {
         setData(d);
-        if (d && d.user) {
-          fetchKMeansNeighbors(d.user.id).then(nRes => {
+        const targetUserId = (d && d.user && d.user.id) || (user && user.id);
+        if (targetUserId) {
+          fetchKMeansNeighbors(targetUserId).then(nRes => {
             if (nRes && nRes.neighbors) setNeighbors(nRes.neighbors);
           }).catch(() => {});
         }
@@ -108,6 +109,15 @@ export default function DashboardPage({ onNavigate, routeParam }) {
       .then(d => setAllTags(d.research_areas || []))
       .catch(() => {});
   }, [token]);
+
+  useEffect(() => {
+    const targetUserId = (data && data.user && data.user.id) || (user && user.id);
+    if (targetUserId) {
+      fetchKMeansNeighbors(targetUserId).then(nRes => {
+        if (nRes && nRes.neighbors) setNeighbors(nRes.neighbors);
+      }).catch(() => {});
+    }
+  }, [user?.id, data?.user?.id]);
 
   // Sync user info into edit form whenever user or tab changes
   useEffect(() => {
