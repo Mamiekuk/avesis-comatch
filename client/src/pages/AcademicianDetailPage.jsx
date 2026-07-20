@@ -1,12 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { fetchAcademicianById, inviteToProject, fetchDashboard, fetchKMeansNeighbors } from '../services/api';
+import { fetchAcademicianById, inviteToProject, fetchDashboard } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { ExternalLink, CheckCircle2, ShieldAlert, Award, Send, UserCheck, ArrowLeft, Building2, BookOpen, MessageSquare } from 'lucide-react';
 
 export default function AcademicianDetailPage({ id, onNavigate, onOpenClaimModal }) {
   const { user, token } = useAuth();
   const [data, setData] = useState(null);
-  const [neighbors, setNeighbors] = useState([]);
   const [loading, setLoading] = useState(true);
 
   // Invite Modal
@@ -19,13 +18,12 @@ export default function AcademicianDetailPage({ id, onNavigate, onOpenClaimModal
 
   useEffect(() => {
     setLoading(true);
-    Promise.all([
-      fetchAcademicianById(id).catch(() => null),
-      fetchKMeansNeighbors(id).catch(() => ({ neighbors: [] }))
-    ]).then(([d, nRes]) => {
-      if (d) setData(d);
-      if (nRes && nRes.neighbors) setNeighbors(nRes.neighbors);
-    }).finally(() => setLoading(false));
+    fetchAcademicianById(id)
+      .then(d => {
+        if (d) setData(d);
+      })
+      .catch(() => null)
+      .finally(() => setLoading(false));
   }, [id]);
 
   const openInviteModal = () => {
@@ -407,96 +405,7 @@ export default function AcademicianDetailPage({ id, onNavigate, onOpenClaimModal
         )}
       </div>
 
-      {/* K-MEANS AKADEMİK MAHALLE & BENZER HOCALAR SECTION */}
-      {academician.tag_cluster && (
-        <div className="card-glass" style={{ marginBottom: '2.5rem', border: '1px solid rgba(168, 85, 247, 0.3)', background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.04), rgba(56, 149, 255, 0.04))' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <div style={{ padding: '0.5rem', borderRadius: '50%', background: 'rgba(168, 85, 247, 0.15)', color: '#c084fc', display: 'flex' }}>
-                <UserCheck size={22} />
-              </div>
-              <div>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>Yapay Zeka K-Means Kümelemesi</span>
-                <h2 style={{ fontSize: '1.45rem', margin: 0, color: 'var(--text-primary)' }}>
-                  Akademik Mahalle: <span style={{ color: '#c084fc' }}>{academician.tag_cluster.name}</span>
-                </h2>
-              </div>
-            </div>
-            {academician.metric_cluster && (
-              <span style={{ padding: '0.4rem 0.9rem', borderRadius: '999px', background: 'rgba(236, 72, 153, 0.15)', color: '#f472b6', border: '1px solid rgba(236, 72, 153, 0.3)', fontSize: '0.88rem', fontWeight: 600 }}>
-                {academician.metric_cluster.badge}
-              </span>
-            )}
-          </div>
-          <p style={{ color: 'var(--text-secondary)', fontSize: '0.94rem', marginBottom: '1.5rem', lineHeight: 1.6 }}>
-            K-Means denetimsiz yapay zeka öğrenme algoritması, {academician.title} {academician.full_name} isimli akademisyenin araştırma alanı vektörlerini analiz ederek <strong>{academician.tag_cluster.name}</strong> kümesine (mahallesine) yerleştirmiştir. Aşağıda aynı mahallede yer alan ve interdisipliner iş birliği potansiyeli en yüksek benzer meslektaşları görebilirsiniz:
-          </p>
 
-          {neighbors.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic' }}>Bu mahallede henüz başka benzer akademisyen bulunamadı.</p>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-              {neighbors.map(nb => (
-                <div
-                  key={nb.id}
-                  onClick={() => onNavigate('academician-detail', nb.id)}
-                  style={{
-                    background: 'var(--bg-primary)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: '1rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between'
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#c084fc'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.transform = 'none'; }}
-                >
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.6rem' }}>
-                      <div style={{
-                        width: '44px', height: '44px', borderRadius: '50%', background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
-                        color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '1rem', flexShrink: 0, overflow: 'hidden'
-                      }}>
-                        {nb.photo_url ? (
-                          <img src={nb.photo_url} alt={nb.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                          nb.full_name.charAt(0)
-                        )}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <h4 style={{ fontSize: '1rem', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {nb.title} {nb.full_name}
-                        </h4>
-                        <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {nb.faculty_name}
-                        </span>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.8rem' }}>
-                      {(nb.research_areas || []).map(ra => (
-                        <span key={ra.id} style={{ fontSize: '0.72rem', background: 'rgba(255,255,255,0.05)', padding: '0.2rem 0.5rem', borderRadius: '4px', color: 'var(--text-secondary)' }}>
-                          {ra.label}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: '0.6rem', marginTop: 'auto' }}>
-                    <span style={{ fontSize: '0.78rem', color: '#c084fc', fontWeight: 600 }}>
-                      ⚡ %{nb.similarity_score} Mahalle Benzerliği
-                    </span>
-                    <span style={{ fontSize: '0.75rem', background: 'rgba(168, 85, 247, 0.12)', color: '#e879f9', padding: '0.2rem 0.5rem', borderRadius: '999px' }}>
-                      {nb.metric_badge}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
 
       {/* PROJECTS SECTION */}
       <div className="card-glass">
