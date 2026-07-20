@@ -13,6 +13,18 @@ export async function fetchMetadata() {
   return res.json();
 }
 
+export async function fetchKMeansClusters() {
+  const res = await fetch(`${API_BASE}/kmeans/clusters`);
+  if (!res.ok) throw new Error('Yapay zeka küme özetleri yüklenemedi.');
+  return res.json();
+}
+
+export async function fetchKMeansNeighbors(userId) {
+  const res = await fetch(`${API_BASE}/kmeans/neighbors/${userId}`);
+  if (!res.ok) throw new Error('Benzer hocalar getirilemedi.');
+  return res.json();
+}
+
 export async function createResearchArea(label, token) {
   const res = await fetch(`${API_BASE}/metadata/research-areas`, {
     method: 'POST',

@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { fetchAcademicians, fetchMetadata } from '../services/api';
+import { fetchAcademicians, fetchMetadata, fetchKMeansClusters } from '../services/api';
 import { Search, Filter, LayoutGrid, List, ChevronLeft, ChevronRight, ExternalLink, CheckCircle2, AlertCircle, Award, UserPlus, X } from 'lucide-react';
 
 export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
   const [academicians, setAcademicians] = useState([]);
   const [loading, setLoading] = useState(true);
   const [metadata, setMetadata] = useState({ faculties: [], departments: [], research_areas: [], titles: [] });
+  const [kmeansSummary, setKmeansSummary] = useState({ tagClusters: [], metricClusters: [] });
 
   // Filters State
   const [search, setSearch] = useState('');
@@ -15,6 +16,8 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
   const [claimedOnly, setClaimedOnly] = useState(false);
   const [selectedTags, setSelectedTags] = useState([]); // Array of tag objects {id, label}
   const [tagSearchInput, setTagSearchInput] = useState('');
+  const [selectedMetricCluster, setSelectedMetricCluster] = useState('');
+  const [selectedTagCluster, setSelectedTagCluster] = useState('');
   const [sort, setSort] = useState('claimed_first');
 
   // View Mode & Pagination
@@ -23,6 +26,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
 
   useEffect(() => {
     fetchMetadata().then(d => setMetadata(d)).catch(() => {});
+    fetchKMeansClusters().then(d => setKmeansSummary(d)).catch(() => {});
   }, []);
 
   const loadData = (pageNo = 1) => {
@@ -35,6 +39,8 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
       title: selectedTitle,
       tag_ids: tagIds,
       claimed_only: claimedOnly ? '1' : '',
+      metric_cluster: selectedMetricCluster,
+      tag_cluster: selectedTagCluster,
       sort,
       page: pageNo,
       limit: 24
@@ -49,7 +55,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
 
   useEffect(() => {
     loadData(1);
-  }, [selectedFaculty, selectedDept, selectedTitle, claimedOnly, sort, selectedTags]);
+  }, [selectedFaculty, selectedDept, selectedTitle, claimedOnly, sort, selectedTags, selectedMetricCluster, selectedTagCluster]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -220,6 +226,42 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
               <option value="joined_desc">Kayıt Numarasına Göre</option>
             </select>
           </div>
+
+          {/* K-Means Metric Cluster Filter */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#e879f9', marginBottom: '0.4rem' }}>
+              ⚡ K-Means Yapay Zeka Profili
+            </label>
+            <select
+              className="form-select"
+              style={{ borderColor: 'rgba(236, 72, 153, 0.4)' }}
+              value={selectedMetricCluster}
+              onChange={e => setSelectedMetricCluster(e.target.value)}
+            >
+              <option value="">Tüm Yapay Zeka Profilleri</option>
+              {(kmeansSummary.metricClusters || []).map(mc => (
+                <option key={mc.id} value={mc.label}>{mc.badge} ({mc.member_count} Hoca)</option>
+              ))}
+            </select>
+          </div>
+
+          {/* K-Means Tag Cluster Filter */}
+          <div>
+            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#c084fc', marginBottom: '0.4rem' }}>
+              🌐 Akademik Mahalle (Küme)
+            </label>
+            <select
+              className="form-select"
+              style={{ borderColor: 'rgba(168, 85, 247, 0.4)' }}
+              value={selectedTagCluster}
+              onChange={e => setSelectedTagCluster(e.target.value)}
+            >
+              <option value="">Tüm Akademik Mahalleler</option>
+              {(kmeansSummary.tagClusters || []).map(tc => (
+                <option key={tc.id} value={tc.id}>{tc.name} ({tc.member_count} Hoca)</option>
+              ))}
+            </select>
+          </div>
         </form>
 
         {/* Research Area Autocomplete Tag Picker */}
@@ -377,6 +419,19 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
                   )}
                 </div>
 
+                {item.metric_cluster && (
+                  <div style={{ marginBottom: '0.6rem' }}>
+                    <span style={{ fontSize: '0.74rem', background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.18), rgba(236, 72, 153, 0.18))', color: '#e879f9', padding: '0.2rem 0.6rem', borderRadius: '999px', border: '1px solid rgba(236, 72, 153, 0.35)', fontWeight: 600, display: 'inline-block', marginBottom: '0.25rem' }}>
+                      {item.metric_cluster.badge}
+                    </span>
+                    {item.tag_cluster && (
+                      <span style={{ fontSize: '0.73rem', color: '#c084fc', display: 'block', fontWeight: 500 }}>
+                        🌐 {item.tag_cluster.name}
+                      </span>
+                    )}
+                  </div>
+                )}
+
                 {/* Name & Title */}
                 <h3 style={{ fontSize: '1.18rem', marginBottom: '0.35rem', lineHeight: 1.35 }}>
                   {item.title} {item.full_name}
@@ -482,6 +537,11 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
                     </div>
                   ) : (
                     <span className="badge badge-unclaimed" style={{ fontSize: '0.7rem' }}>Sahiplenilmeyi Bekliyor</span>
+                  )}
+                  {item.metric_cluster && (
+                    <span style={{ fontSize: '0.72rem', background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.18), rgba(236, 72, 153, 0.18))', color: '#e879f9', padding: '0.15rem 0.55rem', borderRadius: '999px', border: '1px solid rgba(236, 72, 153, 0.35)', fontWeight: 600 }}>
+                      {item.metric_cluster.badge}
+                    </span>
                   )}
                 </div>
                 <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>

@@ -5,9 +5,13 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const db = require('./db');
 const mailer = require('./mailer');
+const kmeansEngine = require('./kmeansEngine');
 
 // SMTP yapılandırmasını yükle ve başlat
 mailer.init();
+
+// Initialize K-Means Clustering Engine with DB
+kmeansEngine.init(db);
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -72,7 +76,7 @@ function optionalAuthMiddleware(req, res, next) {
   next();
 }
 
-// Helper to attach tags to user objects
+// Helper to attach tags & K-Means clusters to user objects
 function attachUserTags(user) {
   const tags = db.prepare(`
     SELECT ra.id, ra.label
@@ -81,6 +85,12 @@ function attachUserTags(user) {
     WHERE ura.user_id = ?
   `).all(user.id);
   user.research_areas = tags;
+
+  // Attach K-Means cluster data
+  const clusterInfo = kmeansEngine.getUserClusterInfo(user.id);
+  user.tag_cluster = clusterInfo.tag_cluster;
+  user.metric_cluster = clusterInfo.metric_cluster;
+
   return user;
 }
 
@@ -140,6 +150,36 @@ app.post('/api/metadata/research-areas', authMiddleware, (req, res) => {
     };
 
     res.status(201).json({ success: true, tag: newTag });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ==========================================
+// 1.5 YAPAY ZEKA K-MEANS KÜMELEME API
+// ==========================================
+app.get('/api/kmeans/clusters', (req, res) => {
+  try {
+    const summary = kmeansEngine.getClustersSummary();
+    res.json(summary);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.get('/api/kmeans/neighbors/:id', (req, res) => {
+  try {
+    const neighbors = kmeansEngine.getNeighbors(req.params.id, 6);
+    res.json({ neighbors });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+app.post('/api/kmeans/recalculate', authMiddleware, (req, res) => {
+  try {
+    kmeansEngine.runClustering();
+    res.json({ success: true, message: 'K-Means kümeleme motoru yeniden hesaplandı!' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -500,6 +540,8 @@ app.put('/api/auth/profile', authMiddleware, (req, res) => {
   delete updatedUser.password_hash;
   attachUserTags(updatedUser);
 
+  setImmediate(() => kmeansEngine.runClustering());
+
   res.json({ message: 'Profiliniz ve araştırma alanlarınız başarıyla güncellendi.', user: updatedUser });
 });
 
@@ -515,6 +557,8 @@ app.get('/api/academicians', (req, res) => {
       title,
       tag_ids,
       claimed_only,
+      metric_cluster,
+      tag_cluster,
       sort = 'claimed_first',
       page = 1,
       limit = 24
@@ -560,6 +604,19 @@ app.get('/api/academicians', (req, res) => {
         `);
         params.push(...tagList);
       }
+    }
+
+    if ((metric_cluster && metric_cluster !== 'Tümü') || (tag_cluster !== undefined && tag_cluster !== null && tag_cluster !== 'Tümü' && tag_cluster !== '')) {
+      const matchingIds = kmeansEngine.getMatchingUserIds({ metricClusterLabel: metric_cluster, tagClusterId: tag_cluster });
+      if (matchingIds.length === 0) {
+        return res.json({
+          academicians: [],
+          pagination: { total: 0, page: Number(page), limit: Number(limit), totalPages: 0 }
+        });
+      }
+      const placeholders = matchingIds.map(() => '?').join(',');
+      whereClauses.push(`u.id IN (${placeholders})`);
+      params.push(...matchingIds);
     }
 
     const whereSQL = whereClauses.length > 0 ? `WHERE ${whereClauses.join(' AND ')}` : '';
