@@ -111,17 +111,20 @@ export default function SmartMatchingPanel({ projectId, onNavigateAcademician })
             >
               <div>
                 {/* Score & Status Header */}
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.8rem', flexWrap: 'wrap', gap: '0.4rem' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem', flexWrap: 'wrap', gap: '0.4rem' }}>
                   <div style={{
                     padding: '0.35rem 0.85rem',
                     borderRadius: '9999px',
                     fontWeight: 800,
-                    fontSize: '0.82rem',
+                    fontSize: '0.85rem',
                     background: `${scoreColor}22`,
                     color: scoreColor,
-                    border: `1px solid ${scoreColor}44`
+                    border: `1px solid ${scoreColor}44`,
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.4rem'
                   }}>
-                    % {m.match_score} Uyumlu
+                    <span>% {m.match_score} Uyumlu</span>
                   </div>
 
                   <div style={{ display: 'flex', gap: '0.4rem', alignItems: 'center' }}>
@@ -131,6 +134,27 @@ export default function SmartMatchingPanel({ projectId, onNavigateAcademician })
                       <span className="badge badge-unclaimed" style={{ margin: 0 }}>AVESİS Arşivi</span>
                     )}
                   </div>
+                </div>
+
+                {/* K-Means Breakdown Pill */}
+                <div style={{
+                  fontSize: '0.72rem',
+                  background: 'rgba(168, 85, 247, 0.08)',
+                  border: '1px solid rgba(168, 85, 247, 0.22)',
+                  borderRadius: '6px',
+                  padding: '0.35rem 0.6rem',
+                  marginBottom: '0.85rem',
+                  color: 'var(--text-secondary)',
+                  display: 'flex',
+                  flexWrap: 'wrap',
+                  gap: '0.6rem',
+                  alignItems: 'center'
+                }}>
+                  <span style={{ color: '#c084fc', fontWeight: 600 }}>⚡ K-Means Vektör Skoru: %{m.cosine_similarity_pct !== undefined ? m.cosine_similarity_pct : 0}</span>
+                  {m.kmeans_cluster_bonus_pct > 0 && (
+                    <span style={{ color: '#e879f9', fontWeight: 600 }}>● Mahalle Bonusu: +%{m.kmeans_cluster_bonus_pct}</span>
+                  )}
+                  <span>● Etiket Kesişimi: %{m.overlap_ratio_pct !== undefined ? m.overlap_ratio_pct : 0}</span>
                 </div>
 
                 {/* K-Means Same Cluster & Metric Profile Badges */}

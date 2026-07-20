@@ -924,17 +924,43 @@ app.get('/api/projects/:id/match', authMiddleware, (req, res) => {
       const isSameKMeansCluster = ownerTagClusterId !== null && candTagCluster && candTagCluster.id === ownerTagClusterId;
 
       if (commonTags.length > 0 || isSameKMeansCluster) {
-        const overlapRatio = projectTags.length > 0 ? (commonTags.length / projectTags.length) : 0;
-        const claimedBonus = cand.is_claimed ? 0.15 : 0;
-        const kmeansBonus = isSameKMeansCluster ? 0.25 : 0; // +%25 K-Means mahalle uyumu
+        // Get total research areas count of candidate for exact Cosine Vector Similarity (A . B / (|A| * |B|))
+        const candTagsCountRow = db.prepare('SELECT COUNT(*) as count FROM user_research_areas WHERE user_id = ?').get(cand.id);
+        const candTagsCount = candTagsCountRow ? candTagsCountRow.count : 0;
 
-        let score = Math.min(Math.round((overlapRatio + claimedBonus + kmeansBonus) * 100), 99);
-        if (overlapRatio === 1) score = Math.max(score, 98);
-        if (isSameKMeansCluster && score < 45) score = 45; // K-Means mahalle ortağı minimum %45 garanti
+        const cosSim = (projectTags.length > 0 && candTagsCount > 0)
+          ? (commonTags.length / (Math.sqrt(projectTags.length) * Math.sqrt(candTagsCount)))
+          : 0;
+
+        const overlapRatio = projectTags.length > 0 ? (commonTags.length / projectTags.length) : 0;
+
+        // K-Means Cosine Vector Similarity & Centroid Proximity formula
+        const cosineScore = cosSim * 40; // up to 40% directly tied to Cosine Vector Similarity
+        const overlapScore = overlapRatio * 35; // up to 35% tied to direct tag intersection ratio
+
+        let kmeansClusterScore = 0;
+        if (isSameKMeansCluster && candTagCluster) {
+          // If in the exact same K-Means cluster, centroid proximity (1 - distance) contributes up to 25%
+          const centroidProximity = Math.max(0, Math.min(1, 1 - (candTagCluster.distance || 0.25)));
+          kmeansClusterScore = Math.round(centroidProximity * 25);
+        }
+
+        const claimedBonus = cand.is_claimed ? 10 : 0; // +10% active verified account
+
+        let score = Math.round(cosineScore + overlapScore + kmeansClusterScore + claimedBonus);
+
+        // K-Means guarantee bounds
+        if (overlapRatio === 1) score = Math.max(score, 97);
+        if (isSameKMeansCluster && score < 55) score = 55; // Same K-Means cluster minimum guarantee (%55)
+        if (commonTags.length > 0 && !isSameKMeansCluster && score < 35) score = 35; // At least %35 if sharing tags
+        score = Math.min(score, 99);
 
         matches.push({
           academician: cand,
           match_score: score,
+          cosine_similarity_pct: Math.round(cosSim * 100),
+          kmeans_cluster_bonus_pct: kmeansClusterScore,
+          overlap_ratio_pct: Math.round(overlapRatio * 100),
           common_tags: commonTags,
           common_count: commonTags.length,
           is_same_cluster: isSameKMeansCluster,
