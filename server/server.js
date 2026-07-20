@@ -903,6 +903,9 @@ app.get('/api/projects/:id/match', authMiddleware, (req, res) => {
         AND u.has_research_fields = 1
     `).all(projectId);
 
+    // Check if user filtered by a specific K-Means cluster ID from the dropdown
+    const requestedClusterId = (req.query.cluster_id !== undefined && req.query.cluster_id !== 'ALL' && req.query.cluster_id !== '') ? Number(req.query.cluster_id) : null;
+
     const matches = [];
     for (const cand of candidates) {
       if (cand.id === project.owner_id) continue;
@@ -922,8 +925,9 @@ app.get('/api/projects/:id/match', authMiddleware, (req, res) => {
       }
 
       const isSameKMeansCluster = ownerTagClusterId !== null && candTagCluster && candTagCluster.id === ownerTagClusterId;
+      const isRequestedClusterMatch = requestedClusterId !== null && candTagCluster && candTagCluster.id === requestedClusterId;
 
-      if (commonTags.length > 0) {
+      if (commonTags.length > 0 || isRequestedClusterMatch) {
         // Get total research areas count of candidate for exact Cosine Vector Similarity (A . B / (|A| * |B|))
         const candTagsCountRow = db.prepare('SELECT COUNT(*) as count FROM user_research_areas WHERE user_id = ?').get(cand.id);
         const candTagsCount = candTagsCountRow ? candTagsCountRow.count : 0;
@@ -934,44 +938,56 @@ app.get('/api/projects/:id/match', authMiddleware, (req, res) => {
 
         const overlapRatio = projectTags.length > 0 ? (commonTags.length / projectTags.length) : 0;
 
-        // K-Means Cosine Vector Similarity & Overlap ratio formula (Mahalle/Küme bonusu tamamen kaldırıldı!)
-        const overlapScore = overlapRatio * 55; // up to 55% tied to direct tag intersection ratio
-        const cosineScore = cosSim * 40; // up to 40% directly tied to Cosine Vector Similarity
+        const cosSimPct = Math.round(cosSim * 100);
+        const overlapRatioPct = Math.round(overlapRatio * 100);
         const claimedBonus = cand.is_claimed ? 5 : 0; // +5% active verified account
 
-        let score = Math.round(overlapScore + cosineScore + claimedBonus);
+        let score = 0;
+        if (commonTags.length > 0) {
+          // Doğrudan ve şeffaf toplam: Kosinüs Benzerliği % + Etiket Kesişimi % + Aktif Profil
+          score = Math.round(cosSimPct + overlapRatioPct + claimedBonus);
 
-        // Quality bounds based on actual tag overlaps
-        if (overlapRatio === 1) score = Math.max(score, 96);
-        else if (overlapRatio >= 0.5) score = Math.max(score, 65);
-        else score = Math.max(score, 35);
+          // Quality bounds based on actual tag overlaps
+          if (overlapRatio === 1) score = Math.max(score, 96);
+          else if (overlapRatio >= 0.5) score = Math.max(score, 65);
+          else score = Math.max(score, 35);
+        } else if (isRequestedClusterMatch && candTagCluster) {
+          // Kullanıcı özellikle bu kümeyi filtrelediğinde ortak etiket yoksa küme merkezine yakınlığına göre puanla
+          const centroidProximity = Math.max(0, Math.min(1, 1 - (candTagCluster.distance || 0.25)));
+          score = Math.round(centroidProximity * 45) + claimedBonus;
+        }
 
         score = Math.min(score, 99);
 
         matches.push({
           academician: cand,
           match_score: score,
-          cosine_similarity_pct: Math.round(cosSim * 100),
+          cosine_similarity_pct: cosSimPct,
           kmeans_cluster_bonus_pct: 0,
-          overlap_ratio_pct: Math.round(overlapRatio * 100),
+          overlap_ratio_pct: overlapRatioPct,
           common_tags: commonTags,
           common_count: commonTags.length,
           is_same_cluster: isSameKMeansCluster,
+          tag_cluster_id: candTagCluster ? candTagCluster.id : null,
           tag_cluster_name: candTagCluster ? candTagCluster.name : null,
           metric_badge: candMetricCluster ? candMetricCluster.badge : '🚀 Yükselen Araştırmacı'
         });
       }
     }
 
-    // Sort by match_score DESC, is_same_cluster DESC, then claimed DESC
-    matches.sort((a, b) => b.match_score - a.match_score || (b.is_same_cluster ? 1 : 0) - (a.is_same_cluster ? 1 : 0) || b.academician.is_claimed - a.academician.is_claimed);
+    // Sort by match_score DESC, common_count DESC, then claimed DESC
+    matches.sort((a, b) => b.match_score - a.match_score || b.common_count - a.common_count || b.academician.is_claimed - a.academician.is_claimed);
+
+    const summaryData = kmeansEngine.getClustersSummary();
+    const allClusters = summaryData && summaryData.tagClusters ? summaryData.tagClusters : [];
 
     res.json({
       project_title: project.title,
       project_tags: projectTags,
       owner_cluster: ownerClusterInfo.tag_cluster || null,
+      all_clusters: allClusters,
       total_candidates_found: matches.length,
-      matches: matches.slice(0, 30) // top 30 smart recommendations
+      matches: matches.slice(0, 100) // top 100 smart recommendations across selected/all clusters
     });
   } catch (err) {
     res.status(500).json({ error: err.message });

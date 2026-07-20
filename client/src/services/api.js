@@ -163,8 +163,9 @@ export async function updateProject(projectId, payload, token) {
   return parseResponse(res, 'Proje güncellenemedi.');
 }
 
-export async function fetchProjectSmartMatches(projectId, token) {
-  const res = await fetch(`${API_BASE}/projects/${projectId}/match`, {
+export async function fetchProjectSmartMatches(projectId, token, clusterId = 'ALL') {
+  const query = clusterId && clusterId !== 'ALL' ? `?cluster_id=${clusterId}` : '';
+  const res = await fetch(`${API_BASE}/projects/${projectId}/match${query}`, {
     headers: getHeaders(token)
   });
   if (!res.ok) throw new Error('Akıllı eşleştirmeler yüklenemedi.');

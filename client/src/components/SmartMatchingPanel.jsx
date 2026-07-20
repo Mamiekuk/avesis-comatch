@@ -7,15 +7,17 @@ export default function SmartMatchingPanel({ projectId, onNavigateAcademician })
   const { user, token } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [selectedClusterId, setSelectedClusterId] = useState('ALL');
   const [invitingId, setInvitingId] = useState(null);
   const [invitedMap, setInvitedMap] = useState({});
 
   useEffect(() => {
-    fetchProjectSmartMatches(projectId, token)
+    setLoading(true);
+    fetchProjectSmartMatches(projectId, token, selectedClusterId)
       .then(d => { setData(d); })
       .catch(() => {})
       .finally(() => setLoading(false));
-  }, [projectId, token]);
+  }, [projectId, token, selectedClusterId]);
 
   const handleQuickInvite = async (academicianId, name) => {
     if (!token) return alert('Lütfen önce giriş yapın.');
@@ -43,9 +45,18 @@ export default function SmartMatchingPanel({ projectId, onNavigateAcademician })
       <div className="card-glass" style={{ textAlign: 'center', padding: '3rem 2rem' }}>
         <Sparkles size={40} color="var(--accent-primary)" style={{ margin: '0 auto 1rem' }} />
         <h4 style={{ fontSize: '1.25rem', marginBottom: '0.5rem' }}>Eşleşen Öneri Bulunamadı</h4>
-        <p style={{ color: 'var(--text-secondary)' }}>
-          {data?.message || 'Projenize araştırma alanı etiketleri eklediğinizde sistem otomatik olarak üniversitemizdeki en uygun akademisyenleri sıralar.'}
+        <p style={{ color: 'var(--text-secondary)', marginBottom: '1.5rem' }}>
+          {data?.message || 'Seçilen K-Means kümesinde projenizle eşleşen veya ortak araştırma alanına sahip akademisyen bulunamadı.'}
         </p>
+        {selectedClusterId !== 'ALL' && (
+          <button
+            onClick={() => setSelectedClusterId('ALL')}
+            className="btn-primary"
+            style={{ display: 'inline-flex', alignItems: 'center', gap: '0.5rem' }}
+          >
+            <span>🌟 Tüm Kümelerde Araştır</span>
+          </button>
+        )}
       </div>
     );
   }
@@ -80,10 +91,39 @@ export default function SmartMatchingPanel({ projectId, onNavigateAcademician })
               Projenizin etiketleri ve K-Means disiplinlerarası akademik mahalleniz temel alınarak 1.233 akademisyen analiz edilmiştir.
             </div>
             {data.owner_cluster && (
-              <div style={{ fontSize: '0.8rem', color: '#c084fc', marginTop: '0.4rem', fontWeight: 600 }}>
+              <div style={{ fontSize: '0.82rem', color: '#c084fc', marginTop: '0.4rem', fontWeight: 600 }}>
                 🌐 Proje Yürütücüsünün K-Means Kümesi: <span style={{ color: 'var(--text-primary)' }}>{data.owner_cluster.name}</span>
               </div>
             )}
+
+            {/* K-Means Cluster Selector Dropdown */}
+            <div style={{ marginTop: '0.85rem', display: 'flex', flexWrap: 'wrap', alignItems: 'center', gap: '0.6rem' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-secondary)' }}>
+                🎯 Hedef K-Means Kümesi (Alan Filtresi):
+              </span>
+              <select
+                value={selectedClusterId}
+                onChange={(e) => setSelectedClusterId(e.target.value)}
+                style={{
+                  padding: '0.4rem 0.85rem',
+                  borderRadius: '8px',
+                  border: '1px solid rgba(168, 85, 247, 0.45)',
+                  background: 'var(--bg-secondary)',
+                  color: 'var(--text-primary)',
+                  fontWeight: 600,
+                  fontSize: '0.82rem',
+                  cursor: 'pointer',
+                  outline: 'none'
+                }}
+              >
+                <option value="ALL">🌟 Tüm K-Means Akademik Kümeleri (Ortak Etiketlere Göre)</option>
+                {data.all_clusters && data.all_clusters.map(c => (
+                  <option key={c.id} value={String(c.id)}>
+                    🌐 {c.name} ({c.member_count} Hoca) {data.owner_cluster && data.owner_cluster.id === c.id ? ' [Proje Yürütücüsünün Kümesi]' : ''}
+                  </option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
         <div className="badge badge-claimed" style={{ fontSize: '0.88rem', padding: '0.5rem 1.1rem', background: 'linear-gradient(135deg, rgba(16, 185, 129, 0.2), rgba(56, 149, 255, 0.2))', border: '1px solid rgba(16, 185, 129, 0.4)' }}>
