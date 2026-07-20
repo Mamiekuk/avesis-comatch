@@ -872,6 +872,10 @@ app.get('/api/projects/:id/match', authMiddleware, (req, res) => {
       return res.status(403).json({ error: 'Bu projenin eşleştirme verilerine erişim yetkiniz bulunmamaktadır.' });
     }
 
+    // Get project owner K-Means cluster info
+    const ownerClusterInfo = kmeansEngine.getUserClusterInfo(project.owner_id) || {};
+    const ownerTagClusterId = ownerClusterInfo.tag_cluster ? ownerClusterInfo.tag_cluster.id : null;
+
     // Get project tags
     const projectTags = db.prepare(`
       SELECT ra.id, ra.label
@@ -880,14 +884,14 @@ app.get('/api/projects/:id/match', authMiddleware, (req, res) => {
       WHERE pra.project_id = ?
     `).all(projectId);
 
-    if (projectTags.length === 0) {
-      return res.json({ matches: [], message: 'Bu projede araştırma alanı etiketi belirtilmediği için eşleştirme yapılamadı.' });
+    if (projectTags.length === 0 && ownerTagClusterId === null) {
+      return res.json({ matches: [], message: 'Bu projede araştırma alanı etiketi bulunmadığı ve K-Means küme kaydı hazır olmadığı için eşleştirme yapılamadı.' });
     }
 
     const tagIds = projectTags.map(t => t.id);
-    const placeholders = tagIds.map(() => '?').join(',');
+    const placeholders = tagIds.length > 0 ? tagIds.map(() => '?').join(',') : '';
 
-    // Find academicians who share tags and are NOT already in the project
+    // Find academicians NOT already in the project
     const candidates = db.prepare(`
       SELECT u.id, u.full_name, u.title, u.faculty_id, u.department_id,
              u.photo_url, u.is_claimed, u.is_active,
@@ -901,37 +905,52 @@ app.get('/api/projects/:id/match', authMiddleware, (req, res) => {
 
     const matches = [];
     for (const cand of candidates) {
-      // Get candidate's tags that intersect with project
-      const commonTags = db.prepare(`
-        SELECT ra.id, ra.label
-        FROM user_research_areas ura
-        JOIN research_areas ra ON ra.id = ura.research_area_id
-        WHERE ura.user_id = ? AND ura.research_area_id IN (${placeholders})
-      `).all(cand.id, ...tagIds);
+      if (cand.id === project.owner_id) continue;
 
-      if (commonTags.length > 0) {
-        // Calculate match percentage
-        const overlapRatio = commonTags.length / projectTags.length;
-        // Bonus for claimed active accounts (+10%)
+      const candClusterInfo = kmeansEngine.getUserClusterInfo(cand.id) || {};
+      const candTagCluster = candClusterInfo.tag_cluster || null;
+      const candMetricCluster = candClusterInfo.metric_cluster || null;
+
+      let commonTags = [];
+      if (tagIds.length > 0) {
+        commonTags = db.prepare(`
+          SELECT ra.id, ra.label
+          FROM user_research_areas ura
+          JOIN research_areas ra ON ra.id = ura.research_area_id
+          WHERE ura.user_id = ? AND ura.research_area_id IN (${placeholders})
+        `).all(cand.id, ...tagIds);
+      }
+
+      const isSameKMeansCluster = ownerTagClusterId !== null && candTagCluster && candTagCluster.id === ownerTagClusterId;
+
+      if (commonTags.length > 0 || isSameKMeansCluster) {
+        const overlapRatio = projectTags.length > 0 ? (commonTags.length / projectTags.length) : 0;
         const claimedBonus = cand.is_claimed ? 0.15 : 0;
-        let score = Math.min(Math.round((overlapRatio + claimedBonus) * 100), 99);
-        if (overlapRatio === 1) score = 98; // High score
+        const kmeansBonus = isSameKMeansCluster ? 0.25 : 0; // +%25 K-Means mahalle uyumu
+
+        let score = Math.min(Math.round((overlapRatio + claimedBonus + kmeansBonus) * 100), 99);
+        if (overlapRatio === 1) score = Math.max(score, 98);
+        if (isSameKMeansCluster && score < 45) score = 45; // K-Means mahalle ortağı minimum %45 garanti
 
         matches.push({
           academician: cand,
           match_score: score,
           common_tags: commonTags,
-          common_count: commonTags.length
+          common_count: commonTags.length,
+          is_same_cluster: isSameKMeansCluster,
+          tag_cluster_name: candTagCluster ? candTagCluster.name : null,
+          metric_badge: candMetricCluster ? candMetricCluster.badge : '🚀 Yükselen Araştırmacı'
         });
       }
     }
 
-    // Sort by match_score DESC, then claimed DESC
-    matches.sort((a, b) => b.match_score - a.match_score || b.academician.is_claimed - a.academician.is_claimed);
+    // Sort by match_score DESC, is_same_cluster DESC, then claimed DESC
+    matches.sort((a, b) => b.match_score - a.match_score || (b.is_same_cluster ? 1 : 0) - (a.is_same_cluster ? 1 : 0) || b.academician.is_claimed - a.academician.is_claimed);
 
     res.json({
       project_title: project.title,
       project_tags: projectTags,
+      owner_cluster: ownerClusterInfo.tag_cluster || null,
       total_candidates_found: matches.length,
       matches: matches.slice(0, 30) // top 30 smart recommendations
     });
