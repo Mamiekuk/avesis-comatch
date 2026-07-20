@@ -236,7 +236,7 @@ export default function SmartMatchingPanel({ projectId, onNavigateAcademician })
                 {/* Overlap Tags */}
                 <div style={{ marginBottom: '1.25rem' }}>
                   <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem', textTransform: 'uppercase' }}>
-                    Ortak & Benzer Çalışma Alanları ({m.common_count})
+                    Ortak Araştırma Alanları ({m.common_count})
                   </div>
                   <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
                     {m.common_tags && m.common_tags.map(t => (
@@ -244,13 +244,13 @@ export default function SmartMatchingPanel({ projectId, onNavigateAcademician })
                         key={t.id}
                         className="badge"
                         style={{
-                          background: t.is_exact !== false ? 'rgba(16, 185, 129, 0.15)' : 'rgba(56, 149, 255, 0.15)',
-                          color: t.is_exact !== false ? 'var(--success)' : 'var(--accent-primary)',
-                          border: t.is_exact !== false ? '1px solid rgba(16, 185, 129, 0.3)' : '1px solid rgba(56, 149, 255, 0.3)',
+                          background: 'rgba(16, 185, 129, 0.15)',
+                          color: 'var(--success)',
+                          border: '1px solid rgba(16, 185, 129, 0.3)',
                           fontSize: '0.75rem'
                         }}
                       >
-                        {t.is_exact !== false ? '✓ ' : '⚡ '}{t.label}
+                        ✓ {t.label}
                       </span>
                     ))}
                   </div>

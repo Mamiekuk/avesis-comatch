@@ -906,16 +906,6 @@ app.get('/api/projects/:id/match', authMiddleware, (req, res) => {
     // Check if user filtered by a specific K-Means cluster ID from the dropdown
     const requestedClusterId = (req.query.cluster_id !== undefined && req.query.cluster_id !== 'ALL' && req.query.cluster_id !== '') ? Number(req.query.cluster_id) : null;
 
-    function getCleanDomainKeywords(str) {
-      if (!str) return [];
-      return str.toLowerCase()
-        .replace(/[^a-z0-9ğüşıöç\s]/g, '')
-        .split(/\s+/)
-        .filter(w => w.length >= 3 && !['veya','ile','için','göre','alan','alanı','alanları','bilim','bilimleri','yöntem','yöntemi','genel','teknoloji','bilişim','mühendislik'].includes(w));
-    }
-    const projKeywordsSet = new Set();
-    projectTags.forEach(pt => getCleanDomainKeywords(pt.label).forEach(w => projKeywordsSet.add(w)));
-
     const matches = [];
     for (const cand of candidates) {
       if (cand.id === project.owner_id) continue;
@@ -925,33 +915,23 @@ app.get('/api/projects/:id/match', authMiddleware, (req, res) => {
       const candMetricCluster = candClusterInfo.metric_cluster || null;
 
       let commonTags = [];
-      let candTagsCount = 0;
       if (tagIds.length > 0) {
-        const allCandTags = db.prepare(`
+        commonTags = db.prepare(`
           SELECT ra.id, ra.label
           FROM user_research_areas ura
           JOIN research_areas ra ON ra.id = ura.research_area_id
-          WHERE ura.user_id = ?
-        `).all(cand.id);
-
-        candTagsCount = allCandTags.length || 1;
-
-        for (const ct of allCandTags) {
-          if (tagIds.includes(ct.id)) {
-            commonTags.push({ ...ct, is_exact: true });
-          } else {
-            const kw = getCleanDomainKeywords(ct.label);
-            if (kw.some(w => projKeywordsSet.has(w))) {
-              commonTags.push({ ...ct, is_exact: false });
-            }
-          }
-        }
+          WHERE ura.user_id = ? AND ura.research_area_id IN (${placeholders})
+        `).all(cand.id, ...tagIds);
       }
 
       const isSameKMeansCluster = ownerTagClusterId !== null && candTagCluster && candTagCluster.id === ownerTagClusterId;
       const isRequestedClusterMatch = requestedClusterId !== null && candTagCluster && candTagCluster.id === requestedClusterId;
 
       if (commonTags.length > 0 || isRequestedClusterMatch) {
+        // Get total research areas count of candidate for exact Cosine Vector Similarity (A . B / (|A| * |B|))
+        const candTagsCountRow = db.prepare('SELECT COUNT(*) as count FROM user_research_areas WHERE user_id = ?').get(cand.id);
+        const candTagsCount = candTagsCountRow ? candTagsCountRow.count : 0;
+
         const cosSim = (projectTags.length > 0 && candTagsCount > 0)
           ? (commonTags.length / (Math.sqrt(projectTags.length) * Math.sqrt(candTagsCount)))
           : 0;
@@ -959,7 +939,7 @@ app.get('/api/projects/:id/match', authMiddleware, (req, res) => {
         const overlapRatio = projectTags.length > 0 ? (commonTags.length / projectTags.length) : 0;
 
         const cosSimPct = Math.round(cosSim * 100);
-        const overlapRatioPct = Math.round(overlapRatio * 100);
+        const overlapRatioPct = Math.min(100, Math.round(overlapRatio * 100));
         const claimedBonus = cand.is_claimed ? 5 : 0; // +5% active verified account
 
         let score = 0;
@@ -968,9 +948,9 @@ app.get('/api/projects/:id/match', authMiddleware, (req, res) => {
           score = Math.round(cosSimPct + overlapRatioPct + claimedBonus);
 
           // Quality bounds based on actual tag overlaps
-          if (overlapRatio >= 1 || commonTags.length >= projectTags.length) score = Math.max(score, 92);
-          else if (overlapRatio >= 0.5 || commonTags.length >= 3) score = Math.max(score, 75);
-          else score = Math.max(score, 45);
+          if (overlapRatio === 1) score = Math.max(score, 96);
+          else if (overlapRatio >= 0.5) score = Math.max(score, 65);
+          else score = Math.max(score, 35);
         } else if (isRequestedClusterMatch && candTagCluster) {
           // Kullanıcı özellikle bu kümeyi filtrelediğinde ortak etiket yoksa küme merkezine yakınlığına göre puanla
           const centroidProximity = Math.max(0, Math.min(1, 1 - (candTagCluster.distance || 0.25)));
