@@ -559,7 +559,7 @@ app.get('/api/academicians', (req, res) => {
       claimed_only,
       metric_cluster,
       tag_cluster,
-      sort = 'richness_desc',
+      sort = 'name_asc',
       page = 1,
       limit = 24
     } = req.query;
