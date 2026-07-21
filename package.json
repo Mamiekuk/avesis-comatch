@@ -3,6 +3,7 @@
   "version": "1.0.0",
   "description": "AVESİS CoMatch Akademik Ekip Oluşturma ve Akademisyen Keşif Platformu",
   "scripts": {
+    "start": "cd server && node server.js",
     "seed": "cd server && node scripts/seed.js",
     "server": "cd server && node server.js",
     "client": "cd client && npm run dev"
