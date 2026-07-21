@@ -1476,7 +1476,18 @@ app.post('/api/meetings/:id/respond', authMiddleware, (req, res) => {
   }
 });
 
-
+// React frontend'ini servis et (production)
+const publicPath = path.join(__dirname, 'public');
+if (fs.existsSync(publicPath)) {
+  app.use(express.static(publicPath));
+  // API olmayan tüm rotalar için React SPA'yı döndür
+  app.get('*', (req, res) => {
+    if (!req.path.startsWith('/api') && !req.path.startsWith('/uploads')) {
+      res.sendFile(path.join(publicPath, 'index.html'));
+    }
+  });
+  console.log('✅ React frontend /public klasöründen servis ediliyor.');
+}
 
 app.listen(PORT, () => {
   console.log(`🚀 AVESİS CoMatch API Server http://localhost:${PORT} adresinde çalışıyor!`);
