@@ -4,8 +4,5 @@ nixPkgs = ["nodejs_22", "npm-10_x"]
 [phases.install]
 cmds = ["npm install"]
 
-[phases.build]
-cmds = ["npm run build"]
-
 [start]
-cmd = "npx serve -s dist -l 3000"
+cmd = "node server.js"
