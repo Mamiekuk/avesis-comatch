@@ -21,7 +21,7 @@ export async function fetchKMeansClusters() {
 
 export async function fetchKMeansNeighbors(userId) {
   const res = await fetch(`${API_BASE}/kmeans/neighbors/${userId}`);
-  if (!res.ok) throw new Error('Benzer hocalar getirilemedi.');
+  if (!res.ok) throw new Error('Benzer araştırmacılar getirilemedi.');
   return res.json();
 }
 
@@ -344,5 +344,15 @@ export async function fetchTubitakCalls() {
   const res = await fetch(`${API_BASE}/tubitak/calls`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'TÜBİTAK çağrıları alınamadı.');
+  return data;
+}
+
+export async function publishProject(projectId, token) {
+  const res = await fetch(`${API_BASE}/projects/${projectId}/publish`, {
+    method: 'POST',
+    headers: getHeaders(token)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Proje yayınlanamadı.');
   return data;
 }

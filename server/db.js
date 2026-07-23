@@ -30,6 +30,22 @@ try {
   console.log(`🚀 Veritabanı yükleniyor: ${dbPath}`);
   db = new Database(dbPath);
 
+  // Register custom Turkish case-insensitive function
+  function normalizeTurkish(str) {
+    if (typeof str !== 'string') return '';
+    return str
+      .replace(/İ/g, 'i')
+      .replace(/I/g, 'ı')
+      .replace(/ı/g, 'i')
+      .replace(/Ğ/g, 'g').replace(/ğ/g, 'g')
+      .replace(/Ü/g, 'u').replace(/ü/g, 'u')
+      .replace(/Ş/g, 's').replace(/ş/g, 's')
+      .replace(/Ö/g, 'o').replace(/ö/g, 'o')
+      .replace(/Ç/g, 'c').replace(/ç/g, 'c')
+      .toLowerCase();
+  }
+  db.function('turkish_lower', (str) => normalizeTurkish(str));
+
   // Enable foreign keys and WAL mode for performance
   db.pragma('foreign_keys = ON');
   db.pragma('journal_mode = WAL');
@@ -55,6 +71,10 @@ try {
 
     try {
       db.prepare("ALTER TABLE users ADD COLUMN collaboration_status TEXT DEFAULT 'open'").run();
+    } catch (e) {}
+
+    try {
+      db.prepare("ALTER TABLE meetings ADD COLUMN meeting_link TEXT").run();
     } catch (e) {}
 
     try {

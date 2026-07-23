@@ -477,7 +477,7 @@ export default function AcademicianDetailPage({ id, onNavigate, onOpenClaimModal
                   <textarea
                     rows={3}
                     className="form-textarea"
-                    placeholder="Hocama projenizdeki rolünü ve davet nedeninizi belirtin..."
+                    placeholder="Araştırmacıya projenizdeki rolünü ve davet nedeninizi belirtin..."
                     value={inviteMsg}
                     onChange={e => setInviteMsg(e.target.value)}
                   />

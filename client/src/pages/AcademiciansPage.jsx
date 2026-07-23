@@ -251,7 +251,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
             >
               <option value="">Tüm Yapay Zeka Profilleri</option>
               {(kmeansSummary.metricClusters || []).map(mc => (
-                <option key={mc.id} value={mc.label}>{mc.badge} ({mc.member_count} Hoca)</option>
+                <option key={mc.id} value={mc.label}>{mc.badge} ({mc.member_count} Araştırmacı)</option>
               ))}
             </select>
           </div>
@@ -269,7 +269,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
             >
               <option value="">Tüm Akademik Kümeler</option>
               {(kmeansSummary.tagClusters || []).map(tc => (
-                <option key={tc.id} value={tc.id}>{cleanClusterName(tc.name)} ({tc.member_count} Hoca)</option>
+                <option key={tc.id} value={tc.id}>{cleanClusterName(tc.name)} ({tc.member_count} Araştırmacı)</option>
               ))}
             </select>
           </div>

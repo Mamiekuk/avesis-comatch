@@ -722,7 +722,7 @@ app.get('/api/academicians', (req, res) => {
     const whereClauses = ["u.id != 1236 AND (u.email IS NULL OR u.email NOT LIKE 'admin%')"];
 
     if (search.trim()) {
-      whereClauses.push('(u.full_name LIKE ? OR u.title LIKE ? OR u.bio LIKE ?)');
+      whereClauses.push('(turkish_lower(u.full_name) LIKE turkish_lower(?) OR turkish_lower(u.title) LIKE turkish_lower(?) OR turkish_lower(u.bio) LIKE turkish_lower(?))');
       const q = `%${search.trim()}%`;
       params.push(q, q, q);
     }
@@ -870,7 +870,7 @@ app.get('/api/projects', (req, res) => {
 
     const clauses = [];
     if (search.trim()) {
-      clauses.push('(p.title LIKE ? OR p.description LIKE ?)');
+      clauses.push('(turkish_lower(p.title) LIKE turkish_lower(?) OR turkish_lower(p.description) LIKE turkish_lower(?))');
       const q = `%${search.trim()}%`;
       params.push(q, q);
     }
@@ -940,6 +940,17 @@ app.get('/api/projects/:id', (req, res) => {
       WHERE pm.project_id = ?
     `).all(project.id);
 
+    project.invitations = db.prepare(`
+      SELECT ai.*, 
+             s.full_name as sender_name, s.title as sender_title,
+             r.full_name as receiver_name, r.title as receiver_title, r.photo_url as receiver_photo
+      FROM applications_invitations ai
+      JOIN users s ON s.id = ai.sender_id
+      JOIN users r ON r.id = ai.receiver_id
+      WHERE ai.project_id = ?
+      ORDER BY ai.id DESC
+    `).all(project.id);
+
     res.json({ project });
   } catch (err) {
     res.status(500).json({ error: err.message });
@@ -989,18 +1000,20 @@ function notifyMatchingAcademiciansForProjectCall(projectId, title, objectives, 
   }
 }
 
-// Create Project
+// Create Project (Open or Draft)
 app.post('/api/projects', authMiddleware, (req, res) => {
-  const { title, description, objectives, teamSize = 3, duration, budget, researchAreaIds = [] } = req.body;
+  const { title, description, objectives, teamSize = 3, duration, budget, researchAreaIds = [], status = 'open' } = req.body;
 
   if (!title || !description) {
     return res.status(400).json({ error: 'Proje başlığı ve açıklaması zorunludur.' });
   }
 
+  const projStatus = status === 'draft' ? 'draft' : 'open';
+
   const result = db.prepare(`
     INSERT INTO projects (title, description, objectives, owner_id, team_size, duration, budget, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, 'open')
-  `).run(title, description, objectives || null, req.user.id, teamSize, duration || null, budget || null);
+    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+  `).run(title, description, objectives || null, req.user.id, teamSize, duration || null, budget || null, projStatus);
 
   const projectId = result.lastInsertRowid;
 
@@ -1014,10 +1027,39 @@ app.post('/api/projects', authMiddleware, (req, res) => {
     insertProjArea.run(projectId, tagId);
   }
 
-  // Trigger automatic project call broadcast to matching academicians
-  notifyMatchingAcademiciansForProjectCall(projectId, title, objectives, req.user.id, researchAreaIds);
+  if (projStatus === 'open') {
+    // Trigger automatic project call broadcast to matching researchers
+    notifyMatchingAcademiciansForProjectCall(projectId, title, objectives, req.user.id, researchAreaIds);
+    res.status(201).json({ message: 'Proje başarıyla yayınlandı ve uyumlu araştırmacılara duyuruldu!', projectId });
+  } else {
+    res.status(201).json({ message: 'Proje taslak olarak kaydedildi.', projectId, isDraft: true });
+  }
+});
 
-  res.status(201).json({ message: 'Proje başarıyla oluşturuldu ve uyumlu akademisyenlere çağrı duyurusu iletildi!', projectId });
+// Publish Draft Project Endpoint
+app.post('/api/projects/:id/publish', authMiddleware, (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const project = db.prepare('SELECT p.* FROM projects p WHERE p.id = ?').get(projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Proje bulunamadı.' });
+    }
+
+    if (project.owner_id !== req.user.id) {
+      return res.status(403).json({ error: 'Sadece proje yürütücüsü projeyi yayınlayabilir.' });
+    }
+
+    db.prepare("UPDATE projects SET status = 'open' WHERE id = ?").run(projectId);
+
+    const tags = db.prepare('SELECT research_area_id FROM project_research_areas WHERE project_id = ?').all(projectId);
+    const researchAreaIds = tags.map(t => t.research_area_id);
+
+    notifyMatchingAcademiciansForProjectCall(projectId, project.title, project.objectives, req.user.id, researchAreaIds);
+
+    res.json({ success: true, message: 'Proje başarıyla yayınlandı ve araştırmacılara bildirildi!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Announce / Re-broadcast Project Call Endpoint
@@ -1651,16 +1693,16 @@ app.get('/api/meetings', authMiddleware, (req, res) => {
 app.post('/api/meetings', authMiddleware, (req, res) => {
   try {
     const userId = req.user.id;
-    const { projectId, guestId, title, description, meetingType, meetingDate, meetingTime } = req.body;
+    const { projectId, guestId, title, description, meetingType, meetingDate, meetingTime, meetingLink } = req.body;
 
     if (!guestId || !title || !meetingDate || !meetingTime) {
-      return res.status(400).json({ error: 'Toplantı başlığı, konuk akademisyen, tarih ve saat zorunludur.' });
+      return res.status(400).json({ error: 'Toplantı başlığı, konuk araştırmacı, tarih ve saat zorunludur.' });
     }
 
     const result = db.prepare(`
-      INSERT INTO meetings (project_id, organizer_id, guest_id, title, description, meeting_type, meeting_date, meeting_time, status)
-      VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'pending')
-    `).run(projectId || null, userId, guestId, title.trim(), description ? description.trim() : null, meetingType || 'zoom', meetingDate, meetingTime);
+      INSERT INTO meetings (project_id, organizer_id, guest_id, title, description, meeting_type, meeting_date, meeting_time, meeting_link, status)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+    `).run(projectId || null, userId, guestId, title.trim(), description ? description.trim() : null, meetingType || 'zoom', meetingDate, meetingTime, meetingLink ? meetingLink.trim() : null);
 
     // Create notification for guest
     const organizer = db.prepare('SELECT title, full_name FROM users WHERE id = ?').get(userId);

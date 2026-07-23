@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { fetchProjectById, applyToProject, announceProjectCall } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import SmartMatchingPanel from '../components/SmartMatchingPanel';
-import { FolderGit2, Users, Sparkles, ArrowLeft, Send, CheckCircle2, Award, Calendar, DollarSign, Megaphone } from 'lucide-react';
+import { FolderGit2, Users, Sparkles, ArrowLeft, Send, CheckCircle2, Award, Calendar, DollarSign, Megaphone, Clock } from 'lucide-react';
 
 export default function ProjectDetailPage({ id, onNavigate }) {
   const { user, token } = useAuth();
@@ -146,7 +146,7 @@ export default function ProjectDetailPage({ id, onNavigate }) {
                 style={{ width: '100%', border: '1px solid rgba(56, 149, 255, 0.4)', background: 'rgba(56, 149, 255, 0.1)', color: 'var(--accent-primary)', fontSize: '0.86rem' }}
               >
                 <Megaphone size={16} />
-                <span>{announcing ? 'Duyuruluyor...' : '📢 Çağrıyı Uzman Hocalara Duyur'}</span>
+                <span>{announcing ? 'Duyuruluyor...' : '📢 Çağrıyı Uzman Araştırmacılara Duyur'}</span>
               </button>
             )}
 
@@ -263,6 +263,77 @@ export default function ProjectDetailPage({ id, onNavigate }) {
               ))}
             </div>
           </div>
+
+          {/* INVITATION HISTORY LOGS (FOR PROJECT MEMBERS / LEADERS) */}
+          {isOwnerOrLeader && project.invitations && project.invitations.length > 0 && (
+            <div className="card-glass" style={{ gridColumn: '1 / -1', padding: '2rem' }}>
+              <h3 style={{ fontSize: '1.25rem', fontWeight: 700, marginBottom: '1.25rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <Clock size={20} color="var(--accent-primary)" />
+                <span>📜 Proje İletişim & Davet Geçmişi (Log Kaydı)</span>
+              </h3>
+
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '0.85rem' }}>
+                {project.invitations.map(inv => (
+                  <div
+                    key={inv.id}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'space-between',
+                      flexWrap: 'wrap',
+                      gap: '1rem',
+                      padding: '1rem 1.25rem',
+                      background: 'var(--bg-secondary)',
+                      border: '1px solid var(--border-color)',
+                      borderRadius: 'var(--radius-md)'
+                    }}
+                  >
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      {inv.receiver_photo ? (
+                        <img src={inv.receiver_photo} alt={inv.receiver_name} style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover' }} />
+                      ) : (
+                        <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(56,149,255,0.2)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700 }}>
+                          {inv.receiver_name ? inv.receiver_name.charAt(0) : '?'}
+                        </div>
+                      )}
+                      <div>
+                        <div style={{ fontWeight: 600, fontSize: '0.92rem', color: 'var(--text-primary)' }}>
+                          {inv.type === 'invitation' ? 'Gönderilen Davet: ' : 'Başvuru Yapan: '}
+                          <strong>{inv.receiver_title} {inv.receiver_name}</strong>
+                        </div>
+                        <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)', marginTop: '2px' }}>
+                          Gönderen: {inv.sender_title} {inv.sender_name} • {new Date(inv.created_at).toLocaleDateString('tr-TR')} {new Date(inv.created_at).toLocaleTimeString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
+                        </div>
+                        {inv.message && (
+                          <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', fontStyle: 'italic', marginTop: '4px' }}>
+                            "{inv.message}"
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+                      {inv.status === 'pending' && (
+                        <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: 'var(--warning)', fontWeight: 700 }}>
+                          ⏳ Yanıt Bekliyor
+                        </span>
+                      )}
+                      {inv.status === 'accepted' && (
+                        <span className="badge" style={{ background: 'rgba(16, 185, 129, 0.15)', color: 'var(--success)', fontWeight: 700 }}>
+                          ✓ Kabul Edildi
+                        </span>
+                      )}
+                      {inv.status === 'declined' && (
+                        <span className="badge" style={{ background: 'rgba(239, 68, 68, 0.15)', color: 'var(--danger)', fontWeight: 700 }}>
+                          ✕ Reddedildi
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       ) : isOwnerOrLeader ? (
         /* SMART MATCHING TAB */

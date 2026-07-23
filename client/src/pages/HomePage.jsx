@@ -208,7 +208,7 @@ export default function HomePage({ onNavigate, onOpenLogin, user }) {
             }}>3</div>
             <h3 style={{ fontSize: '1.25rem', marginBottom: '0.6rem' }}>Akıllı Önerilerle Ekibinizi Kurun</h3>
             <p style={{ color: 'var(--text-secondary)', fontSize: '0.95rem' }}>
-              Sistem, projenizin etiketleriyle en çok örtüşen hocalarımızı % uyum skoruyla sıralar. Tek tıkla davet gönderin.
+              Sistem, projenizin etiketleriyle en çok örtüşen araştırmacılarımızı % uyum skoruyla sıralar. Tek tıkla davet gönderin.
             </p>
           </div>
         </div>

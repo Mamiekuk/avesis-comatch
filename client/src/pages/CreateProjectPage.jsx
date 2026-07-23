@@ -1,32 +1,34 @@
 import React, { useState, useEffect } from 'react';
-import { fetchMetadata, createProject } from '../services/api';
+import { createProject, fetchMetadata } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { PlusCircle, X, BookOpen, ArrowLeft, Sparkles } from 'lucide-react';
+import { PlusCircle, ArrowLeft, X, Sparkles, Tag, Save, Check } from 'lucide-react';
 
 export default function CreateProjectPage({ onNavigate }) {
-  const { token, user } = useAuth();
+  const { token } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [objectives, setObjectives] = useState('BAP');
+  const [objectives, setObjectives] = useState('TÜBİTAK 1001');
   const [teamSize, setTeamSize] = useState(4);
-  const [duration, setDuration] = useState('24 Ay');
+  const [duration, setDuration] = useState('18 Ay');
   const [budget, setBudget] = useState('');
-  
-  // Tag autocomplete
+
+  // Tag autocomplete & chips selector
   const [metadataTags, setMetadataTags] = useState([]);
   const [tagSearch, setTagSearch] = useState('');
   const [selectedTags, setSelectedTags] = useState([]);
   const [loading, setLoading] = useState(false);
+  const [draftLoading, setDraftLoading] = useState(false);
 
   useEffect(() => {
     fetchMetadata().then(d => setMetadataTags(d.research_areas || [])).catch(() => {});
   }, []);
 
-  const addTag = (tag) => {
-    if (!selectedTags.some(t => t.id === tag.id)) {
+  const toggleTag = (tag) => {
+    if (selectedTags.some(t => t.id === tag.id)) {
+      setSelectedTags(prev => prev.filter(t => t.id !== tag.id));
+    } else {
       setSelectedTags(prev => [...prev, tag]);
     }
-    setTagSearch('');
   };
 
   const removeTag = (id) => {
@@ -37,17 +39,25 @@ export default function CreateProjectPage({ onNavigate }) {
     ? metadataTags.filter(t => 
         t.label.toLowerCase().includes(tagSearch.toLowerCase()) &&
         !selectedTags.some(s => s.id === t.id)
-      ).slice(0, 8)
+      ).slice(0, 10)
     : [];
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  // Popular quick tags preview (top 20)
+  const popularTags = metadataTags.slice(0, 24);
+
+  const handleSubmit = async (e, projStatus = 'open') => {
+    if (e) e.preventDefault();
     if (!token) return alert('Lütfen oturum açın.');
+    if (!title.trim() || !description.trim()) {
+      return alert('Lütfen proje başlığını ve açıklamasını doldurun.');
+    }
     if (selectedTags.length === 0) {
       return alert('Akıllı eşleştirme motorunun çalışması için en az 1 araştırma alanı etiketi seçmelisiniz.');
     }
 
-    setLoading(true);
+    if (projStatus === 'open') setLoading(true);
+    else setDraftLoading(true);
+
     try {
       const res = await createProject({
         title,
@@ -56,20 +66,27 @@ export default function CreateProjectPage({ onNavigate }) {
         teamSize: Number(teamSize),
         duration,
         budget,
-        researchAreaIds: selectedTags.map(t => t.id)
+        researchAreaIds: selectedTags.map(t => t.id),
+        status: projStatus
       }, token);
 
-      alert('Proje başarıyla oluşturuldu!');
-      onNavigate('project-detail', res.projectId);
+      if (projStatus === 'open') {
+        alert('🚀 Proje başarıyla yayınlandı ve uyumlu araştırmacılara çağrı duyuruldu!');
+        onNavigate('project-detail', res.projectId);
+      } else {
+        alert('💾 Projeniz taslak olarak kaydedildi. Dilediğiniz zaman Panelim sayfasından düzenleyip yayınlayabilirsiniz.');
+        onNavigate('dashboard', { tab: 'projects' });
+      }
     } catch (err) {
       alert(err.message);
     } finally {
       setLoading(false);
+      setDraftLoading(false);
     }
   };
 
   return (
-    <div style={{ maxWidth: '840px', margin: '0 auto', padding: '2.5rem 2rem 5rem' }}>
+    <div style={{ maxWidth: '880px', margin: '0 auto', padding: '2.5rem 2rem 5rem' }}>
       <button
         onClick={() => onNavigate('projects')}
         className="btn-secondary"
@@ -83,60 +100,62 @@ export default function CreateProjectPage({ onNavigate }) {
         <div style={{ marginBottom: '2rem' }}>
           <h1 style={{ fontSize: '2.1rem', marginBottom: '0.4rem' }}>Yeni Akademik Proje İlanı</h1>
           <p style={{ color: 'var(--text-secondary)' }}>
-            Projenizin ihtiyaçlarını belirleyin, AVESİS Akıllı Eşleştirme Motoru en doğru hocalarımızı önersin.
+            Projenizin ihtiyaçlarını belirleyin, AVESİS Akıllı Eşleştirme Motoru en doğru araştırmacılarımızı önersin.
           </p>
         </div>
 
-        <form onSubmit={handleSubmit}>
-          {/* Title */}
+        <form onSubmit={(e) => handleSubmit(e, 'open')}>
+          {/* TITLE */}
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.92rem', marginBottom: '0.4rem' }}>
+            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.4rem' }}>
               Proje Başlığı *
             </label>
             <input
               type="text"
               required
               className="form-input"
-              placeholder="Örn: Doğu Karadeniz Kıyı Yapılarının Hibrit Malzemelerle Güçlendirilmesi"
+              placeholder="Örn: Karadeniz Kıyı Alanlarında İklim Değişikliği Dirençliliği Ve Modellemesi"
               value={title}
               onChange={e => setTitle(e.target.value)}
             />
           </div>
 
-          {/* Description */}
+          {/* DESCRIPTION */}
           <div style={{ marginBottom: '1.5rem' }}>
-            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.92rem', marginBottom: '0.4rem' }}>
-              Proje Özet Açıklaması *
+            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.4rem' }}>
+              Proje Özeti & Detaylı Açıklama *
             </label>
             <textarea
-              rows={4}
               required
+              rows={4}
               className="form-textarea"
-              placeholder="Projenin amacı, kapsamı ve temel hedefi..."
+              placeholder="Projenin amacı, kullanılan yöntemler, hedeflenen çıktılar ve ekibe katılacak akademisyenlerden beklenen katkıları detaylandırın..."
               value={description}
               onChange={e => setDescription(e.target.value)}
             />
           </div>
 
-          {/* Objectives (Başvurulan Proje Selection) */}
+          {/* PROJECT TYPE / DESTINATION */}
           <div style={{ marginBottom: '1.75rem' }}>
-            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.92rem', marginBottom: '0.6rem' }}>
-              Başvurulan Proje Türü
+            <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.4rem' }}>
+              Proje Destek Programı / Türü
             </label>
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-              {['BAP', 'TÜBİTAK', 'Uluslararası', 'Diğer Projeler'].map(opt => (
-                <label 
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+              {['TÜBİTAK 1001', 'TÜBİTAK 3501', 'TÜBİTAK 1002', 'BAP', 'AB Ufuk Avrupa (Horizon)', 'Uluslararası / Sanayi'].map(opt => (
+                <label
                   key={opt}
                   style={{
                     display: 'flex',
                     alignItems: 'center',
-                    gap: '0.5rem',
-                    background: 'var(--bg-secondary)',
-                    border: objectives === opt ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                    padding: '0.65rem 1.25rem',
-                    borderRadius: '8px',
+                    gap: '0.4rem',
+                    padding: '0.5rem 0.9rem',
+                    borderRadius: 'var(--radius-md)',
+                    border: '1px solid',
+                    borderColor: objectives === opt ? 'var(--accent-primary)' : 'var(--border-color)',
+                    background: objectives === opt ? 'rgba(56, 149, 255, 0.12)' : 'var(--bg-secondary)',
                     cursor: 'pointer',
-                    fontWeight: 600,
+                    fontSize: '0.85rem',
+                    fontWeight: objectives === opt ? 700 : 500,
                     color: objectives === opt ? 'var(--accent-primary)' : 'var(--text-secondary)',
                     transition: 'all 0.2s'
                   }}
@@ -155,7 +174,7 @@ export default function CreateProjectPage({ onNavigate }) {
             </div>
           </div>
 
-          {/* RESEARCH AREA TAG PICKER */}
+          {/* RESEARCH AREA TAG PICKER & CHIPS */}
           <div style={{
             background: 'var(--bg-secondary)',
             border: '1px solid var(--border-highlight)',
@@ -163,18 +182,58 @@ export default function CreateProjectPage({ onNavigate }) {
             padding: '1.25rem',
             marginBottom: '1.75rem'
           }}>
-            <label style={{ display: 'block', fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.4rem', color: 'var(--accent-primary)' }}>
-              🎯 Aranan Araştırma Alanı Etiketleri (Zorunlu — Akıllı Eşleştirme Motoru İçin)
+            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.4rem', color: 'var(--accent-primary)' }}>
+              <Tag size={18} />
+              <span>🎯 Aranan Araştırma Alanı Etiketleri (Çoklu Etiket Seçimi)</span>
             </label>
             <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.85rem' }}>
-              AVESİS taksonomisindeki ~1.400 etiket arasından yazarak ekleyin.
+              Aşağıdaki hazır etiketlere tıklayarak veya arama kutusuna yazarak projenize özel etiket ekleyin.
             </p>
 
+            {/* Quick Popular Tag Chips Selector */}
+            {popularTags.length > 0 && (
+              <div style={{ marginBottom: '1rem' }}>
+                <div style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
+                  💡 Önerilen Popüler Alanlar (Tıklayarak Seçin):
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', maxHeight: '140px', overflowY: 'auto', paddingRight: '4px' }}>
+                  {popularTags.map(tag => {
+                    const isSelected = selectedTags.some(s => s.id === tag.id);
+                    return (
+                      <button
+                        key={tag.id}
+                        type="button"
+                        onClick={() => toggleTag(tag)}
+                        style={{
+                          display: 'inline-flex',
+                          alignItems: 'center',
+                          gap: '0.35rem',
+                          padding: '0.35rem 0.75rem',
+                          borderRadius: '20px',
+                          fontSize: '0.8rem',
+                          fontWeight: isSelected ? 700 : 500,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
+                          background: isSelected ? 'rgba(56, 149, 255, 0.2)' : 'var(--bg-card)',
+                          color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)'
+                        }}
+                      >
+                        {isSelected ? <Check size={13} color="var(--accent-primary)" /> : <span>+</span>}
+                        <span>{tag.label}</span>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
+
+            {/* Tag Search Autocomplete */}
             <div style={{ position: 'relative', marginBottom: '1rem' }}>
               <input
                 type="text"
                 className="form-input"
-                placeholder="Etiket arayın (Örn: İnşaat Mühendisliği, Biyomekanik, Yapay Zeka...)"
+                placeholder="Arama ile ~1.400 etiket arasında bulun (Örn: İnşaat Mühendisliği, Biyomekanik...)"
                 value={tagSearch}
                 onChange={e => setTagSearch(e.target.value)}
               />
@@ -195,12 +254,12 @@ export default function CreateProjectPage({ onNavigate }) {
                   {filteredTags.map(tag => (
                     <div
                       key={tag.id}
-                      onClick={() => addTag(tag)}
+                      onClick={() => { toggleTag(tag); setTagSearch(''); }}
                       style={{
                         padding: '0.65rem 1rem',
                         borderBottom: '1px solid var(--border-color)',
                         cursor: 'pointer',
-                        fontSize: '0.9rem'
+                        fontSize: '0.88rem'
                       }}
                     >
                       + {tag.label}
@@ -210,15 +269,22 @@ export default function CreateProjectPage({ onNavigate }) {
               )}
             </div>
 
-            {/* Selected tags */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
-              {selectedTags.map(tag => (
-                <span key={tag.id} className="badge badge-tag" style={{ padding: '0.45rem 0.9rem' }}>
-                  {tag.label}
-                  <X size={14} style={{ cursor: 'pointer' }} onClick={() => removeTag(tag.id)} />
-                </span>
-              ))}
-            </div>
+            {/* Selected Tags Display */}
+            {selectedTags.length > 0 && (
+              <div>
+                <div style={{ fontSize: '0.75rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.4rem' }}>
+                  SEÇİLEN ETİKETLER ({selectedTags.length}):
+                </div>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
+                  {selectedTags.map(tag => (
+                    <span key={tag.id} className="badge badge-tag" style={{ padding: '0.45rem 0.9rem', fontSize: '0.84rem' }}>
+                      {tag.label}
+                      <X size={14} style={{ cursor: 'pointer', marginLeft: '4px' }} onClick={() => removeTag(tag.id)} />
+                    </span>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Grid Row for Size, Duration, Budget */}
@@ -264,15 +330,29 @@ export default function CreateProjectPage({ onNavigate }) {
             </div>
           </div>
 
-          <button
-            type="submit"
-            disabled={loading}
-            className="btn-primary"
-            style={{ width: '100%', padding: '0.95rem' }}
-          >
-            <PlusCircle size={20} />
-            <span>{loading ? 'Yayınlanıyor...' : 'Projeyi Yayınla & Eşleştirmeye Başla'}</span>
-          </button>
+          {/* Action Buttons: Save Draft vs Publish */}
+          <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
+            <button
+              type="submit"
+              disabled={loading || draftLoading}
+              className="btn-primary"
+              style={{ flex: 2, padding: '0.95rem', minWidth: '220px', justifyContent: 'center' }}
+            >
+              <PlusCircle size={20} />
+              <span>{loading ? 'Yayınlanıyor...' : '🚀 Projeyi Yayınla & Eşleştirmeye Başla'}</span>
+            </button>
+
+            <button
+              type="button"
+              disabled={loading || draftLoading}
+              onClick={(e) => handleSubmit(e, 'draft')}
+              className="btn-secondary"
+              style={{ flex: 1, padding: '0.95rem', minWidth: '180px', justifyContent: 'center' }}
+            >
+              <Save size={18} color="var(--accent-primary)" />
+              <span>{draftLoading ? 'Kaydediliyor...' : '💾 Taslak Olarak Kaydet'}</span>
+            </button>
+          </div>
         </form>
       </div>
     </div>
