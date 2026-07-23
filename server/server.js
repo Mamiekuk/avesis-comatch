@@ -1420,6 +1420,21 @@ app.get('/api/dashboard', authMiddleware, (req, res) => {
   }
 });
 
+// Get User Notifications
+app.get('/api/notifications', authMiddleware, (req, res) => {
+  try {
+    const notifications = db.prepare(`
+      SELECT * FROM notifications
+      WHERE user_id = ?
+      ORDER BY id DESC LIMIT 20
+    `).all(req.user.id);
+    const unreadCount = notifications.filter(n => !n.is_read).length;
+    res.json({ notifications, unreadCount });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Mark notifications read
 app.post('/api/notifications/read-all', authMiddleware, (req, res) => {
   db.prepare('UPDATE notifications SET is_read = 1 WHERE user_id = ?').run(req.user.id);

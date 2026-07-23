@@ -214,6 +214,23 @@ export async function fetchDashboard(token) {
   return data;
 }
 
+export async function fetchNotifications(token) {
+  const res = await fetch(`${API_BASE}/notifications`, {
+    headers: getHeaders(token)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Bildirimler alınamadı.');
+  return data;
+}
+
+export async function markNotificationsRead(token) {
+  const res = await fetch(`${API_BASE}/notifications/read-all`, {
+    method: 'POST',
+    headers: getHeaders(token)
+  });
+  return res.json();
+}
+
 export async function fetchChatContacts(token) {
   const res = await fetch(`${API_BASE}/chat/contacts`, {
     headers: getHeaders(token)

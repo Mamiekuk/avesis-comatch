@@ -25,20 +25,48 @@ export default function FloatingChatWidget() {
   const fileInputRef = useRef(null);
   const widgetRef = useRef(null);
 
-  // Poll contacts when open
+  const prevUnreadRef = useRef(0);
+
+  // Play notification chime using Web Audio API
+  const playChime = () => {
+    try {
+      const ctx = new (window.AudioContext || window.webkitAudioContext)();
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
+      osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // A5
+      gain.gain.setValueAtTime(0.15, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start();
+      osc.stop(ctx.currentTime + 0.3);
+    } catch (e) {}
+  };
+
+  // Poll contacts always when logged in (even when widget is collapsed)
   useEffect(() => {
-    if (!token || !isOpen) return;
+    if (!token) return;
 
     const loadContacts = () => {
       fetchChatContacts(token)
-        .then(res => setContacts(res.contacts || []))
+        .then(res => {
+          const list = res.contacts || [];
+          setContacts(list);
+          const totalUnread = list.reduce((sum, c) => sum + (c.unread_count || 0), 0);
+          if (totalUnread > prevUnreadRef.current && prevUnreadRef.current >= 0) {
+            playChime();
+          }
+          prevUnreadRef.current = totalUnread;
+        })
         .catch(err => console.error('Floating chat contacts load error:', err));
     };
 
     loadContacts();
-    const interval = setInterval(loadContacts, 6000);
+    const interval = setInterval(loadContacts, 5000);
     return () => clearInterval(interval);
-  }, [token, isOpen]);
+  }, [token]);
 
   // Poll messages when active chat is open
   useEffect(() => {
@@ -145,6 +173,7 @@ export default function FloatingChatWidget() {
   );
 
   const selfInitials = user.full_name ? user.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '?';
+  const totalUnread = contacts.reduce((sum, c) => sum + (c.unread_count || 0), 0);
 
   return (
     <div 
@@ -152,23 +181,49 @@ export default function FloatingChatWidget() {
       style={{
         position: 'fixed',
         bottom: 0,
-        right: '2.5rem',
-        width: isOpen ? '320px' : '260px',
-        height: isOpen ? '420px' : '48px',
+        right: '24px',
+        width: isOpen ? '340px' : '280px',
+        height: isOpen ? '500px' : '48px',
         background: 'var(--bg-card)',
-        border: '1px solid var(--border-color)',
-        borderBottom: 'none',
-        borderTopLeftRadius: '12px',
-        borderTopRightRadius: '12px',
-        boxShadow: '0 -4px 20px rgba(0,0,0,0.3)',
+        border: totalUnread > 0 && !isOpen ? '1px solid rgba(239, 68, 68, 0.6)' : '1px solid var(--border-color)',
+        borderRadius: '12px 12px 0 0',
+        boxShadow: totalUnread > 0 && !isOpen ? '0 0 25px rgba(239, 68, 68, 0.4)' : 'var(--shadow-md)',
         zIndex: 9999,
         display: 'flex',
         flexDirection: 'column',
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        overflow: 'hidden',
-        fontFamily: 'var(--font-body)'
+        transition: 'all 0.25s cubic-bezier(0.16, 1, 0.3, 1)',
+        backdropFilter: 'blur(16px)',
+        overflow: 'visible'
       }}
     >
+      {/* Floating Unread Alert Popover when closed */}
+      {!isOpen && totalUnread > 0 && (
+        <div 
+          onClick={() => setIsOpen(true)}
+          style={{
+            position: 'absolute',
+            top: '-46px',
+            right: '0',
+            background: 'linear-gradient(135deg, #ef4444, #dc2626)',
+            color: '#ffffff',
+            padding: '0.45rem 0.95rem',
+            borderRadius: '8px',
+            fontSize: '0.82rem',
+            fontWeight: 700,
+            boxShadow: '0 4px 15px rgba(239, 68, 68, 0.5), 0 0 10px rgba(239, 68, 68, 0.4)',
+            cursor: 'pointer',
+            animation: 'fadeInUp 300ms ease-out',
+            whiteSpace: 'nowrap',
+            zIndex: 10000,
+            display: 'flex',
+            alignItems: 'center',
+            gap: '0.4rem'
+          }}
+        >
+          <span>💬 {totalUnread} Yeni Mesajınız Var!</span>
+        </div>
+      )}
+
       {/* HEADER */}
       <div 
         onClick={() => setIsOpen(!isOpen)}
@@ -201,6 +256,20 @@ export default function FloatingChatWidget() {
             <span style={{ position: 'absolute', bottom: -2, right: -2, width: '10px', height: '10px', borderRadius: '50%', background: '#10b981', border: '2px solid var(--bg-card)' }} />
           </div>
           <span style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--text-primary)' }}>Mesajlaşma</span>
+          {totalUnread > 0 && (
+            <span style={{
+              fontSize: '0.72rem',
+              background: '#ef4444',
+              color: '#fff',
+              padding: '0.12rem 0.55rem',
+              borderRadius: '999px',
+              fontWeight: 800,
+              boxShadow: '0 0 10px rgba(239, 68, 68, 0.6)',
+              animation: 'pulseGlow 2s infinite ease-in-out'
+            }}>
+              {totalUnread} Yeni
+            </span>
+          )}
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }} onClick={e => e.stopPropagation()}>
