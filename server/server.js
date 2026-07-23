@@ -719,7 +719,7 @@ app.get('/api/academicians', (req, res) => {
 
     const offset = (Number(page) - 1) * Number(limit);
     const params = [];
-    const whereClauses = [];
+    const whereClauses = ["u.id != 1236 AND (u.email IS NULL OR u.email NOT LIKE 'admin%')"];
 
     if (search.trim()) {
       whereClauses.push('(u.full_name LIKE ? OR u.title LIKE ? OR u.bio LIKE ?)');
@@ -1471,7 +1471,7 @@ app.get('/api/chat/contacts', authMiddleware, (req, res) => {
       FROM users u
       JOIN messages msg ON (msg.sender_id = u.id AND msg.receiver_id = ?) 
                        OR (msg.sender_id = ? AND msg.receiver_id = u.id)
-      WHERE u.id != ?
+      WHERE u.id != ? AND u.id != 1236 AND (u.email IS NULL OR u.email NOT LIKE 'admin%')
       ORDER BY last_message_time DESC
     `).all(userId, userId, userId, userId, userId, userId, userId, userId);
 
@@ -1515,6 +1515,15 @@ app.post('/api/chat/messages', authMiddleware, (req, res) => {
 
     if (!receiverId || (!message && !fileUrl)) {
       return res.status(400).json({ error: 'Alıcı ve mesaj içeriği veya dosya zorunludur.' });
+    }
+
+    if (Number(receiverId) === 1236) {
+      return res.status(400).json({ error: 'Sistem yöneticisine doğrudan mesaj gönderimi kapalıdır.' });
+    }
+
+    const receiver = db.prepare('SELECT id, email, full_name FROM users WHERE id = ?').get(receiverId);
+    if (receiver && (receiver.email?.toLowerCase().includes('admin') || receiver.full_name?.toLowerCase().includes('sistem'))) {
+      return res.status(400).json({ error: 'Sistem yöneticisine doğrudan mesaj gönderimi kapalıdır.' });
     }
 
     const msgText = message ? message.trim() : (fileName || 'Dosya gönderdi');

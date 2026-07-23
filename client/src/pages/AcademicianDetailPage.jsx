@@ -192,7 +192,7 @@ export default function AcademicianDetailPage({ id, onNavigate, onOpenClaimModal
                 </button>
               )}
 
-              {user && user.id !== academician.id && (
+              {user && user.id !== academician.id && academician.id !== 1236 && (!academician.email || !academician.email.includes('admin')) && (
                 <>
                   <button onClick={openInviteModal} className="btn-primary">
                     <Send size={18} />
