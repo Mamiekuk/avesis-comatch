@@ -76,12 +76,13 @@ export default function FloatingChatWidget() {
       fetchChatHistory(activeContact.id, token)
         .then(res => {
           setMessages(res.history || []);
+          setContacts(prev => prev.map(c => c.id === activeContact.id ? { ...c, unread_count: 0 } : c));
         })
         .catch(err => console.error('Floating chat messages load error:', err));
     };
 
     loadMessages();
-    const interval = setInterval(loadMessages, 4000);
+    const interval = setInterval(loadMessages, 3500);
     return () => clearInterval(interval);
   }, [token, isOpen, activeContact]);
 
@@ -570,7 +571,10 @@ export default function FloatingChatWidget() {
                       return (
                         <div 
                           key={c.id}
-                          onClick={() => setActiveContact(c)}
+                          onClick={() => {
+                            setActiveContact(c);
+                            setContacts(prev => prev.map(item => item.id === c.id ? { ...item, unread_count: 0 } : item));
+                          }}
                           style={{
                             display: 'flex',
                             alignItems: 'center',

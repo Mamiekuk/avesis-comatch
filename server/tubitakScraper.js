@@ -41,9 +41,6 @@ async function syncTubitakCalls(db) {
     }
 
     let newCallsCount = 0;
-    const systemBotId = 1236; // Sistem Yöneticisi / Bot ID
-
-    // Get list of active users to notify
     const activeUsers = db.prepare('SELECT id FROM users WHERE is_active = 1').all();
 
     for (const call of webCalls) {
@@ -56,34 +53,23 @@ async function syncTubitakCalls(db) {
         `).run(call.title, call.url);
         newCallsCount++;
 
-        // Broadcast Notification Bell & Live Chat to all active academicians
+        // Broadcast Notification Bell item ONLY (No chat messages)
         const notifTitle = `🏛️ TÜBİTAK Yeni Çağrı: ${call.title}`;
         const notifBody = `TÜBİTAK resmi sayfasında yeni bir açık çağrı yayınlandı. İncelemek için tıklayın.`;
 
-        const chatMsg = `🏛️ TÜBİTAK RESMİ YENİ ÇAĞRI DUYURUSU\n\n📌 Başlık: "${call.title}"\n\nTÜBİTAK tarafından yeni bir açık çağrı yayınlanmıştır. Detayları ve başvuru şartlarını incelemek için resmi adresi ziyaret edebilirsiniz:\n🔗 ${call.url}`;
-
         for (const u of activeUsers) {
-          // 1. In-App Notification Bell
           try {
             db.prepare(`
               INSERT INTO notifications (user_id, title, body, link)
               VALUES (?, ?, ?, ?)
             `).run(u.id, notifTitle, notifBody, call.url);
           } catch (e) {}
-
-          // 2. Live Chat Message from Bot
-          try {
-            db.prepare(`
-              INSERT INTO messages (sender_id, receiver_id, message)
-              VALUES (?, ?, ?)
-            `).run(systemBotId, u.id, chatMsg);
-          } catch (e) {}
         }
       }
     }
 
     if (newCallsCount > 0) {
-      console.log(`📡 TÜBİTAK Otomatik Scraper: ${newCallsCount} adet YENİ açık çağrı bulundu ve akademisyenlere bildirildi!`);
+      console.log(`📡 TÜBİTAK Otomatik Scraper: ${newCallsCount} adet YENİ açık çağrı bulundu ve bildirim ziline iletildi!`);
     } else {
       console.log(`📡 TÜBİTAK Otomatik Scraper: Güncel (Son kontrol edilen çağrı sayısı: ${webCalls.length})`);
     }

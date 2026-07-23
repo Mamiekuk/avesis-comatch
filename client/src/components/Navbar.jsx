@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Users, FolderGit2, PlusCircle, Sun, Moon, LogIn, LayoutDashboard, LogOut, Award, Bell, CheckCircle2, ExternalLink } from 'lucide-react';
+import { Users, FolderGit2, PlusCircle, Sun, Moon, LogIn, LayoutDashboard, LogOut, Award, Bell, CheckCircle2, ExternalLink, Megaphone } from 'lucide-react';
 import { fetchNotifications, markNotificationsRead } from '../services/api';
 
 export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
@@ -145,6 +145,25 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
           >
             <FolderGit2 size={18} />
             <span>Akademik Projeler</span>
+          </button>
+
+          <button
+            onClick={() => onNavigate('announcements')}
+            style={{
+              padding: '0.55rem 1.1rem',
+              borderRadius: 'var(--radius-md)',
+              fontWeight: 600,
+              fontSize: '0.9rem',
+              color: currentRoute === 'announcements' ? 'var(--accent-primary)' : 'var(--text-secondary)',
+              background: currentRoute === 'announcements' ? 'rgba(56, 149, 255, 0.12)' : 'transparent',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.45rem',
+              transition: 'all 0.2s'
+            }}
+          >
+            <Megaphone size={18} />
+            <span>Çağrı Duyuruları</span>
           </button>
 
           <button

@@ -974,21 +974,12 @@ function notifyMatchingAcademiciansForProjectCall(projectId, title, objectives, 
     const systemBotId = 1236; // Sistem Yöneticisi / Bot ID
 
     for (const u of targetUsers) {
-      // 1. In-App Notification
+      // In-App Notification Bell
       try {
         db.prepare(`
           INSERT INTO notifications (user_id, title, body, link)
           VALUES (?, ?, ?, ?)
         `).run(u.id, notifTitle, notifBody, `/project-detail?id=${projectId}`);
-      } catch (e) {}
-
-      // 2. Chat System Message from System Bot
-      try {
-        const chatMsg = `📢 YENİ PROJE ÇAĞRISI DUYURUSU (${typeName})\n\n📌 Proje Başlığı: "${title}"\n\nUzmanlık alanlarınızla örtüşen yeni bir proje ilanı açılmıştır. Ekibe katılmak veya detayları incelemek için platform içi projeler sekmesini ziyaret edebilirsiniz.`;
-        db.prepare(`
-          INSERT INTO messages (sender_id, receiver_id, message)
-          VALUES (?, ?, ?)
-        `).run(systemBotId, u.id, chatMsg);
       } catch (e) {}
     }
 
@@ -1718,6 +1709,16 @@ app.post('/api/meetings/:id/respond', authMiddleware, (req, res) => {
     );
 
     res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Get TÜBİTAK Open Calls list
+app.get('/api/tubitak/calls', (req, res) => {
+  try {
+    const calls = db.prepare('SELECT * FROM tubitak_calls ORDER BY id DESC').all();
+    res.json({ calls });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

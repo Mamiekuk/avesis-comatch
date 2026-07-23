@@ -8,6 +8,7 @@ import ProjectsPage from './pages/ProjectsPage';
 import ProjectDetailPage from './pages/ProjectDetailPage';
 import CreateProjectPage from './pages/CreateProjectPage';
 import DashboardPage from './pages/DashboardPage';
+import AnnouncementsPage from './pages/AnnouncementsPage';
 import FloatingChatWidget from './components/FloatingChatWidget';
 import { useAuth } from './context/AuthContext';
 import './styles/design-system.css';
@@ -79,6 +80,12 @@ export default function App() {
           <DashboardPage
             onNavigate={handleNavigate}
             routeParam={routeParam}
+          />
+        )}
+
+        {route === 'announcements' && (
+          <AnnouncementsPage
+            onNavigate={handleNavigate}
           />
         )}
       </main>

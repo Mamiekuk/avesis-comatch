@@ -339,3 +339,10 @@ export async function announceProjectCall(projectId, token) {
   if (!res.ok) throw new Error(data.error || 'Proje çağrısı duyurulamadı.');
   return data;
 }
+
+export async function fetchTubitakCalls() {
+  const res = await fetch(`${API_BASE}/tubitak/calls`);
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'TÜBİTAK çağrıları alınamadı.');
+  return data;
+}
