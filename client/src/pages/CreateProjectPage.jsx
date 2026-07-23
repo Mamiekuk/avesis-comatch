@@ -174,7 +174,7 @@ export default function CreateProjectPage({ onNavigate }) {
             </div>
           </div>
 
-          {/* RESEARCH AREA TAG PICKER & CHIPS */}
+          {/* RESEARCH AREA TAG PICKER */}
           <div style={{
             background: 'var(--bg-secondary)',
             border: '1px solid var(--border-highlight)',
@@ -182,51 +182,12 @@ export default function CreateProjectPage({ onNavigate }) {
             padding: '1.25rem',
             marginBottom: '1.75rem'
           }}>
-            <label style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.4rem', color: 'var(--accent-primary)' }}>
-              <Tag size={18} />
-              <span>🎯 Aranan Araştırma Alanı Etiketleri (Çoklu Etiket Seçimi)</span>
+            <label style={{ display: 'block', fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.4rem', color: 'var(--accent-primary)' }}>
+              🎯 Aranan Araştırma Alanı Etiketleri (Zorunlu — Akıllı Eşleştirme Motoru İçin)
             </label>
             <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.85rem' }}>
-              Aşağıdaki hazır etiketlere tıklayarak veya arama kutusuna yazarak projenize özel etiket ekleyin.
+              AVESİS taksonomisindeki ~1.400 etiket arasından yazarak ekleyin.
             </p>
-
-            {/* Quick Popular Tag Chips Selector */}
-            {popularTags.length > 0 && (
-              <div style={{ marginBottom: '1rem' }}>
-                <div style={{ fontSize: '0.74rem', fontWeight: 700, color: 'var(--text-muted)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
-                  💡 Önerilen Popüler Alanlar (Tıklayarak Seçin):
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.45rem', maxHeight: '140px', overflowY: 'auto', paddingRight: '4px' }}>
-                  {popularTags.map(tag => {
-                    const isSelected = selectedTags.some(s => s.id === tag.id);
-                    return (
-                      <button
-                        key={tag.id}
-                        type="button"
-                        onClick={() => toggleTag(tag)}
-                        style={{
-                          display: 'inline-flex',
-                          alignItems: 'center',
-                          gap: '0.35rem',
-                          padding: '0.35rem 0.75rem',
-                          borderRadius: '20px',
-                          fontSize: '0.8rem',
-                          fontWeight: isSelected ? 700 : 500,
-                          cursor: 'pointer',
-                          transition: 'all 0.2s',
-                          border: isSelected ? '1px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                          background: isSelected ? 'rgba(56, 149, 255, 0.2)' : 'var(--bg-card)',
-                          color: isSelected ? 'var(--accent-primary)' : 'var(--text-secondary)'
-                        }}
-                      >
-                        {isSelected ? <Check size={13} color="var(--accent-primary)" /> : <span>+</span>}
-                        <span>{tag.label}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
 
             {/* Tag Search Autocomplete */}
             <div style={{ position: 'relative', marginBottom: '1rem' }}>
