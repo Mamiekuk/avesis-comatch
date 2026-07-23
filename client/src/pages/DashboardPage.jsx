@@ -606,94 +606,6 @@ export default function DashboardPage({ onNavigate, routeParam }) {
         </div>
       </div>
 
-      {/* K-MEANS AKADEMİK MAHALLE & BENZER HOCALAR (KİŞİSEL ÖNERİLER) */}
-      {(data?.user || user).tag_cluster && (
-        <div className="card-glass" style={{ marginBottom: '2.5rem', border: '1px solid rgba(168, 85, 247, 0.3)', background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.05), rgba(56, 149, 255, 0.05))' }}>
-          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
-              <div style={{ padding: '0.55rem', borderRadius: '50%', background: 'rgba(168, 85, 247, 0.18)', color: '#c084fc', display: 'flex' }}>
-                <UserCheck size={22} />
-              </div>
-              <div>
-                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>⚡ Yapay Zeka Öneri Motoru</span>
-                <h3 style={{ fontSize: '1.4rem', margin: 0, color: 'var(--text-primary)' }}>
-                  Akademik Küme Komşularınız: <span style={{ color: '#c084fc' }}>{cleanClusterName((data?.user || user).tag_cluster.name)}</span>
-                </h3>
-              </div>
-            </div>
-            <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-              Vektör benzerliğine göre aynı kümedeki en yakın meslektaşlarınız.
-            </span>
-          </div>
-
-          {neighbors.length === 0 ? (
-            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic', margin: 0 }}>
-              Araştırma alanlarına en yakın benzer akademisyenler hesaplanıyor...
-            </p>
-          ) : (
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
-              {neighbors.slice(0, 4).map(nb => (
-                <div
-                  key={nb.id}
-                  onClick={() => onNavigate('academician-detail', nb.id)}
-                  style={{
-                    background: 'var(--bg-primary)',
-                    border: '1px solid var(--border-color)',
-                    borderRadius: 'var(--radius-md)',
-                    padding: '1rem',
-                    cursor: 'pointer',
-                    transition: 'all 0.2s ease',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    justifyContent: 'space-between'
-                  }}
-                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#c084fc'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
-                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.transform = 'none'; }}
-                >
-                  <div>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.6rem' }}>
-                      <div style={{
-                        width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
-                        color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.95rem', flexShrink: 0, overflow: 'hidden'
-                      }}>
-                        {nb.photo_url ? (
-                          <img src={nb.photo_url} alt={nb.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
-                        ) : (
-                          nb.full_name.charAt(0)
-                        )}
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <h4 style={{ fontSize: '0.98rem', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {nb.title} {nb.full_name}
-                        </h4>
-                        <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                          {nb.faculty_name}
-                        </span>
-                      </div>
-                    </div>
-                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.7rem' }}>
-                      {(nb.research_areas || []).slice(0, 3).map(ra => (
-                        <span key={ra.id} style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.05)', padding: '0.18rem 0.45rem', borderRadius: '4px', color: 'var(--text-secondary)' }}>
-                          {ra.label}
-                        </span>
-                      ))}
-                    </div>
-                  </div>
-                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: '0.55rem', marginTop: 'auto' }}>
-                    <span style={{ fontSize: '0.76rem', color: '#c084fc', fontWeight: 600 }}>
-                      ⚡ %{nb.similarity_score} Benzerlik
-                    </span>
-                    <span style={{ fontSize: '0.73rem', background: 'rgba(168, 85, 247, 0.12)', color: '#e879f9', padding: '0.18rem 0.5rem', borderRadius: '999px' }}>
-                      {nb.metric_badge}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
-      )}
-
       {/* TABS */}
       <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', borderBottom: '2px solid var(--border-color)', marginBottom: '2.5rem' }}>
         <button
@@ -1888,6 +1800,94 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                 </div>
               )}
 
+            </div>
+          )}
+        </div>
+      )}
+
+      {/* K-MEANS AKADEMİK MAHALLE & BENZER HOCALAR (KİŞİSEL ÖNERİLER) */}
+      {(data?.user || user).tag_cluster && (
+        <div className="card-glass" style={{ marginTop: '3rem', marginBottom: '2.5rem', border: '1px solid rgba(168, 85, 247, 0.3)', background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.05), rgba(56, 149, 255, 0.05))' }}>
+          <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+              <div style={{ padding: '0.55rem', borderRadius: '50%', background: 'rgba(168, 85, 247, 0.18)', color: '#c084fc', display: 'flex' }}>
+                <UserCheck size={22} />
+              </div>
+              <div>
+                <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>⚡ Yapay Zeka Öneri Motoru</span>
+                <h3 style={{ fontSize: '1.4rem', margin: 0, color: 'var(--text-primary)' }}>
+                  Akademik Küme Komşularınız: <span style={{ color: '#c084fc' }}>{cleanClusterName((data?.user || user).tag_cluster.name)}</span>
+                </h3>
+              </div>
+            </div>
+            <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
+              Vektör benzerliğine göre aynı kümedeki en yakın meslektaşlarınız.
+            </span>
+          </div>
+
+          {neighbors.length === 0 ? (
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem', fontStyle: 'italic', margin: 0 }}>
+              Araştırma alanlarına en yakın benzer akademisyenler hesaplanıyor...
+            </p>
+          ) : (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(280px, 1fr))', gap: '1rem' }}>
+              {neighbors.slice(0, 4).map(nb => (
+                <div
+                  key={nb.id}
+                  onClick={() => onNavigate('academician-detail', nb.id)}
+                  style={{
+                    background: 'var(--bg-primary)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '1rem',
+                    cursor: 'pointer',
+                    transition: 'all 0.2s ease',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    justifyContent: 'space-between'
+                  }}
+                  onMouseEnter={e => { e.currentTarget.style.borderColor = '#c084fc'; e.currentTarget.style.transform = 'translateY(-2px)'; }}
+                  onMouseLeave={e => { e.currentTarget.style.borderColor = 'var(--border-color)'; e.currentTarget.style.transform = 'none'; }}
+                >
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.6rem' }}>
+                      <div style={{
+                        width: '42px', height: '42px', borderRadius: '50%', background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
+                        color: 'white', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '0.95rem', flexShrink: 0, overflow: 'hidden'
+                      }}>
+                        {nb.photo_url ? (
+                          <img src={nb.photo_url} alt={nb.full_name} style={{ width: '100%', height: '100%', objectFit: 'cover' }} />
+                        ) : (
+                          nb.full_name.charAt(0)
+                        )}
+                      </div>
+                      <div style={{ flex: 1, minWidth: 0 }}>
+                        <h4 style={{ fontSize: '0.98rem', margin: 0, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {nb.title} {nb.full_name}
+                        </h4>
+                        <span style={{ fontSize: '0.76rem', color: 'var(--text-muted)', display: 'block', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                          {nb.faculty_name}
+                        </span>
+                      </div>
+                    </div>
+                    <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginBottom: '0.7rem' }}>
+                      {(nb.research_areas || []).slice(0, 3).map(ra => (
+                        <span key={ra.id} style={{ fontSize: '0.7rem', background: 'rgba(255,255,255,0.05)', padding: '0.18rem 0.45rem', borderRadius: '4px', color: 'var(--text-secondary)' }}>
+                          {ra.label}
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', borderTop: '1px solid var(--border-color)', paddingTop: '0.55rem', marginTop: 'auto' }}>
+                    <span style={{ fontSize: '0.76rem', color: '#c084fc', fontWeight: 600 }}>
+                      ⚡ %{nb.similarity_score} Benzerlik
+                    </span>
+                    <span style={{ fontSize: '0.73rem', background: 'rgba(168, 85, 247, 0.12)', color: '#e879f9', padding: '0.18rem 0.5rem', borderRadius: '999px' }}>
+                      {nb.metric_badge}
+                    </span>
+                  </div>
+                </div>
+              ))}
             </div>
           )}
         </div>
