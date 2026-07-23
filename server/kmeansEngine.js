@@ -217,8 +217,8 @@ function clusterUsersByTags(users, k) {
 
     const topTags = uniqueTopTags.length > 0 ? uniqueTopTags : tagScores.slice(0, 4).map(t => t.label);
     let clusterName = topTags.slice(0, 2).join(' & ');
-    if (!clusterName) clusterName = `Genel Araştırma Yaylası ${c + 1}`;
-    else clusterName = `${clusterName} Akademik Yaylası (Rize Yöresi)`;
+    if (!clusterName) clusterName = `Genel Araştırma Kümesi ${c + 1}`;
+    else clusterName = `${clusterName} Akademik Kümesi`;
 
     clusterNames[c] = clusterName;
 
@@ -229,8 +229,8 @@ function clusterUsersByTags(users, k) {
       member_count: memberCount,
       top_tags: topTags,
       description: topTags.length > 0 
-        ? `${topTags.join(', ')} alanlarında yoğunlaşan disiplinlerarası Rize yöresi akademik yayla grubu.`
-        : 'Çeşitli akademik disiplinleri barındıran Rize yöresi akademik yayla grubu.'
+        ? `${topTags.join(', ')} alanlarında yoğunlaşan disiplinlerarası akademik araştırma kümesi.`
+        : 'Çeşitli akademik disiplinleri barındıran akademik araştırma kümesi.'
     });
   }
 

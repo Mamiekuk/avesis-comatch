@@ -56,6 +56,22 @@ try {
     try {
       db.prepare("ALTER TABLE users ADD COLUMN collaboration_status TEXT DEFAULT 'open'").run();
     } catch (e) {}
+
+    try {
+      db.exec(`
+        CREATE TABLE IF NOT EXISTS user_sessions (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          user_id INTEGER NOT NULL,
+          token TEXT NOT NULL UNIQUE,
+          ip_address TEXT,
+          user_agent TEXT,
+          created_at DATETIME DEFAULT (datetime('now', 'localtime')),
+          expires_at DATETIME,
+          is_active INTEGER DEFAULT 1,
+          FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+        );
+      `);
+    } catch (e) {}
   }
 } catch (error) {
   console.error("❌ VERİTABANI BAŞLATILIRKEN HATA OLUŞTU:");

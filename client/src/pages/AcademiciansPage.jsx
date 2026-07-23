@@ -249,7 +249,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
           {/* K-Means Tag Cluster Filter */}
           <div>
             <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#c084fc', marginBottom: '0.4rem' }}>
-              🌐 Rize Akademik Yaylası
+              🌐 Akademik Küme
             </label>
             <select
               className="form-select"
@@ -257,7 +257,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
               value={selectedTagCluster}
               onChange={e => setSelectedTagCluster(e.target.value)}
             >
-              <option value="">Tüm Akademik Yaylalar</option>
+              <option value="">Tüm Akademik Kümeler</option>
               {(kmeansSummary.tagClusters || []).map(tc => (
                 <option key={tc.id} value={tc.id}>{tc.name} ({tc.member_count} Hoca)</option>
               ))}

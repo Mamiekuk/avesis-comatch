@@ -187,7 +187,19 @@ app.post('/api/kmeans/recalculate', authMiddleware, (req, res) => {
 
 // ==========================================
 // 2. KİMLİK DOĞRULAMA & PROFİL SAHİPLENME
-// ==========================================
+// Session Creation Helper
+function createSession(userId, token, req) {
+  try {
+    const ip = req.headers['x-forwarded-for'] || req.socket?.remoteAddress || '127.0.0.1';
+    const ua = req.headers['user-agent'] || 'Browser Session';
+    db.prepare(`
+      INSERT INTO user_sessions (user_id, token, ip_address, user_agent, expires_at)
+      VALUES (?, ?, ?, ?, datetime('now', '+7 days'))
+    `).run(userId, token, ip, ua);
+  } catch (e) {
+    console.error('Session creation error:', e.message);
+  }
+}
 
 // Login
 app.post('/api/auth/login', (req, res) => {
@@ -217,6 +229,7 @@ app.post('/api/auth/login', (req, res) => {
   attachUserTags(user);
 
   const token = jwt.sign({ id: user.id, email: user.email, name: user.full_name }, JWT_SECRET, { expiresIn: '7d' });
+  createSession(user.id, token, req);
   res.json({ token, user });
 });
 
@@ -492,6 +505,34 @@ app.get('/api/auth/me', authMiddleware, (req, res) => {
   delete user.password_hash;
   attachUserTags(user);
   res.json({ user });
+});
+
+// Logout Session Endpoint
+app.post('/api/auth/logout', authMiddleware, (req, res) => {
+  const header = req.headers.authorization;
+  if (header && header.startsWith('Bearer ')) {
+    const token = header.split(' ')[1];
+    try {
+      db.prepare("UPDATE user_sessions SET is_active = 0 WHERE token = ?").run(token);
+    } catch (e) {}
+  }
+  res.json({ success: true, message: 'Oturum başarıyla sonlandırıldı.' });
+});
+
+// Active Sessions Endpoint
+app.get('/api/auth/sessions', authMiddleware, (req, res) => {
+  try {
+    const sessions = db.prepare(`
+      SELECT id, ip_address, user_agent, created_at, expires_at, is_active
+      FROM user_sessions
+      WHERE user_id = ?
+      ORDER BY id DESC
+      LIMIT 10
+    `).all(req.user.id);
+    res.json({ sessions });
+  } catch (e) {
+    res.json({ sessions: [] });
+  }
 });
 
 // Update Profile & Research Areas (Kullanıcı Profil ve Araştırma Alanı Düzenleme)

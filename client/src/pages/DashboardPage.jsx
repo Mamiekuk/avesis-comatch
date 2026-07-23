@@ -607,12 +607,12 @@ export default function DashboardPage({ onNavigate, routeParam }) {
               <div>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>⚡ Yapay Zeka Öneri Motoru</span>
                 <h3 style={{ fontSize: '1.4rem', margin: 0, color: 'var(--text-primary)' }}>
-                  Yayla Komşularınız: <span style={{ color: '#c084fc' }}>{(data?.user || user).tag_cluster.name}</span>
+                  Akademik Küme Komşularınız: <span style={{ color: '#c084fc' }}>{(data?.user || user).tag_cluster.name}</span>
                 </h3>
               </div>
             </div>
             <span style={{ fontSize: '0.82rem', color: 'var(--text-secondary)' }}>
-              Vektör benzerliğine göre aynı yayladaki en yakın meslektaşlarınız.
+              Vektör benzerliğine göre aynı kümedeki en yakın meslektaşlarınız.
             </span>
           </div>
 
