@@ -945,6 +945,58 @@ app.get('/api/projects/:id', (req, res) => {
   }
 });
 
+// Helper: Automatic Notification & Chat Announcement for Projects (TÜBİTAK, BAP, vb.)
+function notifyMatchingAcademiciansForProjectCall(projectId, title, objectives, ownerId, researchAreaIds) {
+  try {
+    let targetUsers = [];
+    if (Array.isArray(researchAreaIds) && researchAreaIds.length > 0) {
+      const placeholders = researchAreaIds.map(() => '?').join(',');
+      targetUsers = db.prepare(`
+        SELECT DISTINCT u.id, u.full_name, u.email
+        FROM users u
+        JOIN user_research_areas ura ON ura.user_id = u.id
+        WHERE ura.research_area_id IN (${placeholders}) AND u.id != ? AND u.is_active = 1
+      `).all(...researchAreaIds, ownerId);
+    }
+
+    if (!targetUsers || targetUsers.length === 0) {
+      targetUsers = db.prepare(`
+        SELECT id, full_name, email FROM users
+        WHERE id != ? AND is_active = 1
+        LIMIT 25
+      `).all(ownerId);
+    }
+
+    const typeName = objectives || 'BAP / TÜBİTAK';
+    const notifTitle = `📢 Yeni ${typeName} Proje Çağrısı: ${title}`;
+    const notifBody = `Uzmanlık alanınızla doğrudan örtüşen yeni bir ${typeName} projesi açıldı. İncelemek için tıklayın.`;
+    const systemBotId = 1236; // Sistem Yöneticisi / Bot ID
+
+    for (const u of targetUsers) {
+      // 1. In-App Notification
+      try {
+        db.prepare(`
+          INSERT INTO notifications (user_id, title, body, link)
+          VALUES (?, ?, ?, ?)
+        `).run(u.id, notifTitle, notifBody, `/project-detail?id=${projectId}`);
+      } catch (e) {}
+
+      // 2. Chat System Message from System Bot
+      try {
+        const chatMsg = `📢 YENİ PROJE ÇAĞRISI DUYURUSU (${typeName})\n\n📌 Proje Başlığı: "${title}"\n\nUzmanlık alanlarınızla örtüşen yeni bir proje ilanı açılmıştır. Ekibe katılmak veya detayları incelemek için platform içi projeler sekmesini ziyaret edebilirsiniz.`;
+        db.prepare(`
+          INSERT INTO messages (sender_id, receiver_id, message)
+          VALUES (?, ?, ?)
+        `).run(systemBotId, u.id, chatMsg);
+      } catch (e) {}
+    }
+
+    console.log(`🚀 Automatic ${typeName} project announcement broadcasted to ${targetUsers.length} matching academicians!`);
+  } catch (err) {
+    console.error('Error sending automatic project call notifications:', err);
+  }
+}
+
 // Create Project
 app.post('/api/projects', authMiddleware, (req, res) => {
   const { title, description, objectives, teamSize = 3, duration, budget, researchAreaIds = [] } = req.body;
@@ -970,7 +1022,34 @@ app.post('/api/projects', authMiddleware, (req, res) => {
     insertProjArea.run(projectId, tagId);
   }
 
-  res.status(201).json({ message: 'Proje başarıyla oluşturuldu!', projectId });
+  // Trigger automatic project call broadcast to matching academicians
+  notifyMatchingAcademiciansForProjectCall(projectId, title, objectives, req.user.id, researchAreaIds);
+
+  res.status(201).json({ message: 'Proje başarıyla oluşturuldu ve uyumlu akademisyenlere çağrı duyurusu iletildi!', projectId });
+});
+
+// Announce / Re-broadcast Project Call Endpoint
+app.post('/api/projects/:id/announce', authMiddleware, (req, res) => {
+  try {
+    const projectId = req.params.id;
+    const project = db.prepare('SELECT p.* FROM projects p WHERE p.id = ?').get(projectId);
+    if (!project) {
+      return res.status(404).json({ error: 'Proje bulunamadı.' });
+    }
+
+    if (project.owner_id !== req.user.id) {
+      return res.status(403).json({ error: 'Sadece proje yürütücüsü çağrı duyurusu yapabilir.' });
+    }
+
+    const tags = db.prepare('SELECT research_area_id FROM project_research_areas WHERE project_id = ?').all(projectId);
+    const researchAreaIds = tags.map(t => t.research_area_id);
+
+    notifyMatchingAcademiciansForProjectCall(projectId, project.title, project.objectives, req.user.id, researchAreaIds);
+
+    res.json({ success: true, message: 'Proje çağrısı uyumlu uzman akademisyenlere başarıyla mesaj ve bildirim olarak iletildi!' });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
 });
 
 // Update Project

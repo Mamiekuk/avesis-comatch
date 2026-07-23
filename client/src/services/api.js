@@ -312,3 +312,13 @@ export async function resetForgotPassword(email, code, newPassword) {
   if (!res.ok) throw new Error(data.error || 'Şifre güncellenemedi.');
   return data;
 }
+
+export async function announceProjectCall(projectId, token) {
+  const res = await fetch(`${API_BASE}/projects/${projectId}/announce`, {
+    method: 'POST',
+    headers: getHeaders(token)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Proje çağrısı duyurulamadı.');
+  return data;
+}

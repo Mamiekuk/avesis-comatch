@@ -1,8 +1,8 @@
 import React, { useState, useEffect } from 'react';
-import { fetchProjectById, applyToProject } from '../services/api';
+import { fetchProjectById, applyToProject, announceProjectCall } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import SmartMatchingPanel from '../components/SmartMatchingPanel';
-import { FolderGit2, Users, Sparkles, ArrowLeft, Send, CheckCircle2, Award, Calendar, DollarSign } from 'lucide-react';
+import { FolderGit2, Users, Sparkles, ArrowLeft, Send, CheckCircle2, Award, Calendar, DollarSign, Megaphone } from 'lucide-react';
 
 export default function ProjectDetailPage({ id, onNavigate }) {
   const { user, token } = useAuth();
@@ -12,6 +12,8 @@ export default function ProjectDetailPage({ id, onNavigate }) {
   const [applyMsg, setApplyMsg] = useState('');
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [applied, setApplied] = useState(false);
+  const [announcing, setAnnouncing] = useState(false);
+  const [announceSuccessMsg, setAnnounceSuccessMsg] = useState('');
 
   useEffect(() => {
     fetchProjectById(id)
@@ -29,6 +31,20 @@ export default function ProjectDetailPage({ id, onNavigate }) {
       setTimeout(() => setApplyModalOpen(false), 1500);
     } catch (err) {
       alert(err.message);
+    }
+  };
+
+  const handleBroadcastAnnouncement = async () => {
+    if (!token) return alert('Lütfen giriş yapın.');
+    setAnnouncing(true);
+    try {
+      const res = await announceProjectCall(id, token);
+      setAnnounceSuccessMsg(res.message);
+      setTimeout(() => setAnnounceSuccessMsg(''), 4000);
+    } catch (err) {
+      alert(err.message);
+    } finally {
+      setAnnouncing(false);
     }
   };
 
@@ -113,6 +129,25 @@ export default function ProjectDetailPage({ id, onNavigate }) {
                 <DollarSign size={16} color="var(--success)" />
                 <span style={{ fontSize: '0.9rem' }}><strong>Bütçe:</strong> {project.budget}</span>
               </div>
+            )}
+
+            {announceSuccessMsg && (
+              <div style={{ padding: '0.65rem 0.85rem', background: 'var(--success-bg)', color: 'var(--success)', borderRadius: '8px', fontSize: '0.82rem', marginBottom: '0.85rem', border: '1px solid rgba(16, 185, 129, 0.3)', fontWeight: 600 }}>
+                {announceSuccessMsg}
+              </div>
+            )}
+
+            {user && isOwnerOrLeader && (
+              <button
+                type="button"
+                onClick={handleBroadcastAnnouncement}
+                disabled={announcing}
+                className="btn-secondary"
+                style={{ width: '100%', border: '1px solid rgba(56, 149, 255, 0.4)', background: 'rgba(56, 149, 255, 0.1)', color: 'var(--accent-primary)', fontSize: '0.86rem' }}
+              >
+                <Megaphone size={16} />
+                <span>{announcing ? 'Duyuruluyor...' : '📢 Çağrıyı Uzman Hocalara Duyur'}</span>
+              </button>
             )}
 
             {user && !isOwnerOrLeader && (
