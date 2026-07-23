@@ -192,7 +192,7 @@ export default function ProjectDetailPage({ id, onNavigate }) {
               border: '1px solid rgba(56, 149, 255, 0.3)',
               fontWeight: 700
             }}>
-              {project.objectives || 'GAP'}
+              {project.objectives || 'BAP'}
             </span>
           </div>
 

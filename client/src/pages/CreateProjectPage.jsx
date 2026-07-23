@@ -7,7 +7,7 @@ export default function CreateProjectPage({ onNavigate }) {
   const { token, user } = useAuth();
   const [title, setTitle] = useState('');
   const [description, setDescription] = useState('');
-  const [objectives, setObjectives] = useState('GAP');
+  const [objectives, setObjectives] = useState('BAP');
   const [teamSize, setTeamSize] = useState(4);
   const [duration, setDuration] = useState('24 Ay');
   const [budget, setBudget] = useState('');
@@ -124,7 +124,7 @@ export default function CreateProjectPage({ onNavigate }) {
               Başvurulan Proje Türü
             </label>
             <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1rem' }}>
-              {['GAP', 'TÜBİTAK', 'Uluslararası', 'Diğer Projeler'].map(opt => (
+              {['BAP', 'TÜBİTAK', 'Uluslararası', 'Diğer Projeler'].map(opt => (
                 <label 
                   key={opt}
                   style={{

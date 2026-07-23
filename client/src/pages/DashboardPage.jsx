@@ -1942,7 +1942,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                   Başvurulan Proje Türü
                 </label>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-                  {['GAP', 'TÜBİTAK', 'Uluslararası', 'Diğer Projeler'].map(opt => (
+                  {['BAP', 'TÜBİTAK', 'Uluslararası', 'Diğer Projeler'].map(opt => (
                     <label 
                       key={opt}
                       style={{
