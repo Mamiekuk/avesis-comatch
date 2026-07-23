@@ -290,3 +290,25 @@ export async function respondToMeeting(meetingId, status, token) {
   });
   return parseResponse(res, 'Toplantı daveti yanıtlanamadı.');
 }
+
+export async function sendForgotPasswordCode(email) {
+  const res = await fetch(`${API_BASE}/auth/forgot-password/send-code`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Şifre sıfırlama kodu gönderilemedi.');
+  return data;
+}
+
+export async function resetForgotPassword(email, code, newPassword) {
+  const res = await fetch(`${API_BASE}/auth/forgot-password/reset`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ email, code, newPassword })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Şifre güncellenemedi.');
+  return data;
+}

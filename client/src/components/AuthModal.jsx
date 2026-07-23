@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { loginUser, claimProfile, sendClaimVerificationCode, verifyClaimAndActivate, registerUser, fetchAcademicians, fetchMetadata } from '../services/api';
-import { X, CheckCircle2, ShieldCheck, Mail, Lock, UserCheck, AlertTriangle, KeyRound, ArrowLeft } from 'lucide-react';
+import { loginUser, claimProfile, sendClaimVerificationCode, verifyClaimAndActivate, registerUser, fetchAcademicians, fetchMetadata, sendForgotPasswordCode, resetForgotPassword } from '../services/api';
+import { X, CheckCircle2, ShieldCheck, Mail, Lock, UserCheck, AlertTriangle, KeyRound, ArrowLeft, RefreshCw } from 'lucide-react';
 
 export default function AuthModal({ isOpen, onClose }) {
   const { login } = useAuth();
-  const [activeTab, setActiveTab] = useState('login'); // 'login' | 'claim' | 'register'
+  const [activeTab, setActiveTab] = useState('login'); // 'login' | 'claim' | 'forgot'
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [successMsg, setSuccessMsg] = useState(null);
@@ -25,6 +25,14 @@ export default function AuthModal({ isOpen, onClose }) {
   const [otpCode, setOtpCode] = useState('');
   const [simulatedOtp, setSimulatedOtp] = useState(null);
 
+  // Forgot Password State
+  const [forgotEmail, setForgotEmail] = useState('');
+  const [forgotStep, setForgotStep] = useState('send'); // 'send' | 'reset'
+  const [forgotCode, setForgotCode] = useState('');
+  const [simulatedResetCode, setSimulatedResetCode] = useState(null);
+  const [newPassword, setNewPassword] = useState('');
+  const [confirmNewPassword, setConfirmNewPassword] = useState('');
+
   // Metadata for register
   const [faculties, setFaculties] = useState([]);
 
@@ -39,6 +47,7 @@ export default function AuthModal({ isOpen, onClose }) {
   const handleLogin = async (e) => {
     e.preventDefault();
     setError(null);
+    setSuccessMsg(null);
     setLoading(true);
     try {
       const res = await loginUser(loginEmail, loginPassword);
@@ -68,6 +77,7 @@ export default function AuthModal({ isOpen, onClose }) {
       return setError('Lütfen önce sahipleneceğiniz profili seçin.');
     }
     setError(null);
+    setSuccessMsg(null);
     setLoading(true);
     try {
       const res = await sendClaimVerificationCode(selectedAcademician.id, claimEmail);
@@ -105,6 +115,57 @@ export default function AuthModal({ isOpen, onClose }) {
     }
   };
 
+  const handleSendForgotCode = async (e) => {
+    e.preventDefault();
+    if (!forgotEmail.trim()) {
+      return setError('Lütfen kurumsal e-posta adresinizi giriniz.');
+    }
+    setError(null);
+    setSuccessMsg(null);
+    setLoading(true);
+    try {
+      const res = await sendForgotPasswordCode(forgotEmail);
+      setSimulatedResetCode(res.simulatedCode);
+      if (res.simulatedCode) {
+        setForgotCode(res.simulatedCode);
+      }
+      setSuccessMsg(res.message);
+      setForgotStep('reset');
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleResetPasswordSubmit = async (e) => {
+    e.preventDefault();
+    setError(null);
+    setSuccessMsg(null);
+    if (!forgotCode || !newPassword || !confirmNewPassword) {
+      return setError('Lütfen tüm alanları doldurunuz.');
+    }
+    if (newPassword !== confirmNewPassword) {
+      return setError('Girdiğiniz yeni şifreler birbirleriyle eşleşmiyor.');
+    }
+    if (newPassword.length < 6) {
+      return setError('Yeni şifreniz en az 6 karakter olmalıdır.');
+    }
+    setLoading(true);
+    try {
+      const res = await resetForgotPassword(forgotEmail, forgotCode, newPassword);
+      login(res.token, res.user);
+      setSuccessMsg(res.message);
+      setTimeout(() => {
+        onClose();
+      }, 1500);
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fillDemoLogin = (email, pwd = '123456') => {
     setLoginEmail(email);
     setLoginPassword(pwd);
@@ -115,7 +176,9 @@ export default function AuthModal({ isOpen, onClose }) {
       <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '600px' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem' }}>
           <div>
-            <h3 style={{ fontSize: '1.4rem' }}>Akademisyen Girişi & Aktivasyon</h3>
+            <h3 style={{ fontSize: '1.4rem' }}>
+              {activeTab === 'forgot' ? 'Şifremi Unuttum & Sıfırlama' : 'Akademisyen Girişi & Aktivasyon'}
+            </h3>
             <p style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
               Recep Tayyip Erdoğan Üniversitesi AVESİS platform hesabı
             </p>
@@ -126,42 +189,44 @@ export default function AuthModal({ isOpen, onClose }) {
         </div>
 
         {/* Tab Selector */}
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: '1fr 1fr',
-          gap: '0.5rem',
-          background: 'var(--bg-secondary)',
-          padding: '0.35rem',
-          borderRadius: 'var(--radius-md)',
-          marginBottom: '1.5rem'
-        }}>
-          <button
-            onClick={() => { setActiveTab('login'); setError(null); }}
-            style={{
-              padding: '0.65rem',
-              borderRadius: '8px',
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              background: activeTab === 'login' ? 'var(--accent-primary)' : 'transparent',
-              color: activeTab === 'login' ? '#fff' : 'var(--text-secondary)'
-            }}
-          >
-            Hesap Girişi
-          </button>
-          <button
-            onClick={() => { setActiveTab('claim'); setError(null); }}
-            style={{
-              padding: '0.65rem',
-              borderRadius: '8px',
-              fontWeight: 600,
-              fontSize: '0.9rem',
-              background: activeTab === 'claim' ? 'var(--accent-primary)' : 'transparent',
-              color: activeTab === 'claim' ? '#fff' : 'var(--text-secondary)'
-            }}
-          >
-            AVESİS Profili Sahiplen
-          </button>
-        </div>
+        {activeTab !== 'forgot' && (
+          <div style={{
+            display: 'grid',
+            gridTemplateColumns: '1fr 1fr',
+            gap: '0.5rem',
+            background: 'var(--bg-secondary)',
+            padding: '0.35rem',
+            borderRadius: 'var(--radius-md)',
+            marginBottom: '1.5rem'
+          }}>
+            <button
+              onClick={() => { setActiveTab('login'); setError(null); setSuccessMsg(null); }}
+              style={{
+                padding: '0.65rem',
+                borderRadius: '8px',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                background: activeTab === 'login' ? 'var(--accent-primary)' : 'transparent',
+                color: activeTab === 'login' ? '#fff' : 'var(--text-secondary)'
+              }}
+            >
+              Hesap Girişi
+            </button>
+            <button
+              onClick={() => { setActiveTab('claim'); setError(null); setSuccessMsg(null); }}
+              style={{
+                padding: '0.65rem',
+                borderRadius: '8px',
+                fontWeight: 600,
+                fontSize: '0.9rem',
+                background: activeTab === 'claim' ? 'var(--accent-primary)' : 'transparent',
+                color: activeTab === 'claim' ? '#fff' : 'var(--text-secondary)'
+              }}
+            >
+              AVESİS Profili Sahiplen
+            </button>
+          </div>
+        )}
 
         {error && (
           <div style={{
@@ -214,9 +279,32 @@ export default function AuthModal({ isOpen, onClose }) {
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>
-                Şifre
-              </label>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.4rem' }}>
+                <label style={{ fontSize: '0.85rem', fontWeight: 600, margin: 0 }}>
+                  Şifre
+                </label>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setActiveTab('forgot');
+                    setError(null);
+                    setSuccessMsg(null);
+                    setForgotEmail(loginEmail || '');
+                    setForgotStep('send');
+                  }}
+                  style={{
+                    fontSize: '0.8rem',
+                    color: 'var(--accent-primary)',
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                    background: 'none',
+                    border: 'none',
+                    padding: 0
+                  }}
+                >
+                  Şifremi Unuttum?
+                </button>
+              </div>
               <input
                 type="password"
                 required
@@ -287,123 +375,170 @@ export default function AuthModal({ isOpen, onClose }) {
                     fontWeight: 600
                   }}
                 >
-                  Prof. Dr. Veli Süme
+                  Prof. Dr. Veli Süme (İnşaat Müh.)
                 </button>
               </div>
             </div>
           </form>
         )}
 
-        {/* TAB 2: CLAIM UNCLAIMED PROFILE */}
+        {/* TAB 2: CLAIM PROFILE */}
         {activeTab === 'claim' && (
           <div>
-            <div style={{
-              padding: '0.85rem 1rem',
-              background: 'rgba(56, 149, 255, 0.1)',
-              border: '1px solid rgba(56, 149, 255, 0.2)',
-              borderRadius: 'var(--radius-sm)',
-              marginBottom: '1.25rem',
-              fontSize: '0.88rem'
-            }}>
-              <strong>📌 Nasıl Çalışır?</strong> AVESİS veri setindeki 1.233 akademisyen arasından adınızı aratıp profilinizi seçin. Doğrulamayı yalnızca <code>@erdogan.edu.tr</code> uzantılı kurumsal e-posta adresinizle yapabilirsiniz.
-            </div>
-
-            {/* Step 1: Search profile */}
-            <div style={{ marginBottom: '1.25rem' }}>
-              <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>
-                1. Adınızı veya Unvanınızı Arayın
-              </label>
-              <div style={{ display: 'flex', gap: '0.5rem' }}>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="Örn: Fatih Eren veya Semra"
-                  value={searchName}
-                  onChange={e => setSearchName(e.target.value)}
-                />
-                <button
-                  type="button"
-                  onClick={handleSearchAcademician}
-                  className="btn-secondary"
-                  style={{ whiteSpace: 'nowrap' }}
-                >
-                  Bul
-                </button>
-              </div>
-
-              {candidateList.length > 0 && (
-                <div style={{
-                  marginTop: '0.75rem',
-                  maxHeight: '180px',
-                  overflowY: 'auto',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: 'var(--radius-md)',
-                  background: 'var(--bg-secondary)'
-                }}>
-                  {candidateList.map(item => (
-                    <div
-                      key={item.id}
-                      onClick={() => setSelectedAcademician(item)}
-                      style={{
-                        padding: '0.65rem 1rem',
-                        borderBottom: '1px solid var(--border-color)',
-                        cursor: 'pointer',
-                        background: selectedAcademician?.id === item.id ? 'rgba(56, 149, 255, 0.2)' : 'transparent',
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center'
-                      }}
+            {claimStep === 'form' ? (
+              <form onSubmit={handleSendClaimCode}>
+                <div style={{ marginBottom: '1.25rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>
+                    1. AVESİS Veritabanında İsminizi / Profilinizi Bulun
+                  </label>
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <input
+                      type="text"
+                      className="form-input"
+                      placeholder="Adınız Soyadınız (Örn: Ali Ban, Zeynep Gümrükçü...)"
+                      value={searchName}
+                      onChange={e => setSearchName(e.target.value)}
+                    />
+                    <button
+                      type="button"
+                      onClick={handleSearchAcademician}
+                      className="btn-secondary"
+                      style={{ padding: '0.6rem 1.2rem', flexShrink: 0 }}
                     >
-                      <div>
-                        <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>{item.title} {item.full_name}</div>
-                        <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>{item.faculty_name} — {item.department_name}</div>
-                      </div>
-                      {item.is_claimed ? (
-                        <span style={{ fontSize: '0.7rem', color: 'var(--success)', fontWeight: 600 }}>Aktif Hesap</span>
-                      ) : (
-                        <span style={{ fontSize: '0.7rem', color: 'var(--warning)', fontWeight: 600 }}>Sahiplenilmemiş</span>
-                      )}
-                    </div>
-                  ))}
+                      Profil Ara
+                    </button>
+                  </div>
                 </div>
-              )}
-            </div>
 
-            {selectedAcademician && claimStep === 'form' && (
-              <form onSubmit={handleSendClaimCode} style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
+                {candidateList.length > 0 && (
+                  <div style={{ marginBottom: '1.25rem' }}>
+                    <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '0.4rem' }}>
+                      Eşleşen Akademisyen Profilleri ({candidateList.length}):
+                    </label>
+                    <div style={{ maxHeight: '160px', overflowY: 'auto', border: '1px solid var(--border-color)', borderRadius: 'var(--radius-md)' }}>
+                      {candidateList.map(item => (
+                        <div
+                          key={item.id}
+                          onClick={() => {
+                            setSelectedAcademician(item);
+                            if (item.email) setClaimEmail(item.email);
+                          }}
+                          style={{
+                            padding: '0.75rem 1rem',
+                            borderBottom: '1px solid var(--border-color)',
+                            cursor: 'pointer',
+                            background: selectedAcademician?.id === item.id ? 'rgba(56, 149, 255, 0.15)' : 'transparent',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between'
+                          }}
+                        >
+                          <div>
+                            <div style={{ fontWeight: 600, fontSize: '0.9rem' }}>
+                              {item.title} {item.full_name}
+                            </div>
+                            <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                              {item.faculty_name} — {item.department_name}
+                            </div>
+                          </div>
+                          {item.is_claimed ? (
+                            <span className="badge badge-claimed">Aktif Profil</span>
+                          ) : (
+                            <span className="badge badge-unclaimed">Sahiplenilmedi</span>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {selectedAcademician && (
+                  <>
+                    <div style={{ padding: '0.85rem 1rem', background: 'rgba(56, 149, 255, 0.1)', borderRadius: 'var(--radius-md)', marginBottom: '1.25rem', border: '1px solid rgba(56, 149, 255, 0.3)' }}>
+                      <div style={{ fontSize: '0.82rem', color: 'var(--accent-primary)', fontWeight: 700, marginBottom: '0.2rem' }}>
+                        SEÇİLEN AKADEMİSYEN PROFİLİ:
+                      </div>
+                      <div style={{ fontWeight: 700, fontSize: '1rem' }}>
+                        {selectedAcademician.title} {selectedAcademician.full_name}
+                      </div>
+                      <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)' }}>
+                        {selectedAcademician.faculty_name} — {selectedAcademician.department_name}
+                      </div>
+                    </div>
+
+                    <div style={{ marginBottom: '1rem' }}>
+                      <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>
+                        2. Kurumsal E-posta Adresiniz (@erdogan.edu.tr)
+                      </label>
+                      <input
+                        type="email"
+                        required
+                        className="form-input"
+                        placeholder="ad.soyad@erdogan.edu.tr"
+                        value={claimEmail}
+                        onChange={e => setClaimEmail(e.target.value)}
+                      />
+                    </div>
+
+                    <button
+                      type="submit"
+                      disabled={loading}
+                      className="btn-primary"
+                      style={{ width: '100%' }}
+                    >
+                      {loading ? 'Doğrulama Kodu Gönderiliyor...' : 'E-postama Doğrulama Kodu Gönder'}
+                    </button>
+                  </>
+                )}
+              </form>
+            ) : (
+              <form onSubmit={handleVerifyClaimSubmit}>
                 <div style={{
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  border: '1px solid rgba(16, 185, 129, 0.2)',
-                  padding: '0.75rem',
-                  borderRadius: '8px',
-                  marginBottom: '1rem'
+                  padding: '1rem',
+                  background: 'rgba(56, 149, 255, 0.1)',
+                  border: '1px solid rgba(56, 149, 255, 0.3)',
+                  borderRadius: 'var(--radius-md)',
+                  marginBottom: '1.25rem'
                 }}>
-                  <strong>Seçilen Profil:</strong> {selectedAcademician.title} {selectedAcademician.full_name}
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-primary)', marginBottom: '0.3rem' }}>
+                    ✉️ DOĞRULAMA KODU GÖNDERİLDİ:
+                  </div>
+                  <div style={{ fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                    <strong>{claimEmail}</strong> adresine 6 haneli doğrulama kodu iletildi.
+                  </div>
+                  {simulatedOtp && (
+                    <div style={{ marginTop: '0.6rem', fontSize: '0.82rem', background: 'rgba(245, 158, 11, 0.15)', padding: '0.4rem 0.75rem', borderRadius: '6px', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                      🔑 Simülasyon Kodu: <strong>{simulatedOtp}</strong>
+                    </div>
+                  )}
                 </div>
 
                 <div style={{ marginBottom: '1rem' }}>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>
-                    2. Kurumsal E-posta (@erdogan.edu.tr)
+                    6 Haneli E-posta Doğrulama Kodu
                   </label>
                   <input
-                    type="email"
+                    type="text"
                     required
+                    maxLength={6}
                     className="form-input"
-                    placeholder="ad.soyad@erdogan.edu.tr"
-                    value={claimEmail}
-                    onChange={e => setClaimEmail(e.target.value)}
+                    placeholder="123456"
+                    style={{ letterSpacing: '4px', fontSize: '1.1rem', fontWeight: 700, textAlign: 'center' }}
+                    value={otpCode}
+                    onChange={e => setOtpCode(e.target.value)}
                   />
                 </div>
 
                 <div style={{ marginBottom: '1rem' }}>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>
-                    3. Hesap Şifresi Belirleyin
+                    Yeni Platform Şifreniz
                   </label>
                   <input
                     type="password"
                     required
+                    minLength={6}
                     className="form-input"
-                    placeholder="En az 6 karakter"
+                    placeholder="••••••••"
                     value={claimPassword}
                     onChange={e => setClaimPassword(e.target.value)}
                   />
@@ -411,69 +546,14 @@ export default function AuthModal({ isOpen, onClose }) {
 
                 <div style={{ marginBottom: '1.5rem' }}>
                   <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>
-                    4. Kısa Biyografi (Opsiyonel)
+                    Kısa Biyografi / İlgi Alanlarınız (İsteğe Bağlı)
                   </label>
                   <textarea
-                    rows={2}
                     className="form-textarea"
-                    placeholder="Çalışma alanlarınız ve ilgi alanlarınız..."
+                    rows={2}
+                    placeholder="İş birliği yapmak istediğiniz konular..."
                     value={claimBio}
                     onChange={e => setClaimBio(e.target.value)}
-                  />
-                </div>
-
-                <button type="submit" disabled={loading} className="btn-primary" style={{ width: '100%' }}>
-                  <Mail size={18} />
-                  <span>{loading ? 'Kod Gönderiliyor...' : 'Doğrulama Kodu Gönder'}</span>
-                </button>
-              </form>
-            )}
-
-            {selectedAcademician && claimStep === 'otp' && (
-              <form onSubmit={handleVerifyClaimSubmit} style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1.25rem' }}>
-                <div style={{
-                  background: 'rgba(56, 149, 255, 0.1)',
-                  border: '1px solid rgba(56, 149, 255, 0.3)',
-                  padding: '1rem',
-                  borderRadius: '8px',
-                  marginBottom: '1.25rem'
-                }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', fontWeight: 700, color: 'var(--accent-primary)', marginBottom: '0.35rem' }}>
-                    <KeyRound size={18} />
-                    <span>5. E-posta Doğrulama Kodu (2 Adımlı Onay)</span>
-                  </div>
-                  <p style={{ fontSize: '0.85rem', color: 'var(--text-secondary)', marginBottom: '0.75rem' }}>
-                    <strong>{claimEmail}</strong> kurumsal e-posta adresinize 6 haneli doğrulama kodu iletildi.
-                  </p>
-
-                  {simulatedOtp && (
-                    <div style={{
-                      background: 'rgba(16, 185, 129, 0.15)',
-                      border: '1px dashed var(--success)',
-                      color: 'var(--success)',
-                      padding: '0.6rem 0.85rem',
-                      borderRadius: '6px',
-                      fontSize: '0.82rem',
-                      fontWeight: 700
-                    }}>
-                      ⚡ E-Posta Simülasyonu Gelen Kod: <span style={{ letterSpacing: '2px', fontSize: '1rem' }}>{simulatedOtp}</span>
-                    </div>
-                  )}
-                </div>
-
-                <div style={{ marginBottom: '1.5rem' }}>
-                  <label style={{ display: 'block', fontSize: '0.88rem', fontWeight: 700, marginBottom: '0.4rem' }}>
-                    6 Haneli Doğrulama Kodunu Girin
-                  </label>
-                  <input
-                    type="text"
-                    required
-                    maxLength={6}
-                    className="form-input"
-                    placeholder="Örn: 482915"
-                    style={{ fontSize: '1.25rem', letterSpacing: '4px', textAlign: 'center', fontWeight: 800 }}
-                    value={otpCode}
-                    onChange={e => setOtpCode(e.target.value)}
                   />
                 </div>
 
@@ -482,14 +562,149 @@ export default function AuthModal({ isOpen, onClose }) {
                     type="button"
                     onClick={() => setClaimStep('form')}
                     className="btn-secondary"
-                    style={{ flex: 1, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.4rem' }}
+                    style={{ flex: 1 }}
                   >
-                    <ArrowLeft size={16} />
-                    <span>Geri Dön</span>
+                    Geri
                   </button>
-                  <button type="submit" disabled={loading} className="btn-primary" style={{ flex: 2 }}>
-                    <UserCheck size={18} />
-                    <span>{loading ? 'Doğrulanıyor...' : 'Doğrula ve Profili Aktif Et'}</span>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn-primary"
+                    style={{ flex: 2 }}
+                  >
+                    {loading ? 'Hesap Etkinleştiriliyor...' : 'Doğrula ve Hesabı Etkinleştir'}
+                  </button>
+                </div>
+              </form>
+            )}
+          </div>
+        )}
+
+        {/* TAB 3: FORGOT PASSWORD */}
+        {activeTab === 'forgot' && (
+          <div>
+            {forgotStep === 'send' ? (
+              <form onSubmit={handleSendForgotCode}>
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>
+                    Kayıtlı Kurumsal E-posta Adresiniz
+                  </label>
+                  <input
+                    type="email"
+                    required
+                    className="form-input"
+                    placeholder="ornek@erdogan.edu.tr"
+                    value={forgotEmail}
+                    onChange={e => setForgotEmail(e.target.value)}
+                  />
+                  <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)', display: 'block', marginTop: '0.4rem' }}>
+                    Hesabınıza tanımlı e-posta adresinize 6 haneli doğrulama kodu gönderilecektir.
+                  </span>
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => { setActiveTab('login'); setError(null); setSuccessMsg(null); }}
+                    className="btn-secondary"
+                    style={{ flex: 1 }}
+                  >
+                    <ArrowLeft size={16} /> Giriş Ekranına Dön
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn-primary"
+                    style={{ flex: 2 }}
+                  >
+                    {loading ? 'Kod Gönderiliyor...' : 'Şifre Sıfırlama Kodu Gönder'}
+                  </button>
+                </div>
+              </form>
+            ) : (
+              <form onSubmit={handleResetPasswordSubmit}>
+                <div style={{
+                  padding: '1rem',
+                  background: 'rgba(56, 149, 255, 0.1)',
+                  border: '1px solid rgba(56, 149, 255, 0.3)',
+                  borderRadius: 'var(--radius-md)',
+                  marginBottom: '1.25rem'
+                }}>
+                  <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-primary)', marginBottom: '0.3rem' }}>
+                    ✉️ ŞİFRE SIFIRLAMA KODU İLETİLDİ:
+                  </div>
+                  <div style={{ fontSize: '0.88rem', color: 'var(--text-primary)' }}>
+                    <strong>{forgotEmail}</strong> adresine doğrulama kodu gönderilmiştir.
+                  </div>
+                  {simulatedResetCode && (
+                    <div style={{ marginTop: '0.6rem', fontSize: '0.82rem', background: 'rgba(245, 158, 11, 0.15)', padding: '0.4rem 0.75rem', borderRadius: '6px', color: '#fbbf24', border: '1px solid rgba(245, 158, 11, 0.3)' }}>
+                      🔑 Simülasyon Kodu: <strong>{simulatedResetCode}</strong>
+                    </div>
+                  )}
+                </div>
+
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>
+                    6 Haneli Şifre Sıfırlama Kodu
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    maxLength={6}
+                    className="form-input"
+                    placeholder="123456"
+                    style={{ letterSpacing: '4px', fontSize: '1.1rem', fontWeight: 700, textAlign: 'center' }}
+                    value={forgotCode}
+                    onChange={e => setForgotCode(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '1rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>
+                    Yeni Şifreniz
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    className="form-input"
+                    placeholder="••••••••"
+                    value={newPassword}
+                    onChange={e => setNewPassword(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ marginBottom: '1.5rem' }}>
+                  <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>
+                    Yeni Şifreniz (Tekrar)
+                  </label>
+                  <input
+                    type="password"
+                    required
+                    minLength={6}
+                    className="form-input"
+                    placeholder="••••••••"
+                    value={confirmNewPassword}
+                    onChange={e => setConfirmNewPassword(e.target.value)}
+                  />
+                </div>
+
+                <div style={{ display: 'flex', gap: '0.75rem' }}>
+                  <button
+                    type="button"
+                    onClick={() => { setForgotStep('send'); setError(null); setSuccessMsg(null); }}
+                    className="btn-secondary"
+                    style={{ flex: 1 }}
+                  >
+                    <ArrowLeft size={16} /> E-posta Değiştir
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={loading}
+                    className="btn-primary"
+                    style={{ flex: 2 }}
+                  >
+                    {loading ? 'Güncelleniyor...' : 'Şifreyi Güncelle & Giriş Yap'}
                   </button>
                 </div>
               </form>

@@ -365,6 +365,117 @@ app.post('/api/auth/claim/verify', (req, res) => {
   res.json({ message: 'E-posta doğrulandı! Profil başarıyla sahiplenildi ve aktif edildi.', token, user: updatedUser });
 });
 
+// 3. Forgot Password — Send Verification Code
+app.post('/api/auth/forgot-password/send-code', async (req, res) => {
+  const { email } = req.body;
+  if (!email || !email.trim()) {
+    return res.status(400).json({ error: 'Lütfen kurumsal e-posta adresinizi giriniz.' });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+
+  // Find user by email
+  const user = db.prepare('SELECT * FROM users WHERE LOWER(email) = ?').get(cleanEmail);
+  if (!user) {
+    return res.status(404).json({ error: 'Bu e-posta adresiyle kayıtlı akademisyen hesabı bulunamadı.' });
+  }
+
+  // Generate 6-digit verification code
+  const resetCode = Math.floor(100000 + Math.random() * 900000).toString();
+
+  // Save code in DB
+  db.prepare('DELETE FROM email_verification_codes WHERE LOWER(email) = ?').run(cleanEmail);
+  db.prepare(`
+    INSERT INTO email_verification_codes (email, code, academician_id)
+    VALUES (?, ?, ?)
+  `).run(cleanEmail, resetCode, user.id);
+
+  // Send email
+  const mailOptions = mailer.passwordResetCodeMail ? mailer.passwordResetCodeMail(cleanEmail, resetCode) : mailer.emailVerify(cleanEmail, resetCode);
+  const mailSent = await mailer.sendMail(mailOptions);
+
+  console.log(`\n=============================================================`);
+  console.log(`[ŞİFRE SIFIRLAMA DOĞRULAMA KODU]`);
+  console.log(`Alıcı E-posta : ${cleanEmail}`);
+  console.log(`Akademisyen   : ${user.title || ''} ${user.full_name}`);
+  console.log(`DOĞRULAMA KODU: ${resetCode}`);
+  console.log(`=============================================================\n`);
+
+  res.json({
+    message: mailSent
+      ? 'Şifre sıfırlama kodu e-postanıza gönderildi.'
+      : 'Şifre sıfırlama kodu oluşturuldu (SMTP simülasyonu devrede).',
+    email: cleanEmail,
+    simulatedCode: mailSent ? null : resetCode
+  });
+});
+
+// 4. Forgot Password — Verify Code & Set New Password
+app.post('/api/auth/forgot-password/reset', (req, res) => {
+  const { email, code, newPassword } = req.body;
+
+  if (!email || !code || !newPassword) {
+    return res.status(400).json({ error: 'E-posta, 6 haneli kod ve yeni şifre zorunludur.' });
+  }
+
+  if (newPassword.length < 6) {
+    return res.status(400).json({ error: 'Yeni şifreniz en az 6 karakter olmalıdır.' });
+  }
+
+  const cleanEmail = email.trim().toLowerCase();
+
+  // Verify OTP code
+  const record = db.prepare(`
+    SELECT * FROM email_verification_codes
+    WHERE LOWER(email) = ? AND code = ?
+  `).get(cleanEmail, code.trim());
+
+  if (!record) {
+    return res.status(400).json({ error: 'Girdiğiniz 6 haneli şifre sıfırlama kodu geçersiz veya hatalı.' });
+  }
+
+  // Find user
+  const user = db.prepare(`
+    SELECT u.*, f.name as faculty_name, d.name as department_name
+    FROM users u
+    LEFT JOIN faculties f ON f.id = u.faculty_id
+    LEFT JOIN departments d ON d.id = u.department_id
+    WHERE LOWER(u.email) = ?
+  `).get(cleanEmail);
+
+  if (!user) {
+    return res.status(404).json({ error: 'Kullanıcı bulunamadı.' });
+  }
+
+  // Hash new password & activate account
+  const passwordHash = bcrypt.hashSync(newPassword, 10);
+  db.prepare(`
+    UPDATE users SET
+      password_hash = ?,
+      is_claimed = 1,
+      is_active = 1
+    WHERE id = ?
+  `).run(passwordHash, user.id);
+
+  // Clear verification code
+  db.prepare('DELETE FROM email_verification_codes WHERE LOWER(email) = ?').run(cleanEmail);
+
+  // Construct user object & issue token/session
+  delete user.password_hash;
+  user.is_claimed = 1;
+  user.is_active = 1;
+  attachUserTags(user);
+
+  const token = jwt.sign({ id: user.id, email: user.email, name: user.full_name }, JWT_SECRET, { expiresIn: '7d' });
+  createSession(user.id, token, req);
+
+  res.json({
+    message: 'Şifreniz başarıyla güncellendi ve hesabınıza giriş yapıldı!',
+    token,
+    user
+  });
+});
+
 // Claim Profile (AVESİS Arşiv Profilini Sahiplenme - Doğrudan / Geriye Dönük)
 app.post('/api/auth/claim', (req, res) => {
   const { academicianId, email, password, bio } = req.body;

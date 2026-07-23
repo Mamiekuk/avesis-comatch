@@ -193,4 +193,18 @@ function emailVerify(to, code) {
     }
 }
 
-module.exports = { init, isConfigured, sendMail, passwordResetMail, emailChangeConfirm, emailVerify }
+function passwordResetCodeMail(to, code) {
+    return {
+        to,
+        subject: "AVESİS CoMatch - Şifre Sıfırlama Doğrulama Kodu",
+        text: `Şifre sıfırlama doğrulama kodunuz: ${code} (15 dakika geçerlidir).`,
+        html: shell({
+            preview: "AVESİS CoMatch şifre sıfırlama kodu",
+            heading: "Şifre Sıfırlama Doğrulama Kodu",
+            body: ["Şifrenizi sıfırlamak için 6 haneli doğrulama kodunuz aşağıdadır. Kod <b style=\"color:#fff\">15 dakika</b> boyunca geçerlidir."],
+            cta: { code },
+        }),
+    }
+}
+
+module.exports = { init, isConfigured, sendMail, passwordResetMail, passwordResetCodeMail, emailChangeConfirm, emailVerify }
