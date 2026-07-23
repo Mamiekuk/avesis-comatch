@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { loginUser, claimProfile, sendClaimVerificationCode, verifyClaimAndActivate, registerUser, fetchAcademicians, fetchMetadata, sendForgotPasswordCode, resetForgotPassword } from '../services/api';
 import { X, CheckCircle2, ShieldCheck, Mail, Lock, UserCheck, AlertTriangle, KeyRound, ArrowLeft, RefreshCw } from 'lucide-react';
 
-export default function AuthModal({ isOpen, onClose }) {
+export default function AuthModal({ isOpen, onClose, onNavigate }) {
   const { login } = useAuth();
   const [activeTab, setActiveTab] = useState('login'); // 'login' | 'claim' | 'forgot'
   const [loading, setLoading] = useState(false);
@@ -53,6 +53,7 @@ export default function AuthModal({ isOpen, onClose }) {
       const res = await loginUser(loginEmail, loginPassword);
       login(res.token, res.user);
       onClose();
+      if (onNavigate) onNavigate('dashboard');
     } catch (err) {
       setError(err.message);
     } finally {
@@ -105,9 +106,10 @@ export default function AuthModal({ isOpen, onClose }) {
       });
       login(res.token, res.user);
       setSuccessMsg(res.message);
+      if (onNavigate) onNavigate('dashboard');
       setTimeout(() => {
         onClose();
-      }, 1500);
+      }, 1000);
     } catch (err) {
       setError(err.message);
     } finally {
@@ -156,9 +158,10 @@ export default function AuthModal({ isOpen, onClose }) {
       const res = await resetForgotPassword(forgotEmail, forgotCode, newPassword);
       login(res.token, res.user);
       setSuccessMsg(res.message);
+      if (onNavigate) onNavigate('dashboard');
       setTimeout(() => {
         onClose();
-      }, 1500);
+      }, 1000);
     } catch (err) {
       setError(err.message);
     } finally {

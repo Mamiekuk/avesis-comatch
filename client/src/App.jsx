@@ -133,6 +133,7 @@ export default function App() {
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
+        onNavigate={handleNavigate}
       />
 
       {/* Floating LinkedIn Chat Widget */}
