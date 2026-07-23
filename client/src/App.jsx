@@ -32,7 +32,7 @@ export default function App() {
         onOpenLogin={() => setAuthModalOpen(true)}
       />
 
-      <main style={{ flex: 1 }}>
+      <main className="page-transition" key={route + (routeParam || '')} style={{ flex: 1 }}>
         {route === 'home' && (
           <HomePage
             onNavigate={handleNavigate}
