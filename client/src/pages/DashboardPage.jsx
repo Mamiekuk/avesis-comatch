@@ -3,6 +3,16 @@ import { fetchDashboard, respondToInvitation, fetchMetadata, updateUserProfile, 
 import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, FolderGit2, Mail, Bell, CheckCircle2, XCircle, ArrowRight, Sparkles, Building2, Edit3, Save, X, Plus, BookOpen, AlertCircle, MessageSquare, Trash2, Paperclip, Calendar, FileText, Image, Download, MapPin, Video, Clock, UserCheck } from 'lucide-react';
 
+const cleanClusterName = (name) => {
+  if (!name) return '';
+  return name
+    .replace(/ Akademik Yaylası \(Rize Yöresi\)/gi, ' Akademik Kümesi')
+    .replace(/ Akademik Yaylası/gi, ' Akademik Kümesi')
+    .replace(/ Yaylası/gi, ' Kümesi')
+    .replace(/ \(Rize Yöresi\)/gi, '')
+    .replace(/ Rize Yöresi/gi, '');
+};
+
 export default function DashboardPage({ onNavigate, routeParam }) {
   const { user, token, updateUser } = useAuth();
   const [data, setData] = useState(null);
@@ -607,7 +617,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
               <div>
                 <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', fontWeight: 600 }}>⚡ Yapay Zeka Öneri Motoru</span>
                 <h3 style={{ fontSize: '1.4rem', margin: 0, color: 'var(--text-primary)' }}>
-                  Akademik Küme Komşularınız: <span style={{ color: '#c084fc' }}>{(data?.user || user).tag_cluster.name}</span>
+                  Akademik Küme Komşularınız: <span style={{ color: '#c084fc' }}>{cleanClusterName((data?.user || user).tag_cluster.name)}</span>
                 </h3>
               </div>
             </div>

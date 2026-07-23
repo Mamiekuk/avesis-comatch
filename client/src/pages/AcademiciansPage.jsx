@@ -2,6 +2,16 @@ import React, { useState, useEffect } from 'react';
 import { fetchAcademicians, fetchMetadata, fetchKMeansClusters } from '../services/api';
 import { Search, Filter, LayoutGrid, List, ChevronLeft, ChevronRight, ExternalLink, CheckCircle2, AlertCircle, Award, UserPlus, X } from 'lucide-react';
 
+const cleanClusterName = (name) => {
+  if (!name) return '';
+  return name
+    .replace(/ Akademik Yaylası \(Rize Yöresi\)/gi, ' Akademik Kümesi')
+    .replace(/ Akademik Yaylası/gi, ' Akademik Kümesi')
+    .replace(/ Yaylası/gi, ' Kümesi')
+    .replace(/ \(Rize Yöresi\)/gi, '')
+    .replace(/ Rize Yöresi/gi, '');
+};
+
 export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
   const [academicians, setAcademicians] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -259,7 +269,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
             >
               <option value="">Tüm Akademik Kümeler</option>
               {(kmeansSummary.tagClusters || []).map(tc => (
-                <option key={tc.id} value={tc.id}>{tc.name} ({tc.member_count} Hoca)</option>
+                <option key={tc.id} value={tc.id}>{cleanClusterName(tc.name)} ({tc.member_count} Hoca)</option>
               ))}
             </select>
           </div>
@@ -427,7 +437,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
                     </span>
                     {item.tag_cluster && (
                       <span style={{ fontSize: '0.73rem', color: '#c084fc', display: 'block', fontWeight: 500 }}>
-                        🌐 {item.tag_cluster.name}
+                        🌐 {cleanClusterName(item.tag_cluster.name)}
                       </span>
                     )}
                   </div>

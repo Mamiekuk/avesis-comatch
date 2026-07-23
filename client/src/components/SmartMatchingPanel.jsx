@@ -3,6 +3,16 @@ import { fetchProjectSmartMatches, inviteToProject } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Sparkles, Send, CheckCircle2, Award, UserPlus, Zap } from 'lucide-react';
 
+const cleanClusterName = (name) => {
+  if (!name) return '';
+  return name
+    .replace(/ Akademik Yaylası \(Rize Yöresi\)/gi, ' Akademik Kümesi')
+    .replace(/ Akademik Yaylası/gi, ' Akademik Kümesi')
+    .replace(/ Yaylası/gi, ' Kümesi')
+    .replace(/ \(Rize Yöresi\)/gi, '')
+    .replace(/ Rize Yöresi/gi, '');
+};
+
 export default function SmartMatchingPanel({ projectId, onNavigateAcademician }) {
   const { user, token } = useAuth();
   const [data, setData] = useState(null);
@@ -92,7 +102,7 @@ export default function SmartMatchingPanel({ projectId, onNavigateAcademician })
             </div>
             {data.owner_cluster && (
               <div style={{ fontSize: '0.82rem', color: '#c084fc', marginTop: '0.4rem', fontWeight: 600 }}>
-                🌐 Yürütücü Kümesi: <span style={{ color: 'var(--text-primary)' }}>{data.owner_cluster.name}</span>
+                🌐 Yürütücü Kümesi: <span style={{ color: 'var(--text-primary)' }}>{cleanClusterName(data.owner_cluster.name)}</span>
               </div>
             )}
 
@@ -119,7 +129,7 @@ export default function SmartMatchingPanel({ projectId, onNavigateAcademician })
                 <option value="ALL">🌟 Tüm Akademik Kümeler</option>
                 {data.all_clusters && data.all_clusters.map(c => (
                   <option key={c.id} value={String(c.id)}>
-                    🌐 {c.name} ({c.member_count} Hoca) {data.owner_cluster && data.owner_cluster.id === c.id ? ' [Yürütücü Kümesi]' : ''}
+                    🌐 {cleanClusterName(c.name)} ({c.member_count} Hoca) {data.owner_cluster && data.owner_cluster.id === c.id ? ' [Yürütücü Kümesi]' : ''}
                   </option>
                 ))}
               </select>
