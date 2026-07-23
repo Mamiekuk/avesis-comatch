@@ -70,6 +70,14 @@ try {
           is_active INTEGER DEFAULT 1,
           FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
         );
+
+        CREATE TABLE IF NOT EXISTS tubitak_calls (
+          id INTEGER PRIMARY KEY AUTOINCREMENT,
+          title TEXT NOT NULL,
+          url TEXT NOT NULL UNIQUE,
+          source TEXT DEFAULT 'TÜBİTAK',
+          created_at DATETIME DEFAULT (datetime('now', 'localtime'))
+        );
       `);
     } catch (e) {}
   }

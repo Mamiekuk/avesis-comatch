@@ -6,6 +6,7 @@ const jwt = require('jsonwebtoken');
 const db = require('./db');
 const mailer = require('./mailer');
 const kmeansEngine = require('./kmeansEngine');
+const { syncTubitakCalls } = require('./tubitakScraper');
 
 // SMTP yapılandırmasını yükle ve başlat
 mailer.init();
@@ -1722,6 +1723,16 @@ app.post('/api/meetings/:id/respond', authMiddleware, (req, res) => {
   }
 });
 
+// Manuel TÜBİTAK Çağrı Senkronizasyonu
+app.post('/api/tubitak/sync', async (req, res) => {
+  try {
+    const result = await syncTubitakCalls(db);
+    res.json({ success: true, ...result });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // React frontend'ini servis et (production)
 const publicPath = path.join(__dirname, 'public');
 if (fs.existsSync(publicPath)) {
@@ -1737,4 +1748,10 @@ if (fs.existsSync(publicPath)) {
 
 app.listen(PORT, () => {
   console.log(`🚀 AVESİS CoMatch API Server http://localhost:${PORT} adresinde çalışıyor!`);
+  
+  // Start automatic TÜBİTAK scraper sync on startup & poll every 30 mins
+  syncTubitakCalls(db);
+  setInterval(() => {
+    syncTubitakCalls(db);
+  }, 30 * 60 * 1000);
 });
