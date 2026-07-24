@@ -1830,12 +1830,18 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                             <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
                               <button
                                 type="button"
-                                onClick={() => window.open('https://zoom.us/join', '_blank')}
+                                onClick={() => {
+                                  let targetUrl = (m.meeting_link && m.meeting_link.trim()) ? m.meeting_link.trim() : 'https://zoom.us/join';
+                                  if (!targetUrl.startsWith('http://') && !targetUrl.startsWith('https://')) {
+                                    targetUrl = `https://${targetUrl}`;
+                                  }
+                                  window.open(targetUrl, '_blank', 'noopener,noreferrer');
+                                }}
                                 className="btn-primary"
                                 style={{ width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '0.5rem', margin: 0 }}
                               >
                                 <Video size={16} />
-                                <span>Görüşmeye Katıl (Zoom)</span>
+                                <span>Görüşmeye Katıl {m.meeting_link ? '(Canlı Link)' : '(Zoom)'}</span>
                               </button>
                             </div>
                           )}
