@@ -797,9 +797,48 @@ app.get('/api/academicians', (req, res) => {
       LIMIT ? OFFSET ?
     `).all(...params, Number(limit), offset);
 
-    // Attach tags
+    // Extract optional logged in user for match score calculation
+    let currentUserId = null;
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.split(' ')[1];
+      try {
+        const decoded = jwt.verify(token, JWT_SECRET);
+        currentUserId = decoded.id;
+      } catch (e) {}
+    }
+
+    let myTagIds = [];
+    if (currentUserId) {
+      myTagIds = db.prepare('SELECT research_area_id FROM user_research_areas WHERE user_id = ?').all(currentUserId).map(r => r.research_area_id);
+    }
+
+    // Attach tags & compute personalized match score if logged in
     for (const u of users) {
       attachUserTags(u);
+      if (currentUserId && u.id !== currentUserId) {
+        const candTagIds = u.research_areas ? u.research_areas.map(t => t.id) : [];
+        if (myTagIds.length > 0 && candTagIds.length > 0) {
+          const common = candTagIds.filter(id => myTagIds.includes(id));
+          const cosSim = common.length / (Math.sqrt(myTagIds.length) * Math.sqrt(candTagIds.length));
+          const overlap = common.length / myTagIds.length;
+          let score = Math.round(cosSim * 60 + overlap * 35 + (u.is_claimed ? 5 : 0));
+          if (overlap === 1) score = Math.max(score, 95);
+          else if (overlap >= 0.5) score = Math.max(score, 72);
+          else if (common.length >= 1) score = Math.max(score, 45);
+          u.match_score = Math.min(99, Math.max(15, score));
+        } else {
+          const candClusterInfo = kmeansEngine.getUserClusterInfo(u.id);
+          const myClusterInfo = kmeansEngine.getUserClusterInfo(currentUserId);
+          if (candClusterInfo && myClusterInfo && candClusterInfo.tag_cluster && myClusterInfo.tag_cluster && candClusterInfo.tag_cluster.id === myClusterInfo.tag_cluster.id) {
+            u.match_score = 65;
+          }
+        }
+      }
+    }
+
+    if (sort === 'match_desc' && currentUserId) {
+      users.sort((a, b) => (b.match_score || 0) - (a.match_score || 0));
     }
 
     res.json({

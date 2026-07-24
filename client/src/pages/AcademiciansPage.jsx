@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchAcademicians, fetchMetadata, fetchKMeansClusters } from '../services/api';
-import { Search, Filter, LayoutGrid, List, ChevronLeft, ChevronRight, ExternalLink, CheckCircle2, AlertCircle, Award, UserPlus, X } from 'lucide-react';
+import { useAuth } from '../context/AuthContext';
+import { Search, Filter, LayoutGrid, List, ChevronLeft, ChevronRight, ExternalLink, CheckCircle2, AlertCircle, Award, UserPlus, X, Sparkles } from 'lucide-react';
 
 const cleanClusterName = (name) => {
   if (!name) return '';
@@ -13,6 +14,7 @@ const cleanClusterName = (name) => {
 };
 
 export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
+  const { token } = useAuth();
   const [academicians, setAcademicians] = useState([]);
   const [loading, setLoading] = useState(true);
   const [metadata, setMetadata] = useState({ faculties: [], departments: [], research_areas: [], titles: [] });
@@ -54,7 +56,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
       sort,
       page: pageNo,
       limit: 24
-    })
+    }, token)
       .then(d => {
         setAcademicians(d.academicians || []);
         if (d.pagination) setPagination(d.pagination);
@@ -426,6 +428,12 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
                   {item.has_research_fields === 0 && (
                     <span className="badge" style={{ background: 'rgba(239,68,68,0.12)', color: 'var(--danger)' }}>
                       Alan Yok
+                    </span>
+                  )}
+
+                  {user && item.match_score > 0 && (
+                    <span className="badge" style={{ margin: 0, padding: '0.2rem 0.6rem', fontSize: '0.78rem', background: 'rgba(56, 149, 255, 0.18)', color: 'var(--accent-primary)', border: '1px solid rgba(56, 149, 255, 0.4)', fontWeight: 800 }}>
+                      ⚡ %{item.match_score} Uyum
                     </span>
                   )}
                 </div>

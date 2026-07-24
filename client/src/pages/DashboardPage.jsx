@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { fetchDashboard, respondToInvitation, fetchMetadata, updateUserProfile, updateProject, fetchProjectById, fetchChatContacts, fetchChatHistory, sendChatMessage, deleteChatMessage, uploadChatFile, clearChatHistory, fetchMeetings, createMeeting, respondToMeeting, BACKEND_URL, createResearchArea, fetchKMeansNeighbors, publishProject } from '../services/api';
+import { fetchDashboard, respondToInvitation, fetchMetadata, updateUserProfile, updateProject, fetchProjectById, fetchChatContacts, fetchChatHistory, sendChatMessage, deleteChatMessage, uploadChatFile, clearChatHistory, fetchMeetings, createMeeting, respondToMeeting, BACKEND_URL, createResearchArea, fetchKMeansNeighbors, publishProject, fetchAcademicians } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, FolderGit2, Mail, Bell, CheckCircle2, XCircle, ArrowRight, Sparkles, Building2, Edit3, Save, X, Plus, BookOpen, AlertCircle, MessageSquare, Trash2, Paperclip, Calendar, FileText, Image, Download, MapPin, Video, Clock, UserCheck } from 'lucide-react';
+import { LayoutDashboard, FolderGit2, Mail, Bell, CheckCircle2, XCircle, ArrowRight, Sparkles, Building2, Edit3, Save, X, Plus, BookOpen, AlertCircle, MessageSquare, Trash2, Paperclip, Calendar, FileText, Image, Download, MapPin, Video, Clock, UserCheck, Search } from 'lucide-react';
 
 const cleanClusterName = (name) => {
   if (!name) return '';
@@ -71,6 +71,23 @@ export default function DashboardPage({ onNavigate, routeParam }) {
   // File Upload State & Ref
   const [uploadingFile, setUploadingFile] = useState(false);
   const fileInputRef = useRef(null);
+
+  // Meeting Link State
+  const [meetingLink, setMeetingLink] = useState('');
+
+  // New Chat Search States
+  const [chatSearchQuery, setChatSearchQuery] = useState('');
+  const [showNewChatModal, setShowNewChatModal] = useState(false);
+  const [academiciansForChat, setAcademiciansForChat] = useState([]);
+
+  useEffect(() => {
+    if (!token) return;
+    if (chatSearchQuery.trim().length >= 2 || showNewChatModal) {
+      fetchAcademicians({ search: chatSearchQuery, limit: 12 }, token)
+        .then(d => setAcademiciansForChat(d.academicians || []))
+        .catch(() => {});
+    }
+  }, [chatSearchQuery, showNewChatModal, token]);
 
   const loadData = () => {
     if (!token) return;
@@ -385,7 +402,8 @@ export default function DashboardPage({ onNavigate, routeParam }) {
         description: meetingDesc,
         meetingType: meetingType,
         meetingDate: meetingDate,
-        meetingTime: meetingTime
+        meetingTime: meetingTime,
+        meetingLink: meetingType === 'zoom' ? meetingLink : null
       }, token);
 
       alert('Toplantı daveti başarıyla gönderildi!');
@@ -394,6 +412,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
       setMeetingDesc('');
       setMeetingDate('');
       setMeetingTime('');
+      setMeetingLink('');
       setMeetingProjectId('');
       loadMeetings();
     } catch (err) {
@@ -1002,11 +1021,44 @@ export default function DashboardPage({ onNavigate, routeParam }) {
         <div className="card-glass" style={{ display: 'grid', gridTemplateColumns: 'minmax(280px, 320px) 1fr', minHeight: '600px', height: 'calc(100vh - 350px)', padding: 0, overflow: 'hidden', marginBottom: '2.5rem' }}>
           {/* Contacts Pane (Left) */}
           <div style={{ borderRight: '1px solid var(--border-color)', display: 'flex', flexDirection: 'column', height: '100%', overflow: 'hidden' }}>
-            <div style={{ padding: '1.25rem', borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)' }}>
-              <h3 style={{ fontSize: '1.15rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <MessageSquare size={18} color="var(--accent-primary)" />
-                <span>Mesajlaşmalarım</span>
-              </h3>
+            <div style={{ padding: '1rem 1.25rem', borderBottom: '1px solid var(--border-color)', background: 'rgba(255,255,255,0.02)', display: 'flex', flexDirection: 'column', gap: '0.65rem' }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <h3 style={{ fontSize: '1.1rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <MessageSquare size={17} color="var(--accent-primary)" />
+                  <span>Mesajlaşmalarım</span>
+                </h3>
+                <button
+                  type="button"
+                  onClick={() => setShowNewChatModal(true)}
+                  className="btn-primary"
+                  style={{ padding: '0.35rem 0.65rem', fontSize: '0.76rem', display: 'flex', alignItems: 'center', gap: '0.3rem', margin: 0 }}
+                  title="Yeni sohbet başlat"
+                >
+                  <Plus size={14} />
+                  <span>Yeni Sohbet</span>
+                </button>
+              </div>
+
+              {/* Quick Contact Search Input */}
+              <div style={{ position: 'relative' }}>
+                <Search size={14} color="var(--text-muted)" style={{ position: 'absolute', left: '0.75rem', top: '50%', transform: 'translateY(-50%)' }} />
+                <input
+                  type="text"
+                  placeholder="Sohbet veya araştırmacı ara..."
+                  value={chatSearchQuery}
+                  onChange={e => setChatSearchQuery(e.target.value)}
+                  style={{
+                    width: '100%',
+                    padding: '0.4rem 0.75rem 0.4rem 2.2rem',
+                    borderRadius: '20px',
+                    border: '1px solid var(--border-color)',
+                    background: 'var(--bg-secondary)',
+                    fontSize: '0.78rem',
+                    color: 'var(--text-primary)',
+                    outline: 'none'
+                  }}
+                />
+              </div>
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', padding: '0.5rem' }}>
@@ -2247,7 +2299,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.88rem', marginBottom: '0.4rem' }}>
                   Görüşme Türü *
                 </label>
-                <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.25rem' }}>
+                <div style={{ display: 'flex', gap: '1.5rem', marginTop: '0.25rem', marginBottom: meetingType === 'zoom' ? '1rem' : '0' }}>
                   <label style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', cursor: 'pointer' }}>
                     <input
                       type="radio"
@@ -2271,6 +2323,23 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                     <span>Yüz Yüze Görüşme</span>
                   </label>
                 </div>
+
+                {/* Conditional Online Meeting Link Input */}
+                {meetingType === 'zoom' && (
+                  <div style={{ marginTop: '0.75rem', background: 'var(--bg-secondary)', padding: '0.85rem 1rem', borderRadius: 'var(--radius-md)', border: '1px solid var(--border-highlight)' }}>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.4rem', color: 'var(--accent-primary)' }}>
+                      🌐 Online Görüşme Bağlantısı (Zoom / Google Meet / Teams Linki)
+                    </label>
+                    <input
+                      type="url"
+                      className="form-input"
+                      placeholder="https://zoom.us/j/... veya https://meet.google.com/..."
+                      value={meetingLink}
+                      onChange={e => setMeetingLink(e.target.value)}
+                      style={{ margin: 0, fontSize: '0.85rem' }}
+                    />
+                  </div>
+                )}
               </div>
 
               {/* Date and Time */}
@@ -2310,6 +2379,78 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* NEW CHAT SEARCH MODAL */}
+      {showNewChatModal && (
+        <div className="modal-overlay" onClick={() => setShowNewChatModal(false)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '540px', width: '90%', maxHeight: '80vh', display: 'flex', flexDirection: 'column' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
+              <h3 style={{ fontSize: '1.2rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <MessageSquare size={18} color="var(--accent-primary)" />
+                <span>Yeni Sohbet Başlat</span>
+              </h3>
+              <button onClick={() => setShowNewChatModal(false)} style={{ color: 'var(--text-secondary)' }}>
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ position: 'relative', marginBottom: '1rem' }}>
+              <Search size={16} color="var(--text-muted)" style={{ position: 'absolute', left: '0.85rem', top: '50%', transform: 'translateY(-50%)' }} />
+              <input
+                type="text"
+                autoFocus
+                className="form-input"
+                placeholder="Araştırmacı adı, unvanı veya bölümü yazın..."
+                value={chatSearchQuery}
+                onChange={e => setChatSearchQuery(e.target.value)}
+                style={{ paddingLeft: '2.5rem' }}
+              />
+            </div>
+
+            <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem', minHeight: '200px' }}>
+              {academiciansForChat.length === 0 ? (
+                <div style={{ textAlign: 'center', padding: '2.5rem', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                  Eşleşen araştırmacı bulunamadı. Lütfen ismi yazın.
+                </div>
+              ) : (
+                academiciansForChat.map(a => (
+                  <div
+                    key={a.id}
+                    onClick={() => {
+                      setSelectedContact(a);
+                      setShowNewChatModal(false);
+                      setChatSearchQuery('');
+                    }}
+                    style={{
+                      display: 'flex',
+                      alignItems: 'center',
+                      gap: '0.75rem',
+                      padding: '0.65rem 0.85rem',
+                      borderRadius: '8px',
+                      cursor: 'pointer',
+                      background: 'var(--bg-secondary)',
+                      transition: 'all 0.2s'
+                    }}
+                    className="chat-contact-item"
+                  >
+                    {a.photo_url ? (
+                      <img src={a.photo_url} alt={a.full_name} style={{ width: '38px', height: '38px', borderRadius: '50%', objectFit: 'cover' }} />
+                    ) : (
+                      <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'rgba(56,149,255,0.15)', color: 'var(--accent-primary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 700, fontSize: '0.85rem' }}>
+                        {a.full_name.charAt(0)}
+                      </div>
+                    )}
+                    <div>
+                      <div style={{ fontWeight: 600, fontSize: '0.88rem', color: 'var(--text-primary)' }}>{a.title} {a.full_name}</div>
+                      <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)' }}>{a.department_name || a.faculty_name}</div>
+                    </div>
+                  </div>
+                ))
+              )}
+            </div>
           </div>
         </div>
       )}

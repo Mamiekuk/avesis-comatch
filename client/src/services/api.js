@@ -117,9 +117,10 @@ export async function registerUser(payload) {
   return data;
 }
 
-export async function fetchAcademicians(params = {}) {
+export async function fetchAcademicians(params = {}, token = null) {
   const query = new URLSearchParams(params).toString();
-  const res = await fetch(`${API_BASE}/academicians?${query}`);
+  const headers = token ? getHeaders(token) : {};
+  const res = await fetch(`${API_BASE}/academicians?${query}`, { headers });
   if (!res.ok) throw new Error('Akademisyen listesi yüklenemedi.');
   return res.json();
 }
