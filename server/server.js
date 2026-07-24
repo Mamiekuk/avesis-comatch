@@ -831,9 +831,19 @@ app.get('/api/academicians', (req, res) => {
           const candClusterInfo = kmeansEngine.getUserClusterInfo(u.id);
           const myClusterInfo = kmeansEngine.getUserClusterInfo(currentUserId);
           if (candClusterInfo && myClusterInfo && candClusterInfo.tag_cluster && myClusterInfo.tag_cluster && candClusterInfo.tag_cluster.id === myClusterInfo.tag_cluster.id) {
-            u.match_score = 65;
+            u.match_score = 75;
           }
         }
+
+        if (!u.match_score) {
+          const me = db.prepare('SELECT faculty_id, department_id FROM users WHERE id = ?').get(currentUserId);
+          if (me) {
+            if (me.department_id && me.department_id === u.department_id) u.match_score = 85;
+            else if (me.faculty_id && me.faculty_id === u.faculty_id) u.match_score = 68;
+            else u.match_score = 42;
+          }
+        }
+      }
       }
     }
 

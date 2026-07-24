@@ -14,7 +14,7 @@ import { useAuth } from './context/AuthContext';
 import './styles/design-system.css';
 
 export default function App() {
-  const { token } = useAuth();
+  const { user, token } = useAuth();
   const [route, setRoute] = useState('home'); // 'home' | 'academicians' | 'academician-detail' | 'projects' | 'project-detail' | 'create-project' | 'dashboard'
   const [routeParam, setRouteParam] = useState(null); // ID for detail pages
   const [authModalOpen, setAuthModalOpen] = useState(false);
@@ -45,6 +45,7 @@ export default function App() {
           <AcademiciansPage
             onNavigate={handleNavigate}
             onOpenLogin={() => setAuthModalOpen(true)}
+            user={user}
           />
         )}
 

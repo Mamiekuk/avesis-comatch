@@ -31,15 +31,24 @@ export default function CreateProjectPage({ onNavigate }) {
     }
   };
 
-  const removeTag = (id) => {
-    setSelectedTags(prev => prev.filter(t => t.id !== id));
+  const normalizeTR = (str) => {
+    if (!str) return '';
+    return str.toLowerCase('tr-TR')
+      .replace(/i/g, 'i').replace(/ı/g, 'i')
+      .replace(/g/g, 'g').replace(/ğ/g, 'g')
+      .replace(/u/g, 'u').replace(/ü/g, 'u')
+      .replace(/s/g, 's').replace(/ş/g, 's')
+      .replace(/o/g, 'o').replace(/ö/g, 'o')
+      .replace(/c/g, 'c').replace(/ç/g, 'c');
   };
 
-  const filteredTags = tagSearch.trim()
+  const tagSearchNorm = normalizeTR(tagSearch.trim());
+
+  const filteredTags = tagSearchNorm
     ? metadataTags.filter(t => 
-        t.label.toLowerCase().includes(tagSearch.toLowerCase()) &&
+        normalizeTR(t.label).includes(tagSearchNorm) &&
         !selectedTags.some(s => s.id === t.id)
-      ).slice(0, 10)
+      ).slice(0, 15)
     : [];
 
   // Popular quick tags preview (top 20)
@@ -194,7 +203,7 @@ export default function CreateProjectPage({ onNavigate }) {
               <input
                 type="text"
                 className="form-input"
-                placeholder="Arama ile ~1.400 etiket arasında bulun (Örn: İnşaat Mühendisliği, Biyomekanik...)"
+                placeholder="Arama ile ~1.400 etiket arasında bulun (Örn: Fizik, Biyomekanik...)"
                 value={tagSearch}
                 onChange={e => setTagSearch(e.target.value)}
               />
@@ -205,11 +214,13 @@ export default function CreateProjectPage({ onNavigate }) {
                   top: '100%',
                   left: 0,
                   right: 0,
-                  zIndex: 20,
+                  zIndex: 100,
                   background: 'var(--bg-card)',
-                  border: '1px solid var(--border-highlight)',
+                  border: '1px solid var(--accent-primary)',
                   borderRadius: 'var(--radius-md)',
-                  boxShadow: 'var(--shadow-md)',
+                  boxShadow: '0 12px 36px rgba(0,0,0,0.5)',
+                  maxHeight: '280px',
+                  overflowY: 'auto',
                   marginTop: '4px'
                 }}>
                   {filteredTags.map(tag => (
@@ -217,13 +228,22 @@ export default function CreateProjectPage({ onNavigate }) {
                       key={tag.id}
                       onClick={() => { toggleTag(tag); setTagSearch(''); }}
                       style={{
-                        padding: '0.65rem 1rem',
+                        padding: '0.75rem 1.1rem',
                         borderBottom: '1px solid var(--border-color)',
                         cursor: 'pointer',
-                        fontSize: '0.88rem'
+                        fontSize: '0.9rem',
+                        fontWeight: 500,
+                        color: 'var(--text-primary)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        transition: 'background 0.15s'
                       }}
+                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(56, 149, 255, 0.15)'}
+                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
                     >
-                      + {tag.label}
+                      <span style={{ fontWeight: 700, color: 'var(--accent-primary)' }}>+</span>
+                      <span>{tag.label}</span>
                     </div>
                   ))}
                 </div>
