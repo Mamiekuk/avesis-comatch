@@ -45,10 +45,7 @@ export default function CreateProjectPage({ onNavigate }) {
   const tagSearchNorm = normalizeTR(tagSearch.trim());
 
   const filteredTags = tagSearchNorm
-    ? metadataTags.filter(t => 
-        normalizeTR(t.label).includes(tagSearchNorm) &&
-        !selectedTags.some(s => s.id === t.id)
-      ).slice(0, 15)
+    ? metadataTags.filter(t => normalizeTR(t.label).includes(tagSearchNorm)).slice(0, 20)
     : [];
 
   // Popular quick tags preview (top 20)
@@ -206,7 +203,29 @@ export default function CreateProjectPage({ onNavigate }) {
                 placeholder="Arama ile ~1.400 etiket arasında bulun (Örn: Fizik, Biyomekanik...)"
                 value={tagSearch}
                 onChange={e => setTagSearch(e.target.value)}
+                style={{ paddingRight: tagSearch ? '2.5rem' : '1rem' }}
               />
+
+              {tagSearch && (
+                <button
+                  type="button"
+                  onClick={() => setTagSearch('')}
+                  style={{
+                    position: 'absolute',
+                    right: '0.85rem',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
+                    color: 'var(--text-muted)',
+                    fontSize: '0.9rem',
+                    cursor: 'pointer',
+                    background: 'transparent',
+                    border: 'none'
+                  }}
+                  title="Aramayı temizle ve kapat"
+                >
+                  <X size={16} />
+                </button>
+              )}
 
               {filteredTags.length > 0 && (
                 <div style={{
@@ -218,34 +237,77 @@ export default function CreateProjectPage({ onNavigate }) {
                   background: 'var(--bg-card)',
                   border: '1px solid var(--accent-primary)',
                   borderRadius: 'var(--radius-md)',
-                  boxShadow: '0 12px 36px rgba(0,0,0,0.5)',
-                  maxHeight: '280px',
+                  boxShadow: '0 14px 40px rgba(0,0,0,0.6)',
+                  maxHeight: '300px',
                   overflowY: 'auto',
                   marginTop: '4px'
                 }}>
-                  {filteredTags.map(tag => (
-                    <div
-                      key={tag.id}
-                      onClick={() => { toggleTag(tag); setTagSearch(''); }}
-                      style={{
-                        padding: '0.75rem 1.1rem',
-                        borderBottom: '1px solid var(--border-color)',
-                        cursor: 'pointer',
-                        fontSize: '0.9rem',
-                        fontWeight: 500,
-                        color: 'var(--text-primary)',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.5rem',
-                        transition: 'background 0.15s'
-                      }}
-                      onMouseEnter={e => e.currentTarget.style.background = 'rgba(56, 149, 255, 0.15)'}
-                      onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+                  {/* Dropdown Header Bar */}
+                  <div style={{
+                    padding: '0.5rem 1rem',
+                    background: 'var(--bg-secondary)',
+                    borderBottom: '1px solid var(--border-color)',
+                    display: 'flex',
+                    justify: 'space-between',
+                    alignItems: 'center',
+                    fontSize: '0.78rem',
+                    color: 'var(--text-muted)',
+                    fontWeight: 600
+                  }}>
+                    <span>💡 Çoklu Seçim Modu (Tıklayarak Seçin veya Kaldırın)</span>
+                    <button
+                      type="button"
+                      onClick={() => setTagSearch('')}
+                      style={{ color: 'var(--accent-primary)', cursor: 'pointer', fontWeight: 700, background: 'transparent', border: 'none' }}
                     >
-                      <span style={{ fontWeight: 700, color: 'var(--accent-primary)' }}>+</span>
-                      <span>{tag.label}</span>
-                    </div>
-                  ))}
+                      Bitti / Kapat ✕
+                    </button>
+                  </div>
+
+                  {filteredTags.map(tag => {
+                    const isSelected = selectedTags.some(s => s.id === tag.id);
+                    return (
+                      <div
+                        key={tag.id}
+                        onClick={() => toggleTag(tag)}
+                        style={{
+                          padding: '0.75rem 1.1rem',
+                          borderBottom: '1px solid var(--border-color)',
+                          cursor: 'pointer',
+                          fontSize: '0.9rem',
+                          fontWeight: isSelected ? 700 : 500,
+                          color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)',
+                          background: isSelected ? 'rgba(56, 149, 255, 0.15)' : 'transparent',
+                          display: 'flex',
+                          alignItems: 'center',
+                          justifyContent: 'space-between',
+                          transition: 'background 0.15s'
+                        }}
+                        onMouseEnter={e => {
+                          if (!isSelected) e.currentTarget.style.background = 'rgba(56, 149, 255, 0.08)';
+                        }}
+                        onMouseLeave={e => {
+                          if (!isSelected) e.currentTarget.style.background = 'transparent';
+                        }}
+                      >
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
+                          <span style={{
+                            fontWeight: 800,
+                            color: isSelected ? 'var(--success)' : 'var(--accent-primary)',
+                            fontSize: '1rem'
+                          }}>
+                            {isSelected ? '✓' : '+'}
+                          </span>
+                          <span>{tag.label}</span>
+                        </div>
+                        {isSelected && (
+                          <span className="badge" style={{ padding: '0.15rem 0.5rem', fontSize: '0.72rem', background: 'rgba(16,185,129,0.2)', color: 'var(--success)' }}>
+                            Seçildi
+                          </span>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
