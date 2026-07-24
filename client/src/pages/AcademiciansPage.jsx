@@ -30,7 +30,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
   const [tagSearchInput, setTagSearchInput] = useState('');
   const [selectedMetricCluster, setSelectedMetricCluster] = useState('');
   const [selectedTagCluster, setSelectedTagCluster] = useState('');
-  const [sort, setSort] = useState('name_asc');
+  const [sort, setSort] = useState(token ? 'match_desc' : 'name_asc');
 
   // View Mode & Pagination
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
@@ -232,7 +232,9 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
               className="form-select"
               value={sort}
               onChange={e => setSort(e.target.value)}
+              style={{ fontWeight: sort === 'match_desc' ? 700 : 500 }}
             >
+              {token && <option value="match_desc">⚡ % Uyum Skoru (Yüksekten Düşüğe)</option>}
               <option value="name_asc">Ad Soyad (A - Z)</option>
               <option value="richness_desc">Profil Zenginliği (Dolu → Boş)</option>
               <option value="claimed_first">Önce Aktif Profiller</option>
