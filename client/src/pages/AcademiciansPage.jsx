@@ -30,7 +30,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
   const [tagSearchInput, setTagSearchInput] = useState('');
   const [selectedMetricCluster, setSelectedMetricCluster] = useState('');
   const [selectedTagCluster, setSelectedTagCluster] = useState('');
-  const [sort, setSort] = useState(token ? 'match_desc' : 'name_asc');
+  const [sort, setSort] = useState('name_asc');
 
   // View Mode & Pagination
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
