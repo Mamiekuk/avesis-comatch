@@ -343,9 +343,31 @@ export default function CreateProjectPage({ onNavigate }) {
                 </div>
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                   {selectedTags.map(tag => (
-                    <span key={tag.id} className="badge badge-tag" style={{ padding: '0.45rem 0.9rem', fontSize: '0.84rem' }}>
-                      {tag.label}
-                      <X size={14} style={{ cursor: 'pointer', marginLeft: '4px' }} onClick={() => removeTag(tag.id)} />
+                    <span
+                      key={tag.id}
+                      className="badge badge-tag"
+                      onClick={() => removeTag(tag.id)}
+                      style={{
+                        padding: '0.45rem 0.9rem',
+                        fontSize: '0.84rem',
+                        cursor: 'pointer',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.4rem',
+                        userSelect: 'none',
+                        transition: 'all 0.15s'
+                      }}
+                      title="Tıklayarak bu etiketi kaldırın"
+                    >
+                      <span>{tag.label}</span>
+                      <X
+                        size={14}
+                        style={{ cursor: 'pointer', opacity: 0.8 }}
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          removeTag(tag.id);
+                        }}
+                      />
                     </span>
                   ))}
                 </div>
