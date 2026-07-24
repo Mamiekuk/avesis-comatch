@@ -345,3 +345,55 @@ button {
 ::-webkit-scrollbar-thumb:hover {
   background: rgba(248, 250, 252, 0.35);
 }
+
+/* =========================================================
+   Responsive Mobile Media Queries
+   ========================================================= */
+@media (min-width: 901px) {
+  .nav-mobile-toggle, .nav-mobile-menu {
+    display: none !important;
+  }
+}
+
+@media (max-width: 900px) {
+  .nav-desktop-links, .nav-desktop-actions {
+    display: none !important;
+  }
+  .desktop-only {
+    display: none !important;
+  }
+}
+
+@media (max-width: 768px) {
+  body {
+    font-size: 15px;
+  }
+
+  .modal-content {
+    max-width: 95% !important;
+    padding: 1.25rem !important;
+    margin: 0.5rem !important;
+  }
+
+  .card-glass {
+    padding: 1.15rem !important;
+    border-radius: var(--radius-md) !important;
+  }
+
+  /* Grid layout overrides for mobile single-column stacking */
+  .grid-responsive {
+    grid-template-columns: 1fr !important;
+  }
+
+  h1 { font-size: 1.65rem !important; }
+  h2 { font-size: 1.35rem !important; }
+  h3 { font-size: 1.15rem !important; }
+  h4 { font-size: 1.02rem !important; }
+}
+
+@media (max-width: 480px) {
+  .btn-primary, .btn-secondary {
+    padding: 0.65rem 1rem !important;
+    font-size: 0.85rem !important;
+  }
+}

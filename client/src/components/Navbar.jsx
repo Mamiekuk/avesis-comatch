@@ -1,11 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
-import { Users, FolderGit2, PlusCircle, Sun, Moon, LogIn, LayoutDashboard, LogOut, Award, Bell, CheckCircle2, ExternalLink, Megaphone } from 'lucide-react';
+import { Users, FolderGit2, PlusCircle, Sun, Moon, LogIn, LayoutDashboard, LogOut, Award, Bell, Megaphone, Menu, X } from 'lucide-react';
 import { fetchNotifications, markNotificationsRead } from '../services/api';
 
 export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
   const { user, token, theme, toggleTheme, logout } = useAuth();
   const [notifOpen, setNotifOpen] = useState(false);
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [notifications, setNotifications] = useState([]);
   const [unreadCount, setUnreadCount] = useState(0);
   const dropdownRef = useRef(null);
@@ -63,6 +64,11 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
     }
   };
 
+  const handleMobileNav = (route, param) => {
+    setMobileMenuOpen(false);
+    onNavigate(route, param);
+  };
+
   return (
     <nav style={{
       position: 'sticky',
@@ -71,7 +77,7 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
       background: 'var(--bg-glass)',
       backdropFilter: 'blur(16px)',
       borderBottom: '1px solid var(--border-color)',
-      padding: '0.85rem 2rem'
+      padding: '0.75rem 1.25rem'
     }}>
       <div style={{
         maxWidth: '1360px',
@@ -82,87 +88,87 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
       }}>
         {/* Brand Logo */}
         <div 
-          onClick={() => onNavigate('home')}
-          style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', cursor: 'pointer' }}
+          onClick={() => handleMobileNav('home')}
+          style={{ display: 'flex', alignItems: 'center', gap: '0.65rem', cursor: 'pointer' }}
         >
           <div style={{
-            width: 40,
-            height: 40,
-            borderRadius: '12px',
+            width: 36,
+            height: 36,
+            borderRadius: '10px',
             background: 'var(--accent-gradient)',
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             boxShadow: 'var(--shadow-glow)'
           }}>
-            <Award color="#fff" size={22} />
+            <Award color="#fff" size={20} />
           </div>
           <div>
-            <span style={{ fontSize: '1.25rem', fontWeight: 800, fontFamily: 'var(--font-heading)', letterSpacing: '-0.5px' }}>
+            <span style={{ fontSize: '1.15rem', fontWeight: 800, fontFamily: 'var(--font-heading)', letterSpacing: '-0.5px' }}>
               AVESİS <span style={{ color: 'var(--accent-primary)' }}>CoMatch</span>
             </span>
-            <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', fontWeight: 500 }}>
+            <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', fontWeight: 500 }} className="desktop-only">
               Akademik Ekip & Keşif Platformu
             </div>
           </div>
         </div>
 
-        {/* Center Navigation Links */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+        {/* Desktop Navigation Links */}
+        <div className="nav-desktop-links" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <button
             onClick={() => onNavigate('academicians')}
             style={{
-              padding: '0.55rem 1.1rem',
+              padding: '0.55rem 0.95rem',
               borderRadius: 'var(--radius-md)',
               fontWeight: 600,
-              fontSize: '0.9rem',
+              fontSize: '0.88rem',
               color: currentRoute === 'academicians' ? 'var(--accent-primary)' : 'var(--text-secondary)',
               background: currentRoute === 'academicians' ? 'rgba(56, 149, 255, 0.12)' : 'transparent',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.45rem',
+              gap: '0.4rem',
               transition: 'all 0.2s'
             }}
           >
-            <Users size={18} />
+            <Users size={17} />
             <span>Tüm Akademisyenler (1.233)</span>
           </button>
 
           <button
             onClick={() => onNavigate('projects')}
             style={{
-              padding: '0.55rem 1.1rem',
+              padding: '0.55rem 0.95rem',
               borderRadius: 'var(--radius-md)',
               fontWeight: 600,
-              fontSize: '0.9rem',
+              fontSize: '0.88rem',
               color: currentRoute === 'projects' ? 'var(--accent-primary)' : 'var(--text-secondary)',
               background: currentRoute === 'projects' ? 'rgba(56, 149, 255, 0.12)' : 'transparent',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.45rem',
+              gap: '0.4rem',
               transition: 'all 0.2s'
             }}
           >
-            <FolderGit2 size={18} />
+            <FolderGit2 size={17} />
             <span>Akademik Projeler</span>
           </button>
 
           <button
             onClick={() => onNavigate('announcements')}
             style={{
-              padding: '0.55rem 1.1rem',
+              padding: '0.55rem 0.95rem',
               borderRadius: 'var(--radius-md)',
               fontWeight: 600,
-              fontSize: '0.9rem',
+              fontSize: '0.88rem',
               color: currentRoute === 'announcements' ? 'var(--accent-primary)' : 'var(--text-secondary)',
               background: currentRoute === 'announcements' ? 'rgba(56, 149, 255, 0.12)' : 'transparent',
               display: 'flex',
               alignItems: 'center',
-              gap: '0.45rem',
+              gap: '0.4rem',
               transition: 'all 0.2s'
             }}
           >
-            <Megaphone size={18} />
+            <Megaphone size={17} />
             <span>Çağrı Duyuruları</span>
           </button>
 
@@ -172,21 +178,21 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
               else onOpenLogin();
             }}
             className="btn-primary"
-            style={{ padding: '0.55rem 1.15rem', fontSize: '0.9rem' }}
+            style={{ padding: '0.55rem 1.1rem', fontSize: '0.88rem' }}
           >
-            <PlusCircle size={18} />
+            <PlusCircle size={17} />
             <span>Proje Oluştur</span>
           </button>
         </div>
 
-        {/* Right Side: Theme Switch, Notification Bell & User Actions */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem' }}>
+        {/* Right Side: Theme Switch, Notification Bell & Actions */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
           <button
             onClick={toggleTheme}
             title="Tema Değiştir"
             style={{
-              width: 38,
-              height: 38,
+              width: 36,
+              height: 36,
               borderRadius: '10px',
               border: '1px solid var(--border-color)',
               display: 'flex',
@@ -195,7 +201,7 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
               color: 'var(--text-secondary)'
             }}
           >
-            {theme === 'dark' ? <Sun size={18} color="#fbbf24" /> : <Moon size={18} />}
+            {theme === 'dark' ? <Sun size={17} color="#fbbf24" /> : <Moon size={17} />}
           </button>
 
           {/* Notification Bell Icon & Dropdown */}
@@ -205,8 +211,8 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
                 onClick={() => setNotifOpen(!notifOpen)}
                 title="Bildirimler"
                 style={{
-                  width: 38,
-                  height: 38,
+                  width: 36,
+                  height: 36,
                   borderRadius: '10px',
                   border: unreadCount > 0 ? '1px solid rgba(239, 68, 68, 0.5)' : '1px solid var(--border-color)',
                   background: unreadCount > 0 ? 'rgba(239, 68, 68, 0.12)' : 'transparent',
@@ -218,18 +224,18 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
                   cursor: 'pointer'
                 }}
               >
-                <Bell size={19} />
+                <Bell size={18} />
                 {unreadCount > 0 && (
                   <span style={{
                     position: 'absolute',
-                    top: -5,
-                    right: -5,
+                    top: -4,
+                    right: -4,
                     background: '#ef4444',
                     color: '#fff',
-                    fontSize: '0.68rem',
+                    fontSize: '0.65rem',
                     fontWeight: 800,
-                    width: 18,
-                    height: 18,
+                    width: 17,
+                    height: 17,
                     borderRadius: '50%',
                     display: 'flex',
                     alignItems: 'center',
@@ -245,23 +251,24 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
               {notifOpen && (
                 <div style={{
                   position: 'absolute',
-                  top: '48px',
+                  top: '44px',
                   right: 0,
-                  width: '340px',
+                  width: '320px',
+                  maxWidth: '90vw',
                   background: 'var(--bg-card)',
                   border: '1px solid var(--border-color)',
                   borderRadius: 'var(--radius-lg)',
                   boxShadow: 'var(--shadow-md), 0 0 25px rgba(0,0,0,0.5)',
-                  padding: '1rem',
+                  padding: '0.85rem',
                   zIndex: 200,
                   animation: 'scaleIn 200ms ease-out'
                 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.75rem', paddingBottom: '0.5rem', borderBottom: '1px solid var(--border-color)' }}>
-                    <div style={{ fontWeight: 700, fontSize: '0.92rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      <Bell size={16} color="var(--accent-primary)" />
+                    <div style={{ fontWeight: 700, fontSize: '0.88rem', color: 'var(--text-primary)', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Bell size={15} color="var(--accent-primary)" />
                       <span>Bildirimler</span>
                       {unreadCount > 0 && (
-                        <span style={{ fontSize: '0.72rem', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', padding: '0.1rem 0.5rem', borderRadius: '999px', fontWeight: 700 }}>
+                        <span style={{ fontSize: '0.7rem', background: 'rgba(239, 68, 68, 0.2)', color: '#ef4444', padding: '0.1rem 0.4rem', borderRadius: '999px', fontWeight: 700 }}>
                           {unreadCount} yeni
                         </span>
                       )}
@@ -269,16 +276,16 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
                     {unreadCount > 0 && (
                       <button
                         onClick={handleMarkRead}
-                        style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', fontWeight: 600 }}
+                        style={{ fontSize: '0.72rem', color: 'var(--accent-primary)', fontWeight: 600 }}
                       >
                         Tümünü Okundu İşaretle
                       </button>
                     )}
                   </div>
 
-                  <div style={{ maxHeight: '280px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.5rem' }}>
+                  <div style={{ maxHeight: '260px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '0.45rem' }}>
                     {notifications.length === 0 ? (
-                      <div style={{ textAlign: 'center', padding: '1.5rem 0', color: 'var(--text-muted)', fontSize: '0.85rem' }}>
+                      <div style={{ textAlign: 'center', padding: '1.25rem 0', color: 'var(--text-muted)', fontSize: '0.82rem' }}>
                         Henüz bildiriminiz yok.
                       </div>
                     ) : (
@@ -287,7 +294,7 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
                           key={n.id}
                           onClick={() => handleNotifClick(n)}
                           style={{
-                            padding: '0.65rem 0.85rem',
+                            padding: '0.6rem 0.75rem',
                             borderRadius: 'var(--radius-md)',
                             background: n.is_read ? 'transparent' : 'rgba(56, 149, 255, 0.08)',
                             border: n.is_read ? '1px solid transparent' : '1px solid rgba(56, 149, 255, 0.2)',
@@ -295,14 +302,14 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
                             transition: 'all 0.2s'
                           }}
                         >
-                          <div style={{ fontWeight: 700, fontSize: '0.85rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
+                          <div style={{ fontWeight: 700, fontSize: '0.82rem', color: 'var(--text-primary)', marginBottom: '0.2rem' }}>
                             {n.title}
                           </div>
-                          <div style={{ fontSize: '0.78rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
+                          <div style={{ fontSize: '0.76rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
                             {n.body}
                           </div>
-                          <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: '0.3rem', display: 'flex', alignItems: 'center', gap: '0.3rem' }}>
-                            <span>{new Date(n.created_at).toLocaleDateString('tr-TR', { hour: '2-digit', minute: '2-digit' })}</span>
+                          <div style={{ fontSize: '0.68rem', color: 'var(--text-muted)', marginTop: '0.25rem' }}>
+                            {new Date(n.created_at).toLocaleDateString('tr-TR', { hour: '2-digit', minute: '2-digit' })}
                           </div>
                         </div>
                       ))
@@ -313,41 +320,181 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
             </div>
           )}
 
-          {user ? (
-            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem' }}>
+          {/* Desktop User Panel / Login Buttons */}
+          <div className="nav-desktop-actions" style={{ display: 'flex', alignItems: 'center', gap: '0.65rem' }}>
+            {user ? (
+              <>
+                <button
+                  onClick={() => onNavigate('dashboard')}
+                  className="btn-secondary"
+                  style={{ padding: '0.5rem 0.85rem', fontSize: '0.85rem' }}
+                >
+                  <LayoutDashboard size={15} />
+                  <span>Panelim</span>
+                </button>
+                <button
+                  onClick={logout}
+                  title="Çıkış Yap"
+                  style={{
+                    padding: '0.5rem',
+                    borderRadius: '10px',
+                    color: 'var(--danger)',
+                    border: '1px solid var(--border-color)'
+                  }}
+                >
+                  <LogOut size={16} />
+                </button>
+              </>
+            ) : (
               <button
-                onClick={() => onNavigate('dashboard')}
+                onClick={onOpenLogin}
                 className="btn-secondary"
-                style={{ padding: '0.5rem 0.95rem', fontSize: '0.88rem' }}
+                style={{ padding: '0.5rem 1rem', fontSize: '0.85rem' }}
               >
-                <LayoutDashboard size={16} />
-                <span>Panelim ({user.full_name.split(' ')[0]})</span>
+                <LogIn size={15} />
+                <span>Giriş Yap</span>
               </button>
-              <button
-                onClick={logout}
-                title="Çıkış Yap"
-                style={{
-                  padding: '0.5rem',
-                  borderRadius: '10px',
-                  color: 'var(--danger)',
-                  border: '1px solid var(--border-color)'
-                }}
-              >
-                <LogOut size={17} />
-              </button>
-            </div>
-          ) : (
-            <button
-              onClick={onOpenLogin}
-              className="btn-secondary"
-              style={{ padding: '0.55rem 1.15rem', fontSize: '0.88rem' }}
-            >
-              <LogIn size={16} />
-              <span>Giriş / Profil Sahiplen</span>
-            </button>
-          )}
+            )}
+          </div>
+
+          {/* Mobile Hamburger Menu Button */}
+          <button
+            className="nav-mobile-toggle"
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            title="Mobil Menü"
+            style={{
+              width: 36,
+              height: 36,
+              borderRadius: '10px',
+              border: '1px solid var(--border-color)',
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'var(--accent-primary)',
+              background: mobileMenuOpen ? 'rgba(56, 149, 255, 0.15)' : 'transparent'
+            }}
+          >
+            {mobileMenuOpen ? <X size={20} /> : <Menu size={20} />}
+          </button>
         </div>
       </div>
+
+      {/* MOBILE DROPDOWN OVERLAY MENU */}
+      {mobileMenuOpen && (
+        <div className="nav-mobile-menu" style={{
+          position: 'absolute',
+          top: '100%',
+          left: 0,
+          right: 0,
+          background: 'var(--bg-card)',
+          borderBottom: '1px solid var(--border-color)',
+          boxShadow: 'var(--shadow-md)',
+          padding: '1rem 1.25rem',
+          display: 'flex',
+          flexDirection: 'column',
+          gap: '0.65rem',
+          zIndex: 150,
+          animation: 'fadeInUp 200ms ease-out'
+        }}>
+          <button
+            onClick={() => handleMobileNav('academicians')}
+            style={{
+              padding: '0.75rem 1rem',
+              borderRadius: 'var(--radius-md)',
+              fontWeight: 600,
+              fontSize: '0.92rem',
+              color: currentRoute === 'academicians' ? 'var(--accent-primary)' : 'var(--text-primary)',
+              background: currentRoute === 'academicians' ? 'rgba(56, 149, 255, 0.15)' : 'var(--bg-secondary)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem'
+            }}
+          >
+            <Users size={18} />
+            <span>Tüm Akademisyenler (1.233)</span>
+          </button>
+
+          <button
+            onClick={() => handleMobileNav('projects')}
+            style={{
+              padding: '0.75rem 1rem',
+              borderRadius: 'var(--radius-md)',
+              fontWeight: 600,
+              fontSize: '0.92rem',
+              color: currentRoute === 'projects' ? 'var(--accent-primary)' : 'var(--text-primary)',
+              background: currentRoute === 'projects' ? 'rgba(56, 149, 255, 0.15)' : 'var(--bg-secondary)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem'
+            }}
+          >
+            <FolderGit2 size={18} />
+            <span>Akademik Projeler</span>
+          </button>
+
+          <button
+            onClick={() => handleMobileNav('announcements')}
+            style={{
+              padding: '0.75rem 1rem',
+              borderRadius: 'var(--radius-md)',
+              fontWeight: 600,
+              fontSize: '0.92rem',
+              color: currentRoute === 'announcements' ? 'var(--accent-primary)' : 'var(--text-primary)',
+              background: currentRoute === 'announcements' ? 'rgba(56, 149, 255, 0.15)' : 'var(--bg-secondary)',
+              display: 'flex',
+              alignItems: 'center',
+              gap: '0.6rem'
+            }}
+          >
+            <Megaphone size={18} />
+            <span>Çağrı Duyuruları</span>
+          </button>
+
+          <button
+            onClick={() => {
+              if (user) handleMobileNav('create-project');
+              else { setMobileMenuOpen(false); onOpenLogin(); }
+            }}
+            className="btn-primary"
+            style={{ padding: '0.75rem 1rem', fontSize: '0.92rem', width: '100%', justifyContent: 'center' }}
+          >
+            <PlusCircle size={18} />
+            <span>Proje Oluştur</span>
+          </button>
+
+          <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.65rem', marginTop: '0.25rem', display: 'flex', gap: '0.65rem' }}>
+            {user ? (
+              <>
+                <button
+                  onClick={() => handleMobileNav('dashboard')}
+                  className="btn-secondary"
+                  style={{ flex: 1, padding: '0.75rem 1rem', fontSize: '0.9rem', justifyContent: 'center' }}
+                >
+                  <LayoutDashboard size={18} />
+                  <span>Panelim ({user.full_name.split(' ')[0]})</span>
+                </button>
+                <button
+                  onClick={() => { setMobileMenuOpen(false); logout(); }}
+                  className="btn-secondary"
+                  style={{ padding: '0.75rem 1rem', color: 'var(--danger)' }}
+                  title="Çıkış Yap"
+                >
+                  <LogOut size={18} />
+                </button>
+              </>
+            ) : (
+              <button
+                onClick={() => { setMobileMenuOpen(false); onOpenLogin(); }}
+                className="btn-secondary"
+                style={{ width: '100%', padding: '0.75rem 1rem', fontSize: '0.9rem', justifyContent: 'center' }}
+              >
+                <LogIn size={18} />
+                <span>Giriş Yap / Profil Sahiplen</span>
+              </button>
+            )}
+          </div>
+        </div>
+      )}
     </nav>
   );
 }
