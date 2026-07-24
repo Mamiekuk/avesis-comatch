@@ -844,7 +844,6 @@ app.get('/api/academicians', (req, res) => {
           }
         }
       }
-      }
     }
 
     if (sort === 'match_desc' && currentUserId) {
