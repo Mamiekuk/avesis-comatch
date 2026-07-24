@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { createProject, fetchMetadata } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { PlusCircle, ArrowLeft, X, Sparkles, Tag, Save, Check } from 'lucide-react';
@@ -16,11 +16,25 @@ export default function CreateProjectPage({ onNavigate }) {
   const [metadataTags, setMetadataTags] = useState([]);
   const [tagSearch, setTagSearch] = useState('');
   const [selectedTags, setSelectedTags] = useState([]);
+  const [dropdownOpen, setDropdownOpen] = useState(false);
+  const tagPickerRef = useRef(null);
+
   const [loading, setLoading] = useState(false);
   const [draftLoading, setDraftLoading] = useState(false);
 
   useEffect(() => {
     fetchMetadata().then(d => setMetadataTags(d.research_areas || [])).catch(() => {});
+  }, []);
+
+  // Click outside listener to close tag dropdown
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (tagPickerRef.current && !tagPickerRef.current.contains(event.target)) {
+        setDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
   }, []);
 
   const toggleTag = (tag) => {
@@ -29,6 +43,10 @@ export default function CreateProjectPage({ onNavigate }) {
     } else {
       setSelectedTags(prev => [...prev, tag]);
     }
+  };
+
+  const removeTag = (id) => {
+    setSelectedTags(prev => prev.filter(t => t.id !== id));
   };
 
   const normalizeTR = (str) => {
@@ -44,9 +62,9 @@ export default function CreateProjectPage({ onNavigate }) {
 
   const tagSearchNorm = normalizeTR(tagSearch.trim());
 
-  const filteredTags = tagSearchNorm
-    ? metadataTags.filter(t => normalizeTR(t.label).includes(tagSearchNorm)).slice(0, 20)
-    : [];
+  const displayTags = tagSearchNorm
+    ? metadataTags.filter(t => normalizeTR(t.label).includes(tagSearchNorm)).slice(0, 25)
+    : metadataTags.slice(0, 20);
 
   // Popular quick tags preview (top 20)
   const popularTags = metadataTags.slice(0, 24);
@@ -181,18 +199,21 @@ export default function CreateProjectPage({ onNavigate }) {
           </div>
 
           {/* RESEARCH AREA TAG PICKER */}
-          <div style={{
-            background: 'var(--bg-secondary)',
-            border: '1px solid var(--border-highlight)',
-            borderRadius: 'var(--radius-md)',
-            padding: '1.25rem',
-            marginBottom: '1.75rem'
-          }}>
+          <div
+            ref={tagPickerRef}
+            style={{
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-highlight)',
+              borderRadius: 'var(--radius-md)',
+              padding: '1.25rem',
+              marginBottom: '1.75rem'
+            }}
+          >
             <label style={{ display: 'block', fontWeight: 700, fontSize: '0.95rem', marginBottom: '0.4rem', color: 'var(--accent-primary)' }}>
               🎯 Aranan Araştırma Alanı Etiketleri (Zorunlu — Akıllı Eşleştirme Motoru İçin)
             </label>
             <p style={{ fontSize: '0.82rem', color: 'var(--text-secondary)', marginBottom: '0.85rem' }}>
-              AVESİS taksonomisindeki ~1.400 etiket arasından yazarak ekleyin.
+              Aramaya tıklayın veya kelime yazarak açılan listeden birden fazla etiket seçin.
             </p>
 
             {/* Tag Search Autocomplete */}
@@ -202,14 +223,15 @@ export default function CreateProjectPage({ onNavigate }) {
                 className="form-input"
                 placeholder="Arama ile ~1.400 etiket arasında bulun (Örn: Fizik, Biyomekanik...)"
                 value={tagSearch}
-                onChange={e => setTagSearch(e.target.value)}
+                onChange={e => { setTagSearch(e.target.value); setDropdownOpen(true); }}
+                onFocus={() => setDropdownOpen(true)}
                 style={{ paddingRight: tagSearch ? '2.5rem' : '1rem' }}
               />
 
               {tagSearch && (
                 <button
                   type="button"
-                  onClick={() => setTagSearch('')}
+                  onClick={() => { setTagSearch(''); setDropdownOpen(false); }}
                   style={{
                     position: 'absolute',
                     right: '0.85rem',
@@ -227,7 +249,8 @@ export default function CreateProjectPage({ onNavigate }) {
                 </button>
               )}
 
-              {filteredTags.length > 0 && (
+              {/* PERSISTENT MULTI-SELECT DROPDOWN MENU */}
+              {dropdownOpen && displayTags.length > 0 && (
                 <div style={{
                   position: 'absolute',
                   top: '100%',
@@ -244,27 +267,27 @@ export default function CreateProjectPage({ onNavigate }) {
                 }}>
                   {/* Dropdown Header Bar */}
                   <div style={{
-                    padding: '0.5rem 1rem',
+                    padding: '0.55rem 1rem',
                     background: 'var(--bg-secondary)',
                     borderBottom: '1px solid var(--border-color)',
                     display: 'flex',
-                    justify: 'space-between',
+                    justifyContent: 'space-between',
                     alignItems: 'center',
                     fontSize: '0.78rem',
                     color: 'var(--text-muted)',
                     fontWeight: 600
                   }}>
-                    <span>💡 Çoklu Seçim Modu (Tıklayarak Seçin veya Kaldırın)</span>
+                    <span>💡 Çoklu Seçim Modu (Kapanmadan Art Arda Seçebilirsiniz)</span>
                     <button
                       type="button"
-                      onClick={() => setTagSearch('')}
+                      onClick={() => setDropdownOpen(false)}
                       style={{ color: 'var(--accent-primary)', cursor: 'pointer', fontWeight: 700, background: 'transparent', border: 'none' }}
                     >
                       Bitti / Kapat ✕
                     </button>
                   </div>
 
-                  {filteredTags.map(tag => {
+                  {displayTags.map(tag => {
                     const isSelected = selectedTags.some(s => s.id === tag.id);
                     return (
                       <div
@@ -277,7 +300,7 @@ export default function CreateProjectPage({ onNavigate }) {
                           fontSize: '0.9rem',
                           fontWeight: isSelected ? 700 : 500,
                           color: isSelected ? 'var(--accent-primary)' : 'var(--text-primary)',
-                          background: isSelected ? 'rgba(56, 149, 255, 0.15)' : 'transparent',
+                          background: isSelected ? 'rgba(56, 149, 255, 0.18)' : 'transparent',
                           display: 'flex',
                           alignItems: 'center',
                           justifyContent: 'space-between',
@@ -294,7 +317,7 @@ export default function CreateProjectPage({ onNavigate }) {
                           <span style={{
                             fontWeight: 800,
                             color: isSelected ? 'var(--success)' : 'var(--accent-primary)',
-                            fontSize: '1rem'
+                            fontSize: '1.05rem'
                           }}>
                             {isSelected ? '✓' : '+'}
                           </span>
@@ -302,7 +325,7 @@ export default function CreateProjectPage({ onNavigate }) {
                         </div>
                         {isSelected && (
                           <span className="badge" style={{ padding: '0.15rem 0.5rem', fontSize: '0.72rem', background: 'rgba(16,185,129,0.2)', color: 'var(--success)' }}>
-                            Seçildi
+                            ✓ Seçildi
                           </span>
                         )}
                       </div>
