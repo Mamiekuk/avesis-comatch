@@ -820,28 +820,31 @@ app.get('/api/academicians', (req, res) => {
         const candTagIds = u.research_areas ? u.research_areas.map(t => t.id) : [];
         if (myTagIds.length > 0 && candTagIds.length > 0) {
           const common = candTagIds.filter(id => myTagIds.includes(id));
-          const cosSim = common.length / (Math.sqrt(myTagIds.length) * Math.sqrt(candTagIds.length));
-          const overlap = common.length / myTagIds.length;
-          let score = Math.round(cosSim * 60 + overlap * 35 + (u.is_claimed ? 5 : 0));
-          if (overlap === 1) score = Math.max(score, 95);
-          else if (overlap >= 0.5) score = Math.max(score, 72);
-          else if (common.length >= 1) score = Math.max(score, 45);
-          u.match_score = Math.min(99, Math.max(15, score));
+          const commonCount = common.length;
+          
+          if (commonCount > 0) {
+            const minTags = Math.min(myTagIds.length, candTagIds.length);
+            const unionTags = myTagIds.length + candTagIds.length - commonCount;
+            const overlapRatio = commonCount / minTags;
+            const jaccardSim = commonCount / unionTags;
+            
+            let baseScore = Math.round((overlapRatio * 60) + (jaccardSim * 35) + (u.is_claimed ? 5 : 0));
+            let calculatedScore = baseScore;
+            if (overlapRatio === 1) calculatedScore = Math.min(99, Math.max(90, baseScore));
+            else if (overlapRatio >= 0.5) calculatedScore = Math.min(88, Math.max(68, baseScore));
+            else calculatedScore = Math.min(68, Math.max(42, baseScore));
+            u.match_score = calculatedScore;
+          } else {
+            const me = db.prepare('SELECT faculty_id, department_id FROM users WHERE id = ?').get(currentUserId);
+            if (me && me.department_id && me.department_id === u.department_id) u.match_score = 55;
+            else if (me && me.faculty_id && me.faculty_id === u.faculty_id) u.match_score = 38;
+            else u.match_score = 20;
+          }
         } else {
-          const candClusterInfo = kmeansEngine.getUserClusterInfo(u.id);
-          const myClusterInfo = kmeansEngine.getUserClusterInfo(currentUserId);
-          if (candClusterInfo && myClusterInfo && candClusterInfo.tag_cluster && myClusterInfo.tag_cluster && candClusterInfo.tag_cluster.id === myClusterInfo.tag_cluster.id) {
-            u.match_score = 75;
-          }
-        }
-
-        if (!u.match_score) {
           const me = db.prepare('SELECT faculty_id, department_id FROM users WHERE id = ?').get(currentUserId);
-          if (me) {
-            if (me.department_id && me.department_id === u.department_id) u.match_score = 85;
-            else if (me.faculty_id && me.faculty_id === u.faculty_id) u.match_score = 68;
-            else u.match_score = 42;
-          }
+          if (me && me.department_id && me.department_id === u.department_id) u.match_score = 55;
+          else if (me && me.faculty_id && me.faculty_id === u.faculty_id) u.match_score = 38;
+          else u.match_score = 20;
         }
       }
     }
@@ -1246,36 +1249,52 @@ app.get('/api/projects/:id/match', authMiddleware, (req, res) => {
       const isRequestedClusterMatch = requestedClusterId !== null && candTagCluster && candTagCluster.id === requestedClusterId;
 
       if (commonTags.length > 0 || isRequestedClusterMatch) {
-        // Get total research areas count of candidate for exact Cosine Vector Similarity (A . B / (|A| * |B|))
         const candTagsCountRow = db.prepare('SELECT COUNT(*) as count FROM user_research_areas WHERE user_id = ?').get(cand.id);
         const candTagsCount = candTagsCountRow ? candTagsCountRow.count : 0;
 
-        const cosSim = (projectTags.length > 0 && candTagsCount > 0)
-          ? (commonTags.length / (Math.sqrt(projectTags.length) * Math.sqrt(candTagsCount)))
-          : 0;
-
-        const overlapRatio = projectTags.length > 0 ? (commonTags.length / projectTags.length) : 0;
-
-        const cosSimPct = Math.round(cosSim * 100);
-        const overlapRatioPct = Math.min(100, Math.round(overlapRatio * 100));
-        const claimedBonus = cand.is_claimed ? 5 : 0; // +5% active verified account
+        const commonCount = commonTags.length;
+        const totalProjTags = projectTags.length;
 
         let score = 0;
-        if (commonTags.length > 0) {
-          // Doğrudan ve şeffaf toplam: Kosinüs Benzerliği % + Etiket Kesişimi % + Aktif Profil
-          score = Math.round(cosSimPct + overlapRatioPct + claimedBonus);
+        let cosSimPct = 0;
+        let overlapRatioPct = 0;
 
-          // Quality bounds based on actual tag overlaps
-          if (overlapRatio === 1) score = Math.max(score, 96);
-          else if (overlapRatio >= 0.5) score = Math.max(score, 65);
-          else score = Math.max(score, 35);
+        if (commonCount > 0 && totalProjTags > 0) {
+          // 1. Proje Etiket Kapsama Oranı (Coverage Ratio)
+          const coverageRatio = commonCount / totalProjTags;
+          overlapRatioPct = Math.round(coverageRatio * 100);
+
+          // 2. Kosinüs Benzerliği (Cosine Similarity)
+          const cosSim = commonCount / (Math.sqrt(totalProjTags) * Math.sqrt(candTagsCount || 1));
+          cosSimPct = Math.round(cosSim * 100);
+
+          // 3. Jaccard İndeksi (Kesişim / Birleşim)
+          const unionCount = totalProjTags + candTagsCount - commonCount;
+          const jaccardSim = unionCount > 0 ? (commonCount / unionCount) : 0;
+
+          // Ağırlıklı Temel Puan (Kapsama %55 + Kosinüs %30 + Jaccard %15)
+          let baseScore = Math.round((coverageRatio * 55) + (cosSim * 30) + (jaccardSim * 15));
+
+          // K-Means Küme Bonusu
+          if (isSameKMeansCluster) baseScore += 5;
+          if (cand.is_claimed) baseScore += 5;
+
+          // Etiket Sayısına Göre Gerçekçi Alt ve Üst Sınırlar
+          if (coverageRatio === 1) {
+            // Projenin aradığı TÜM etiketler araştırmacıda mevcut!
+            score = Math.min(99, Math.max(88, baseScore));
+          } else if (coverageRatio >= 0.66) {
+            score = Math.min(88, Math.max(72, baseScore));
+          } else if (coverageRatio >= 0.5) {
+            score = Math.min(78, Math.max(60, baseScore));
+          } else {
+            score = Math.min(65, Math.max(35, baseScore));
+          }
         } else if (isRequestedClusterMatch && candTagCluster) {
-          // Kullanıcı özellikle bu kümeyi filtrelediğinde ortak etiket yoksa küme merkezine yakınlığına göre puanla
-          const centroidProximity = Math.max(0, Math.min(1, 1 - (candTagCluster.distance || 0.25)));
-          score = Math.round(centroidProximity * 45) + claimedBonus;
+          score = cand.is_claimed ? 32 : 25;
         }
 
-        score = Math.min(score, 99);
+        score = Math.min(99, Math.max(15, score));
 
         matches.push({
           academician: cand,
