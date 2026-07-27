@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { fetchAcademicians, fetchMetadata, fetchKMeansClusters } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { Search, Filter, LayoutGrid, List, ChevronLeft, ChevronRight, ExternalLink, CheckCircle2, AlertCircle, Award, UserPlus, X, Sparkles } from 'lucide-react';
@@ -20,6 +20,16 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
   const [metadata, setMetadata] = useState({ faculties: [], departments: [], research_areas: [], titles: [] });
   const [kmeansSummary, setKmeansSummary] = useState({ tagClusters: [], metricClusters: [] });
 
+  // Custom AI Profile Dropdown State with Info Tooltip
+  const [aiProfileOpen, setAiProfileOpen] = useState(false);
+  const [hoveredAiProfile, setHoveredAiProfile] = useState(null);
+  const aiProfileRef = useRef(null);
+
+  // Custom Academic Tag Cluster Dropdown State with Info Tooltip
+  const [tagClusterOpen, setTagClusterOpen] = useState(false);
+  const [hoveredTagCluster, setHoveredTagCluster] = useState(null);
+  const tagClusterRef = useRef(null);
+
   // Filters State
   const [search, setSearch] = useState('');
   const [selectedFaculty, setSelectedFaculty] = useState('');
@@ -35,6 +45,20 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
   // View Mode & Pagination
   const [viewMode, setViewMode] = useState('grid'); // 'grid' | 'list'
   const [pagination, setPagination] = useState({ total: 1234, page: 1, limit: 24, totalPages: 52 });
+
+  // Click outside listener for custom dropdowns
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (aiProfileRef.current && !aiProfileRef.current.contains(event.target)) {
+        setAiProfileOpen(false);
+      }
+      if (tagClusterRef.current && !tagClusterRef.current.contains(event.target)) {
+        setTagClusterOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
 
   useEffect(() => {
     fetchMetadata().then(d => setMetadata(d)).catch(() => {});
@@ -148,7 +172,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
       </div>
 
       {/* ADVANCED FILTER PANEL */}
-      <div className="card-glass" style={{ marginBottom: '2.5rem', padding: '1.75rem' }}>
+      <div className="card-glass" style={{ marginBottom: '2.5rem', padding: '1.75rem', overflow: 'visible', position: 'relative', zIndex: 50 }}>
         <form onSubmit={handleSearchSubmit} style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', marginBottom: '1.25rem' }}>
           {/* Search Bar */}
           <div>
@@ -242,40 +266,263 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
             </select>
           </div>
 
-          {/* K-Means Metric Cluster Filter */}
-          <div>
-            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#e879f9', marginBottom: '0.4rem' }}>
-              ⚡ Yapay Zeka Profili
+          {/* Custom Yapay Zeka Profili Filter Dropdown with Hover Info Tooltip */}
+          <div style={{ position: 'relative' }} ref={aiProfileRef}>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.82rem', fontWeight: 600, color: '#e879f9', marginBottom: '0.4rem' }}>
+              <span>⚡ Yapay Zeka Profili</span>
             </label>
-            <select
+
+            {/* Select Box Trigger */}
+            <div
+              onClick={() => { setAiProfileOpen(!aiProfileOpen); setTagClusterOpen(false); }}
               className="form-select"
-              style={{ borderColor: 'rgba(236, 72, 153, 0.4)' }}
-              value={selectedMetricCluster}
-              onChange={e => setSelectedMetricCluster(e.target.value)}
+              style={{
+                borderColor: 'rgba(236, 72, 153, 0.5)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justify: 'space-between',
+                background: 'var(--bg-secondary)',
+                fontWeight: selectedMetricCluster ? 700 : 400
+              }}
             >
-              <option value="">Tüm Yapay Zeka Profilleri</option>
-              {(kmeansSummary.metricClusters || []).map(mc => (
-                <option key={mc.id} value={mc.label}>{mc.badge} ({mc.member_count} Araştırmacı)</option>
-              ))}
-            </select>
+              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {selectedMetricCluster ? selectedMetricCluster : 'Tüm Yapay Zeka Profilleri'}
+              </span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: '6px' }}>▼</span>
+            </div>
+
+            {/* Dropdown Menu Overlay */}
+            {aiProfileOpen && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                width: '100%',
+                minWidth: '280px',
+                zIndex: 300,
+                marginTop: '4px',
+                background: '#1e293b',
+                border: '1.5px solid #3895ff',
+                borderRadius: 'var(--radius-md)',
+                boxShadow: '0 14px 40px rgba(0,0,0,0.85)',
+                overflow: 'visible'
+              }}>
+                <div
+                  onClick={() => { setSelectedMetricCluster(''); setAiProfileOpen(false); }}
+                  onMouseEnter={() => setHoveredAiProfile(null)}
+                  style={{
+                    padding: '0.75rem 1rem',
+                    cursor: 'pointer',
+                    fontSize: '0.88rem',
+                    color: selectedMetricCluster === '' ? '#3895ff' : 'var(--text-primary)',
+                    background: selectedMetricCluster === '' ? 'rgba(56, 149, 255, 0.15)' : 'transparent',
+                    borderBottom: '1px solid var(--border-color)',
+                    fontWeight: selectedMetricCluster === '' ? 700 : 500
+                  }}
+                >
+                  Tüm Yapay Zeka Profilleri
+                </div>
+
+                {(kmeansSummary.metricClusters || []).map(mc => {
+                  const isSelected = selectedMetricCluster === mc.label;
+                  return (
+                    <div
+                      key={mc.id}
+                      onClick={() => { setSelectedMetricCluster(mc.label); setAiProfileOpen(false); }}
+                      onMouseEnter={() => setHoveredAiProfile(mc)}
+                      onMouseLeave={() => setHoveredAiProfile(null)}
+                      style={{
+                        padding: '0.75rem 1rem',
+                        cursor: 'pointer',
+                        fontSize: '0.88rem',
+                        color: '#ffffff',
+                        background: isSelected ? '#3895ff' : 'transparent',
+                        borderBottom: '1px solid rgba(248, 250, 252, 0.06)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justify: 'space-between',
+                        fontWeight: isSelected ? 700 : 500,
+                        transition: 'background 0.15s'
+                      }}
+                      onMouseOver={e => {
+                        if (!isSelected) e.currentTarget.style.background = '#3895ff';
+                      }}
+                      onMouseOut={e => {
+                        if (!isSelected) e.currentTarget.style.background = 'transparent';
+                      }}
+                    >
+                      <span>{mc.badge} ({mc.member_count} Araştırmacı)</span>
+                    </div>
+                  );
+                })}
+
+                {/* HOVER INFO TOOLTIP POPUP */}
+                {hoveredAiProfile && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: '103%',
+                    width: '310px',
+                    background: '#0f172a',
+                    border: '1.5px solid #3895ff',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '1rem 1.15rem',
+                    boxShadow: '0 14px 40px rgba(0,0,0,0.9), 0 0 25px rgba(56, 149, 255, 0.4)',
+                    zIndex: 500,
+                    pointerEvents: 'none',
+                    animation: 'fadeIn 150ms ease-out'
+                  }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.94rem', color: '#e879f9', marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Sparkles size={16} color="#e879f9" />
+                      <span>{hoveredAiProfile.badge}</span>
+                    </div>
+                    <div style={{ fontSize: '0.84rem', color: '#f8fafc', lineHeight: 1.5, fontWeight: 500 }}>
+                      {hoveredAiProfile.desc || 'Bu kümedeki akademisyenlerin yayın, atıf ve proje metrikleri K-Means makine öğrenimi ile kümelenmiştir.'}
+                    </div>
+                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.6rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.45rem', display: 'flex', justifyContent: 'space-between' }}>
+                      <span>📊 Metrik Ortalamaları:</span>
+                      <strong style={{ color: 'var(--accent-primary)' }}>{hoveredAiProfile.avg_metrics?.pub || 0} Yayın • {hoveredAiProfile.avg_metrics?.cite || 0} Atıf</strong>
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
 
-          {/* K-Means Tag Cluster Filter */}
-          <div>
-            <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, color: '#c084fc', marginBottom: '0.4rem' }}>
-              🌐 Akademik Küme
+          {/* Custom K-Means Tag Cluster Filter Dropdown with Hover Info Tooltip */}
+          <div style={{ position: 'relative' }} ref={tagClusterRef}>
+            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.82rem', fontWeight: 600, color: '#c084fc', marginBottom: '0.4rem' }}>
+              <span>🌐 Akademik Küme</span>
             </label>
-            <select
+
+            {/* Select Box Trigger */}
+            <div
+              onClick={() => { setTagClusterOpen(!tagClusterOpen); setAiProfileOpen(false); }}
               className="form-select"
-              style={{ borderColor: 'rgba(168, 85, 247, 0.4)' }}
-              value={selectedTagCluster}
-              onChange={e => setSelectedTagCluster(e.target.value)}
+              style={{
+                borderColor: 'rgba(168, 85, 247, 0.5)',
+                cursor: 'pointer',
+                display: 'flex',
+                alignItems: 'center',
+                justify: 'space-between',
+                background: 'var(--bg-secondary)',
+                fontWeight: selectedTagCluster ? 700 : 400
+              }}
             >
-              <option value="">Tüm Akademik Kümeler</option>
-              {(kmeansSummary.tagClusters || []).map(tc => (
-                <option key={tc.id} value={tc.id}>{cleanClusterName(tc.name)} ({tc.member_count} Araştırmacı)</option>
-              ))}
-            </select>
+              <span style={{ whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                {selectedTagCluster ? (
+                  cleanClusterName((kmeansSummary.tagClusters || []).find(c => String(c.id) === String(selectedTagCluster))?.name || 'Seçili Küme')
+                ) : 'Tüm Akademik Kümeler'}
+              </span>
+              <span style={{ fontSize: '0.7rem', color: 'var(--text-muted)', marginLeft: '6px' }}>▼</span>
+            </div>
+
+            {/* Dropdown Menu Overlay */}
+            {tagClusterOpen && (
+              <div style={{
+                position: 'absolute',
+                top: '100%',
+                left: 0,
+                width: '100%',
+                minWidth: '310px',
+                zIndex: 300,
+                marginTop: '4px',
+                background: '#1e293b',
+                border: '1.5px solid #c084fc',
+                borderRadius: 'var(--radius-md)',
+                boxShadow: '0 14px 40px rgba(0,0,0,0.85)',
+                overflow: 'visible'
+              }}>
+                <div
+                  onClick={() => { setSelectedTagCluster(''); setTagClusterOpen(false); }}
+                  onMouseEnter={() => setHoveredTagCluster(null)}
+                  style={{
+                    padding: '0.75rem 1rem',
+                    cursor: 'pointer',
+                    fontSize: '0.88rem',
+                    color: selectedTagCluster === '' ? '#c084fc' : 'var(--text-primary)',
+                    background: selectedTagCluster === '' ? 'rgba(168, 85, 247, 0.15)' : 'transparent',
+                    borderBottom: '1px solid var(--border-color)',
+                    fontWeight: selectedTagCluster === '' ? 700 : 500
+                  }}
+                >
+                  Tüm Akademik Kümeler
+                </div>
+
+                {(kmeansSummary.tagClusters || []).map(tc => {
+                  const isSelected = String(selectedTagCluster) === String(tc.id);
+                  const cleanName = cleanClusterName(tc.name);
+                  return (
+                    <div
+                      key={tc.id}
+                      onClick={() => { setSelectedTagCluster(tc.id); setTagClusterOpen(false); }}
+                      onMouseEnter={() => setHoveredTagCluster(tc)}
+                      onMouseLeave={() => setHoveredTagCluster(null)}
+                      style={{
+                        padding: '0.75rem 1rem',
+                        cursor: 'pointer',
+                        fontSize: '0.88rem',
+                        color: '#ffffff',
+                        background: isSelected ? '#a855f7' : 'transparent',
+                        borderBottom: '1px solid rgba(248, 250, 252, 0.06)',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justify: 'space-between',
+                        fontWeight: isSelected ? 700 : 500,
+                        transition: 'background 0.15s'
+                      }}
+                      onMouseOver={e => {
+                        if (!isSelected) e.currentTarget.style.background = '#a855f7';
+                      }}
+                      onMouseOut={e => {
+                        if (!isSelected) e.currentTarget.style.background = 'transparent';
+                      }}
+                    >
+                      <span>🌐 {cleanName} ({tc.member_count} Araştırmacı)</span>
+                    </div>
+                  );
+                })}
+
+                {/* HOVER INFO TOOLTIP POPUP FOR AKADEMİK KÜME */}
+                {hoveredTagCluster && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: '103%',
+                    width: '320px',
+                    background: '#0f172a',
+                    border: '1.5px solid #c084fc',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '1rem 1.15rem',
+                    boxShadow: '0 14px 40px rgba(0,0,0,0.9), 0 0 25px rgba(168, 85, 247, 0.4)',
+                    zIndex: 500,
+                    pointerEvents: 'none',
+                    animation: 'fadeIn 150ms ease-out'
+                  }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.94rem', color: '#c084fc', marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Sparkles size={16} color="#c084fc" />
+                      <span>🌐 {cleanClusterName(hoveredTagCluster.name)}</span>
+                    </div>
+                    <div style={{ fontSize: '0.84rem', color: '#f8fafc', lineHeight: 1.5, fontWeight: 500, marginBottom: '0.5rem' }}>
+                      {hoveredTagCluster.description || 'Kosinüs Benzerliği vektör kümelemesi ile belirlenmiş akademik araştırma mahalle alanı.'}
+                    </div>
+                    {hoveredTagCluster.top_tags && hoveredTagCluster.top_tags.length > 0 && (
+                      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.45rem' }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.3rem' }}>🎯 Öne Çıkan Etiketler:</span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                          {hoveredTagCluster.top_tags.slice(0, 3).map((t, idx) => (
+                            <span key={idx} className="badge badge-tag" style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}>
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </form>
 
