@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { fetchAcademicians, fetchMetadata, fetchKMeansClusters } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { Search, Filter, LayoutGrid, List, ChevronLeft, ChevronRight, ExternalLink, CheckCircle2, AlertCircle, Award, UserPlus, X, Sparkles } from 'lucide-react';
+import { Search, Filter, LayoutGrid, List, ChevronLeft, ChevronRight, ExternalLink, CheckCircle2, AlertCircle, Award, UserPlus, X, Sparkles, Info, Zap } from 'lucide-react';
 
 const cleanClusterName = (name) => {
   if (!name) return '';
@@ -23,11 +23,13 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
   // Custom AI Profile Dropdown State with Info Tooltip
   const [aiProfileOpen, setAiProfileOpen] = useState(false);
   const [hoveredAiProfile, setHoveredAiProfile] = useState(null);
+  const [showMetricInfo, setShowMetricInfo] = useState(false);
   const aiProfileRef = useRef(null);
 
   // Custom Academic Tag Cluster Dropdown State with Info Tooltip
   const [tagClusterOpen, setTagClusterOpen] = useState(false);
   const [hoveredTagCluster, setHoveredTagCluster] = useState(null);
+  const [showTagInfo, setShowTagInfo] = useState(false);
   const tagClusterRef = useRef(null);
 
   // Filters State
@@ -268,9 +270,60 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
 
           {/* Custom Yapay Zeka Profili Filter Dropdown with Hover Info Tooltip */}
           <div style={{ position: 'relative' }} ref={aiProfileRef}>
-            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.82rem', fontWeight: 600, color: '#e879f9', marginBottom: '0.4rem' }}>
-              <span>⚡ Yapay Zeka Profili</span>
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem', position: 'relative' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#e879f9' }}>
+                Yapay Zeka Profili
+              </span>
+              
+              {/* Sleek Info Button replacing emoji */}
+              <div
+                onMouseEnter={() => setShowMetricInfo(true)}
+                onMouseLeave={() => setShowMetricInfo(false)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justify: 'center',
+                  width: '18px',
+                  height: '18px',
+                  borderRadius: '50%',
+                  background: 'rgba(236, 72, 153, 0.2)',
+                  color: '#e879f9',
+                  border: '1px solid rgba(236, 72, 153, 0.5)',
+                  cursor: 'help',
+                  transition: 'all 0.2s'
+                }}
+                title="Kümeleme Hakkında Bilgi"
+              >
+                <Info size={11} />
+              </div>
+
+              {/* Info Tooltip Popup on Button Hover */}
+              {showMetricInfo && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '100%',
+                  left: 0,
+                  marginBottom: '8px',
+                  width: '300px',
+                  background: '#0f172a',
+                  border: '1.5px solid #e879f9',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.85rem 1rem',
+                  boxShadow: '0 14px 40px rgba(0,0,0,0.9), 0 0 20px rgba(236, 72, 153, 0.3)',
+                  zIndex: 600,
+                  pointerEvents: 'none',
+                  animation: 'fadeIn 150ms ease-out'
+                }}>
+                  <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#e879f9', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Zap size={15} color="#e879f9" />
+                    <span>⚡ Yapay Zeka Profili Kümelemesi</span>
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#f8fafc', lineHeight: 1.45, fontWeight: 400 }}>
+                    Akademisyenlerimizin <strong>yayın, atıf, h-indeksi ve proje metrikleri</strong> (4 sayısal boyut) Min-Max normalizasyonundan geçirildikten sonra <strong>K-Means Makine Öğrenimi Algoritması</strong> (<em>K=4</em>) ile analiz edilerek 4 ana performans seviyesine derecelendirilir.
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Select Box Trigger */}
             <div
@@ -392,9 +445,60 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
 
           {/* Custom K-Means Tag Cluster Filter Dropdown with Hover Info Tooltip */}
           <div style={{ position: 'relative' }} ref={tagClusterRef}>
-            <label style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: '0.82rem', fontWeight: 600, color: '#c084fc', marginBottom: '0.4rem' }}>
-              <span>🌐 Akademik Küme</span>
-            </label>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', marginBottom: '0.4rem', position: 'relative' }}>
+              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: '#c084fc' }}>
+                Akademik Küme
+              </span>
+
+              {/* Sleek Info Button replacing emoji */}
+              <div
+                onMouseEnter={() => setShowTagInfo(true)}
+                onMouseLeave={() => setShowTagInfo(false)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  justify: 'center',
+                  width: '18px',
+                  height: '18px',
+                  borderRadius: '50%',
+                  background: 'rgba(168, 85, 247, 0.2)',
+                  color: '#c084fc',
+                  border: '1px solid rgba(168, 85, 247, 0.5)',
+                  cursor: 'help',
+                  transition: 'all 0.2s'
+                }}
+                title="Kümeleme Hakkında Bilgi"
+              >
+                <Info size={11} />
+              </div>
+
+              {/* Info Tooltip Popup on Button Hover */}
+              {showTagInfo && (
+                <div style={{
+                  position: 'absolute',
+                  bottom: '100%',
+                  left: 0,
+                  marginBottom: '8px',
+                  width: '310px',
+                  background: '#0f172a',
+                  border: '1.5px solid #c084fc',
+                  borderRadius: 'var(--radius-md)',
+                  padding: '0.85rem 1rem',
+                  boxShadow: '0 14px 40px rgba(0,0,0,0.9), 0 0 25px rgba(168, 85, 247, 0.3)',
+                  zIndex: 600,
+                  pointerEvents: 'none',
+                  animation: 'fadeIn 150ms ease-out'
+                }}>
+                  <div style={{ fontWeight: 800, fontSize: '0.88rem', color: '#c084fc', marginBottom: '0.35rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                    <Sparkles size={15} color="#c084fc" />
+                    <span>🌐 Akademik Kümeleme Nasıl Yapılır?</span>
+                  </div>
+                  <div style={{ fontSize: '0.8rem', color: '#f8fafc', lineHeight: 1.45, fontWeight: 400 }}>
+                    ~1.400 AVESİS uzmanlık etiketinin kesişimleri ve ortak araştırma alanları <strong>Kosinüs Benzerliği Matris Analizi</strong> (<em>K=6</em>) ile taranarak akademisyenlerimiz semantik olarak en yakın oldukları disiplinlerarası akademik mahallelere yerleştirilir.
+                  </div>
+                </div>
+              )}
+            </div>
 
             {/* Select Box Trigger */}
             <div
