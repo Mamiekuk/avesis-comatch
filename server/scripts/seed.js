@@ -131,7 +131,7 @@ async function seed() {
         email,
         null, // password_hash
         null, // bio
-        null, // photo_url
+        profileUrl ? `https://avesis.erdogan.edu.tr/user/image/${profileUrl.split('/').pop().toLowerCase()}` : null, // photo_url
         0, // is_claimed
         0, // is_active
         hasFields,

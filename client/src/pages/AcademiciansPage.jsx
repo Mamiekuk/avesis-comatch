@@ -453,10 +453,45 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
                   </div>
                 )}
 
-                {/* Name & Title */}
-                <h3 style={{ fontSize: '1.18rem', marginBottom: '0.35rem', lineHeight: 1.35 }}>
-                  {item.title} {item.full_name}
-                </h3>
+                {/* Name & Avatar Header */}
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.85rem', marginBottom: '0.75rem' }}>
+                  <div style={{
+                    width: '46px',
+                    height: '46px',
+                    borderRadius: '50%',
+                    background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
+                    color: 'white',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    fontWeight: 'bold',
+                    fontSize: '1.05rem',
+                    flexShrink: 0,
+                    overflow: 'hidden',
+                    border: '2px solid rgba(168, 85, 247, 0.3)'
+                  }}>
+                    {item.photo_url ? (
+                      <img
+                        src={item.photo_url}
+                        alt={item.full_name}
+                        style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                        onError={(e) => {
+                          e.currentTarget.style.display = 'none';
+                          if (e.currentTarget.parentElement) {
+                            e.currentTarget.parentElement.innerText = item.full_name.charAt(0);
+                          }
+                        }}
+                      />
+                    ) : (
+                      item.full_name.charAt(0)
+                    )}
+                  </div>
+                  <div style={{ flex: 1, minWidth: 0 }}>
+                    <h3 style={{ fontSize: '1.1rem', margin: 0, lineHeight: 1.3, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                      {item.title} {item.full_name}
+                    </h3>
+                  </div>
+                </div>
 
                 {/* Faculty & Dept */}
                 <div style={{ fontSize: '0.83rem', color: 'var(--text-secondary)', marginBottom: '1rem' }}>
@@ -534,46 +569,79 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
               onMouseEnter={e => e.currentTarget.style.background = 'rgba(56,149,255,0.06)'}
               onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
             >
-              <div style={{ flex: 1 }}>
-                <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.3rem' }}>
-                  <h4 style={{ fontSize: '1.1rem' }}>{item.title} {item.full_name}</h4>
-                  {item.is_claimed ? (
-                    <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
-                      <span className="badge badge-claimed" style={{ fontSize: '0.7rem' }}>Aktif</span>
-                      {(!item.collaboration_status || item.collaboration_status === 'open') && (
-                        <span className="badge" style={{ padding: '0.1rem 0.4rem', fontSize: '0.68rem', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--success)' }}>
-                          ● Açık
-                        </span>
-                      )}
-                      {item.collaboration_status === 'looking' && (
-                        <span className="badge" style={{ padding: '0.1rem 0.4rem', fontSize: '0.68rem', background: 'rgba(56, 149, 255, 0.15)', color: 'var(--accent-primary)' }}>
-                          ● İş Birliği
-                        </span>
-                      )}
-                      {item.collaboration_status === 'busy' && (
-                        <span className="badge" style={{ padding: '0.1rem 0.4rem', fontSize: '0.68rem', background: 'rgba(239, 68, 68, 0.15)', color: 'var(--danger)' }}>
-                          ● Yoğun
-                        </span>
-                      )}
-                    </div>
+              <div style={{ flex: 1, display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                <div style={{
+                  width: '42px',
+                  height: '42px',
+                  borderRadius: '50%',
+                  background: 'linear-gradient(135deg, #a855f7, #3b82f6)',
+                  color: 'white',
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  fontWeight: 'bold',
+                  fontSize: '1rem',
+                  flexShrink: 0,
+                  overflow: 'hidden',
+                  border: '1.5px solid rgba(168, 85, 247, 0.3)'
+                }}>
+                  {item.photo_url ? (
+                    <img
+                      src={item.photo_url}
+                      alt={item.full_name}
+                      style={{ width: '100%', height: '100%', objectFit: 'cover' }}
+                      onError={(e) => {
+                        e.currentTarget.style.display = 'none';
+                        if (e.currentTarget.parentElement) {
+                          e.currentTarget.parentElement.innerText = item.full_name.charAt(0);
+                        }
+                      }}
+                    />
                   ) : (
-                    <span className="badge badge-unclaimed" style={{ fontSize: '0.7rem' }}>Sahiplenilmedi</span>
-                  )}
-                  {item.metric_cluster && (
-                    <span style={{ fontSize: '0.72rem', background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.18), rgba(236, 72, 153, 0.18))', color: '#e879f9', padding: '0.15rem 0.55rem', borderRadius: '999px', border: '1px solid rgba(236, 72, 153, 0.35)', fontWeight: 600 }}>
-                      {item.metric_cluster.badge}
-                    </span>
+                    item.full_name.charAt(0)
                   )}
                 </div>
-                <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
-                  {item.faculty_name} — {item.department_name}
-                </div>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.5rem' }}>
-                  {(item.research_areas || []).slice(0, 5).map(tag => (
-                    <span key={tag.id} className="badge badge-tag" style={{ fontSize: '0.7rem' }}>
-                      {tag.label}
-                    </span>
-                  ))}
+                <div style={{ flex: 1 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.3rem' }}>
+                    <h4 style={{ fontSize: '1.1rem', margin: 0 }}>{item.title} {item.full_name}</h4>
+                    {item.is_claimed ? (
+                      <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
+                        <span className="badge badge-claimed" style={{ fontSize: '0.7rem' }}>Aktif</span>
+                        {(!item.collaboration_status || item.collaboration_status === 'open') && (
+                          <span className="badge" style={{ padding: '0.1rem 0.4rem', fontSize: '0.68rem', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--success)' }}>
+                            ● Açık
+                          </span>
+                        )}
+                        {item.collaboration_status === 'looking' && (
+                          <span className="badge" style={{ padding: '0.1rem 0.4rem', fontSize: '0.68rem', background: 'rgba(56, 149, 255, 0.15)', color: 'var(--accent-primary)' }}>
+                            ● İş Birliği
+                          </span>
+                        )}
+                        {item.collaboration_status === 'busy' && (
+                          <span className="badge" style={{ padding: '0.1rem 0.4rem', fontSize: '0.68rem', background: 'rgba(239, 68, 68, 0.15)', color: 'var(--danger)' }}>
+                            ● Yoğun
+                          </span>
+                        )}
+                      </div>
+                    ) : (
+                      <span className="badge badge-unclaimed" style={{ fontSize: '0.7rem' }}>Sahiplenilmedi</span>
+                    )}
+                    {item.metric_cluster && (
+                      <span style={{ fontSize: '0.72rem', background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.18), rgba(236, 72, 153, 0.18))', color: '#e879f9', padding: '0.15rem 0.55rem', borderRadius: '999px', border: '1px solid rgba(236, 72, 153, 0.35)', fontWeight: 600 }}>
+                        {item.metric_cluster.badge}
+                      </span>
+                    )}
+                  </div>
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-secondary)' }}>
+                    {item.faculty_name} — {item.department_name}
+                  </div>
+                  <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.5rem' }}>
+                    {(item.research_areas || []).slice(0, 5).map(tag => (
+                      <span key={tag.id} className="badge badge-tag" style={{ fontSize: '0.7rem' }}>
+                        {tag.label}
+                      </span>
+                    ))}
+                  </div>
                 </div>
               </div>
 

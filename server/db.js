@@ -98,6 +98,11 @@ try {
           source TEXT DEFAULT 'TÜBİTAK',
           created_at DATETIME DEFAULT (datetime('now', 'localtime'))
         );
+
+        UPDATE users 
+        SET photo_url = 'https://avesis.erdogan.edu.tr/user/image/' || LOWER(SUBSTR(avesis_profile_url, LENGTH('https://avesis.erdogan.edu.tr/') + 1)) 
+        WHERE (photo_url IS NULL OR photo_url = '') 
+          AND avesis_profile_url LIKE '%avesis.erdogan.edu.tr/%';
       `);
     } catch (e) {}
   }

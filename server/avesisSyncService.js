@@ -174,9 +174,12 @@ async function syncUserAvesisProfile(userId) {
     throw new Error('AVESİS verileri çekilemedi. Profil URL adresinizin doğruluğunu kontrol edin.');
   }
 
+  const autoPhotoUrl = slug ? `https://avesis.erdogan.edu.tr/user/image/${slug}` : null;
+
   // 3. Update User DB Metrics
   db.prepare(`
     UPDATE users SET
+      photo_url = COALESCE(photo_url, ?),
       pub_total = ?,
       pub_wos = ?,
       pub_scopus = ?,
@@ -193,6 +196,7 @@ async function syncUserAvesisProfile(userId) {
       open_access = ?
     WHERE id = ?
   `).run(
+    autoPhotoUrl,
     syncData.pub_total,
     syncData.pub_wos,
     syncData.pub_scopus,
