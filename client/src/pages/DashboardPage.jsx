@@ -1938,7 +1938,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
       )}
 
       {/* K-MEANS AKADEMİK MAHALLE & BENZER HOCALAR (KİŞİSEL ÖNERİLER) */}
-      {(data?.user || user).tag_cluster && (
+      {activeTab === 'projects' && (data?.user || user).tag_cluster && (
         <div className="card-glass" style={{ marginTop: '3rem', marginBottom: '2.5rem', border: '1px solid rgba(168, 85, 247, 0.3)', background: 'linear-gradient(135deg, rgba(168, 85, 247, 0.05), rgba(56, 149, 255, 0.05))' }}>
           <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '1rem', marginBottom: '1rem' }}>
             <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
