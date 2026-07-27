@@ -74,7 +74,15 @@ function parseAvesisHtml(html) {
     extracted.researchAreas = Array.from(new Set(tags));
   }
 
-  // 2. Metrics regex extraction helper
+  // 2. Exact Profile Photo URL extraction (/user/image/{ID})
+  const imgMatch = html.match(/src=["'](\/user\/image\/\d+)["']/i) || html.match(/src=["'](https?:\/\/[^"']+\/user\/image\/\d+)["']/i);
+  if (imgMatch) {
+    let pUrl = imgMatch[1];
+    if (pUrl.startsWith('/')) pUrl = 'https://avesis.erdogan.edu.tr' + pUrl;
+    extracted.photo_url = pUrl;
+  }
+
+  // 3. Metrics regex extraction helper
   const parseVal = (regex) => {
     const m = html.match(regex);
     return m && m[1] ? parseInt(m[1].replace(/\D/g, ''), 10) || 0 : 0;
@@ -174,12 +182,12 @@ async function syncUserAvesisProfile(userId) {
     throw new Error('AVESİS verileri çekilemedi. Profil URL adresinizin doğruluğunu kontrol edin.');
   }
 
-  const autoPhotoUrl = slug ? `https://avesis.erdogan.edu.tr/user/image/${slug}` : null;
+  const autoPhotoUrl = syncData.photo_url || (slug ? `https://avesis.erdogan.edu.tr/user/image/${slug}` : null);
 
   // 3. Update User DB Metrics
   db.prepare(`
     UPDATE users SET
-      photo_url = COALESCE(photo_url, ?),
+      photo_url = COALESCE(?, photo_url),
       pub_total = ?,
       pub_wos = ?,
       pub_scopus = ?,
