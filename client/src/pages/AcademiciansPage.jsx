@@ -529,6 +529,8 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
                     <div
                       key={tc.id}
                       onClick={() => { setSelectedTagCluster(tc.id); setTagClusterOpen(false); }}
+                      onMouseEnter={() => setHoveredTagCluster(tc)}
+                      onMouseLeave={() => setHoveredTagCluster(null)}
                       style={{
                         padding: '0.75rem 1rem',
                         cursor: 'pointer',
@@ -553,6 +555,44 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
                     </div>
                   );
                 })}
+
+                {/* HOVER INFO TOOLTIP POPUP FOR AKADEMİK KÜME */}
+                {hoveredTagCluster && (
+                  <div style={{
+                    position: 'absolute',
+                    top: 0,
+                    left: '103%',
+                    width: '320px',
+                    background: '#0f172a',
+                    border: '1.5px solid #c084fc',
+                    borderRadius: 'var(--radius-md)',
+                    padding: '1rem 1.15rem',
+                    boxShadow: '0 14px 40px rgba(0,0,0,0.9), 0 0 25px rgba(168, 85, 247, 0.4)',
+                    zIndex: 500,
+                    pointerEvents: 'none',
+                    animation: 'fadeIn 150ms ease-out'
+                  }}>
+                    <div style={{ fontWeight: 800, fontSize: '0.94rem', color: '#c084fc', marginBottom: '0.45rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                      <Sparkles size={16} color="#c084fc" />
+                      <span>🌐 {cleanClusterName(hoveredTagCluster.name)}</span>
+                    </div>
+                    <div style={{ fontSize: '0.84rem', color: '#f8fafc', lineHeight: 1.5, fontWeight: 500, marginBottom: '0.5rem' }}>
+                      {hoveredTagCluster.description || 'Kosinüs Benzerliği vektör kümelemesi ile belirlenmiş akademik araştırma mahalle alanı.'}
+                    </div>
+                    {hoveredTagCluster.top_tags && hoveredTagCluster.top_tags.length > 0 && (
+                      <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.45rem' }}>
+                        <span style={{ fontSize: '0.72rem', color: 'var(--text-muted)', display: 'block', marginBottom: '0.3rem' }}>🎯 Öne Çıkan Etiketler:</span>
+                        <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem' }}>
+                          {hoveredTagCluster.top_tags.slice(0, 3).map((t, idx) => (
+                            <span key={idx} className="badge badge-tag" style={{ fontSize: '0.7rem', padding: '0.15rem 0.45rem' }}>
+                              {t}
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             )}
           </div>
