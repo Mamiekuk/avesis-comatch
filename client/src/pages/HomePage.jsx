@@ -212,6 +212,46 @@ export default function HomePage({ onNavigate, onOpenLogin, user }) {
             </p>
           </div>
         </div>
+
+        {/* AI CLUSTERING & PROFILING INFO BANNER */}
+        <div className="card-glass" style={{
+          marginTop: '2.25rem',
+          padding: '1.75rem 2rem',
+          background: 'linear-gradient(135deg, rgba(56, 149, 255, 0.08), rgba(168, 85, 247, 0.08))',
+          border: '1px solid rgba(56, 149, 255, 0.3)',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))',
+          gap: '1.75rem',
+          alignItems: 'center'
+        }}>
+          <div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.6rem' }}>
+              <div style={{ padding: '0.45rem', borderRadius: '10px', background: 'rgba(236, 72, 153, 0.2)', color: '#e879f9' }}>
+                <Zap size={20} />
+              </div>
+              <h4 style={{ fontSize: '1.1rem', margin: 0, color: 'var(--text-primary)' }}>
+                ⚡ Yapay Zeka Profili (Performans Kümelemesi)
+              </h4>
+            </div>
+            <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.55, margin: 0 }}>
+              1.233 akademisyenimizin yayın, atıf, h-indeksi ve proje metrikleri <strong>K-Means makine öğrenimi</strong> ile analiz edilerek 4 ana profilde (<em>🏆 Lider, 🌟 Öncü, 📈 Aktif Yayıncı, 🚀 Yükselen</em>) derecelendirilir.
+            </p>
+          </div>
+
+          <div style={{ borderLeft: '1px solid var(--border-color)', paddingLeft: '1.75rem' }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', marginBottom: '0.6rem' }}>
+              <div style={{ padding: '0.45rem', borderRadius: '10px', background: 'rgba(168, 85, 247, 0.2)', color: '#c084fc' }}>
+                <Sparkles size={20} />
+              </div>
+              <h4 style={{ fontSize: '1.1rem', margin: 0, color: 'var(--text-primary)' }}>
+                🌐 Akademik Küme (Semantik İlgi Alanı)
+              </h4>
+            </div>
+            <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', lineHeight: 1.55, margin: 0 }}>
+              ~1.400 AVESİS uzmanlık etiketinin kesişimleri <strong>Kosinüs Benzerliği</strong> matris analizi ile taranarak araştırmacılarımız disiplinlerarası akademik mahallelerde (<em>Mühendislik, Tıp, Sosyal vb.</em>) buluşturulur.
+            </p>
+          </div>
+        </div>
       </section>
 
       {/* FEATURED PROJECTS */}
