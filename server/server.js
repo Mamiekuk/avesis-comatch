@@ -7,6 +7,7 @@ const db = require('./db');
 const mailer = require('./mailer');
 const kmeansEngine = require('./kmeansEngine');
 const { syncTubitakCalls } = require('./tubitakScraper');
+const { syncUserAvesisProfile } = require('./avesisSyncService');
 
 // SMTP yapılandırmasını yükle ve başlat
 mailer.init();
@@ -696,6 +697,24 @@ app.put('/api/auth/profile', authMiddleware, (req, res) => {
   setImmediate(() => kmeansEngine.runClustering());
 
   res.json({ message: 'Profiliniz ve araştırma alanlarınız başarıyla güncellendi.', user: updatedUser });
+});
+
+// AVESİS Profil Verilerini Otomatik Senkronize Etme Endpoint'i
+app.post('/api/users/sync-avesis', authMiddleware, async (req, res) => {
+  try {
+    const result = await syncUserAvesisProfile(req.user.id);
+    const updatedUser = result.user;
+    attachUserTags(updatedUser);
+    res.json({
+      message: 'AVESİS profil verileriniz ve yayın metrikleriniz başarıyla senkronize edildi!',
+      user: updatedUser,
+      research_areas: result.research_areas,
+      synced_metrics: result.synced_metrics
+    });
+  } catch (error) {
+    console.error('❌ AVESİS Sync hatası:', error.message);
+    res.status(400).json({ error: error.message || 'AVESİS senkronizasyonunda bir hata oluştu.' });
+  }
 });
 
 // ==========================================

@@ -357,3 +357,13 @@ export async function publishProject(projectId, token) {
   if (!res.ok) throw new Error(data.error || 'Proje yayınlanamadı.');
   return data;
 }
+
+export async function syncAvesisProfile(token) {
+  const res = await fetch(`${API_BASE}/users/sync-avesis`, {
+    method: 'POST',
+    headers: getHeaders(token)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'AVESİS verileri senkronize edilemedi.');
+  return data;
+}

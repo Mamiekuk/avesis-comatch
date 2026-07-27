@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { fetchDashboard, respondToInvitation, fetchMetadata, updateUserProfile, updateProject, fetchProjectById, fetchChatContacts, fetchChatHistory, sendChatMessage, deleteChatMessage, uploadChatFile, clearChatHistory, fetchMeetings, createMeeting, respondToMeeting, BACKEND_URL, createResearchArea, fetchKMeansNeighbors, publishProject, fetchAcademicians } from '../services/api';
+import { fetchDashboard, respondToInvitation, fetchMetadata, updateUserProfile, updateProject, fetchProjectById, fetchChatContacts, fetchChatHistory, sendChatMessage, deleteChatMessage, uploadChatFile, clearChatHistory, fetchMeetings, createMeeting, respondToMeeting, BACKEND_URL, createResearchArea, fetchKMeansNeighbors, publishProject, fetchAcademicians, syncAvesisProfile } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, FolderGit2, Mail, Bell, CheckCircle2, XCircle, ArrowRight, Sparkles, Building2, Edit3, Save, X, Plus, BookOpen, AlertCircle, MessageSquare, Trash2, Paperclip, Calendar, FileText, Image, Download, MapPin, Video, Clock, UserCheck, Search } from 'lucide-react';
+import { LayoutDashboard, FolderGit2, Mail, Bell, CheckCircle2, XCircle, ArrowRight, Sparkles, Building2, Edit3, Save, X, Plus, BookOpen, AlertCircle, MessageSquare, Trash2, Paperclip, Calendar, FileText, Image, Download, MapPin, Video, Clock, UserCheck, Search, RefreshCw } from 'lucide-react';
 
 const cleanClusterName = (name) => {
   if (!name) return '';
@@ -206,6 +206,29 @@ export default function DashboardPage({ onNavigate, routeParam }) {
       }
     } catch (err) {
       alert('Etiket oluşturulamadı: ' + err.message);
+    }
+  };
+
+  const [syncLoading, setSyncLoading] = useState(false);
+
+  const handleSyncAvesis = async () => {
+    setSyncLoading(true);
+    setSaveMsg(null);
+    setSaveError(null);
+    try {
+      const res = await syncAvesisProfile(token);
+      if (res.user) {
+        updateUser(res.user);
+      }
+      if (res.research_areas && Array.isArray(res.research_areas)) {
+        setEditTags(res.research_areas);
+      }
+      setSaveMsg(res.message || 'AVESİS verileriniz ve yayın metrikleriniz başarıyla güncellendi!');
+      setTimeout(() => setSaveMsg(null), 5000);
+    } catch (err) {
+      setSaveError(err.message || 'AVESİS senkronizasyonunda bir hata oluştu.');
+    } finally {
+      setSyncLoading(false);
     }
   };
 
@@ -599,8 +622,26 @@ export default function DashboardPage({ onNavigate, routeParam }) {
               {user.faculty_name} — {user.department_name}
             </div>
 
+            {/* AVESİS Publication Metrics Badges */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', marginTop: '0.75rem' }}>
+              <span className="badge" style={{ background: 'rgba(56, 189, 248, 0.12)', color: '#38bdf8', border: '1px solid rgba(56, 189, 248, 0.3)', fontSize: '0.78rem' }}>
+                📚 Total Yayın: {user.pub_total || 0}
+              </span>
+              <span className="badge" style={{ background: 'rgba(168, 85, 247, 0.12)', color: '#c084fc', border: '1px solid rgba(168, 85, 247, 0.3)', fontSize: '0.78rem' }}>
+                ⚡ WoS H-İndeksi: {user.h_index_wos || 0}
+              </span>
+              <span className="badge" style={{ background: 'rgba(234, 179, 8, 0.12)', color: '#facc15', border: '1px solid rgba(234, 179, 8, 0.3)', fontSize: '0.78rem' }}>
+                ⭐ WoS Atıf: {user.cite_wos || 0}
+              </span>
+              {user.h_index_scopus > 0 && (
+                <span className="badge" style={{ background: 'rgba(52, 211, 153, 0.12)', color: '#34d399', border: '1px solid rgba(52, 211, 153, 0.3)', fontSize: '0.78rem' }}>
+                  📊 Scopus H-İndeksi: {user.h_index_scopus}
+                </span>
+              )}
+            </div>
+
             {/* Selected Tags summary badge row */}
-            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.85rem' }}>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.35rem', marginTop: '0.65rem' }}>
               {(user.research_areas || []).slice(0, 6).map(t => (
                 <span key={t.id} className="badge badge-tag" style={{ fontSize: '0.75rem' }}>
                   {t.label}
@@ -615,6 +656,17 @@ export default function DashboardPage({ onNavigate, routeParam }) {
           </div>
 
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
+            <button
+              onClick={handleSyncAvesis}
+              disabled={syncLoading}
+              className="btn-secondary"
+              style={{ fontSize: '0.9rem', padding: '0.65rem 1.15rem', borderColor: 'rgba(168, 85, 247, 0.5)', color: '#c084fc' }}
+              title="AVESİS profilinizden yayın sayıları ve etiketleri otomatik çeker"
+            >
+              <RefreshCw size={17} style={{ animation: syncLoading ? 'spin 1s linear infinite' : 'none' }} />
+              <span>{syncLoading ? 'AVESİS Senkronize Ediliyor...' : 'AVESİS\'ten Senkronize Et'}</span>
+            </button>
+
             <button
               onClick={() => setActiveTab('edit-profile')}
               className="btn-primary"
@@ -1577,13 +1629,27 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.4rem' }}>
                   Resmi AVESİS Profil Linki
                 </label>
-                <input
-                  type="text"
-                  className="form-input"
-                  placeholder="Örn: https://avesis.erdogan.edu.tr/..."
-                  value={editAvesisUrl}
-                  onChange={e => setEditAvesisUrl(e.target.value)}
-                />
+                <div style={{ display: 'flex', gap: '0.5rem' }}>
+                  <input
+                    type="text"
+                    className="form-input"
+                    placeholder="Örn: https://avesis.erdogan.edu.tr/..."
+                    value={editAvesisUrl}
+                    onChange={e => setEditAvesisUrl(e.target.value)}
+                    style={{ flex: 1 }}
+                  />
+                  <button
+                    type="button"
+                    onClick={handleSyncAvesis}
+                    disabled={syncLoading || !editAvesisUrl}
+                    className="btn-primary"
+                    style={{ background: 'linear-gradient(135deg, #a855f7, #3b82f6)', fontSize: '0.85rem', whiteSpace: 'nowrap', gap: '0.4rem' }}
+                    title="AVESİS sayfanızdaki yayınları ve etiketleri otomatik çeker"
+                  >
+                    <RefreshCw size={16} style={{ animation: syncLoading ? 'spin 1s linear infinite' : 'none' }} />
+                    <span>{syncLoading ? 'Senkronize...' : 'Verileri Çek'}</span>
+                  </button>
+                </div>
               </div>
             </div>
 
