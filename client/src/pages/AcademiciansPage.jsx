@@ -318,8 +318,8 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
                     <Zap size={15} color="#e879f9" />
                     <span>⚡ Yapay Zeka Profili Kümelemesi</span>
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: '#f8fafc', lineHeight: 1.45, fontWeight: 400 }}>
-                    Akademisyenlerimizin <strong>yayın, atıf, h-indeksi ve proje metrikleri</strong> (4 sayısal boyut) Min-Max normalizasyonundan geçirildikten sonra <strong>K-Means Makine Öğrenimi Algoritması</strong> (<em>K=4</em>) ile analiz edilerek 4 ana performans seviyesine derecelendirilir.
+                  <div style={{ fontSize: '0.82rem', color: '#f8fafc', lineHeight: 1.45, fontWeight: 500 }}>
+                    Akademisyenlerimizin yayın, atıf, h-indeksi ve proje metrikleri değerlendirilmiştir.
                   </div>
                 </div>
               )}
@@ -433,7 +433,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
                     <div style={{ fontSize: '0.84rem', color: '#f8fafc', lineHeight: 1.5, fontWeight: 500 }}>
                       {hoveredAiProfile.desc || 'Bu kümedeki akademisyenlerin yayın, atıf ve proje metrikleri K-Means makine öğrenimi ile kümelenmiştir.'}
                     </div>
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', marginTop: '0.6rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.45rem', display: 'flex', justifyContent: 'space-between' }}>
+                    <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginTop: '0.6rem', borderTop: '1px solid var(--border-color)', paddingTop: '0.45rem', display: 'flex', justifyContent: 'space-between' }}>
                       <span>📊 Metrik Ortalamaları:</span>
                       <strong style={{ color: 'var(--accent-primary)' }}>{hoveredAiProfile.avg_metrics?.pub || 0} Yayın • {hoveredAiProfile.avg_metrics?.cite || 0} Atıf</strong>
                     </div>
@@ -493,8 +493,8 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
                     <Sparkles size={15} color="#c084fc" />
                     <span>🌐 Akademik Kümeleme Nasıl Yapılır?</span>
                   </div>
-                  <div style={{ fontSize: '0.8rem', color: '#f8fafc', lineHeight: 1.45, fontWeight: 400 }}>
-                    ~1.400 AVESİS uzmanlık etiketinin kesişimleri ve ortak araştırma alanları <strong>Kosinüs Benzerliği Matris Analizi</strong> (<em>K=6</em>) ile taranarak akademisyenlerimiz semantik olarak en yakın oldukları disiplinlerarası akademik mahallelere yerleştirilir.
+                  <div style={{ fontSize: '0.82rem', color: '#f8fafc', lineHeight: 1.45, fontWeight: 500 }}>
+                    1.400 AVESİS uzmanlık etiketinin kesişimleri ve ortak araştırma alanları değerlendirilmiştir.
                   </div>
                 </div>
               )}
