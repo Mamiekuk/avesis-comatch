@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { fetchDashboard, respondToInvitation, fetchMetadata, updateUserProfile, updateProject, fetchProjectById, fetchChatContacts, fetchChatHistory, sendChatMessage, deleteChatMessage, uploadChatFile, clearChatHistory, fetchMeetings, createMeeting, respondToMeeting, BACKEND_URL, createResearchArea, fetchKMeansNeighbors, publishProject, fetchAcademicians, syncAvesisProfile } from '../services/api';
+import { fetchDashboard, respondToInvitation, fetchMetadata, updateUserProfile, updateProject, fetchProjectById, fetchChatContacts, fetchChatHistory, sendChatMessage, deleteChatMessage, uploadChatFile, clearChatHistory, fetchMeetings, createMeeting, respondToMeeting, BACKEND_URL, createResearchArea, fetchKMeansNeighbors, publishProject, unpublishProject, fetchAcademicians, syncAvesisProfile } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, FolderGit2, Mail, Bell, CheckCircle2, XCircle, ArrowRight, Sparkles, Building2, Edit3, Save, X, Plus, BookOpen, AlertCircle, MessageSquare, Trash2, Paperclip, Calendar, FileText, Image, Download, MapPin, Video, Clock, UserCheck, Search, RefreshCw } from 'lucide-react';
+import { LayoutDashboard, FolderGit2, Mail, Bell, CheckCircle2, XCircle, ArrowRight, Sparkles, Building2, Edit3, Save, X, Plus, BookOpen, AlertCircle, MessageSquare, Trash2, Paperclip, Calendar, FileText, Image, Download, MapPin, Video, Clock, UserCheck, Search, RefreshCw, Lock } from 'lucide-react';
 
 const cleanClusterName = (name) => {
   if (!name) return '';
@@ -322,6 +322,32 @@ export default function DashboardPage({ onNavigate, routeParam }) {
     }
   };
 
+  const handlePublishProject = async (projectId) => {
+    if (!window.confirm('Bu proje Tüm Akademik Projeler alanında diğer kullanıcılar tarafından görüntülenebilir hâle gelecektir. Devam etmek istiyor musunuz?')) {
+      return;
+    }
+    try {
+      const res = await publishProject(projectId, token);
+      alert(res.message || 'Proje Tüm Akademik Projelerde yayımlandı.');
+      loadData();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
+  const handleUnpublishProject = async (projectId) => {
+    if (!window.confirm('Bu proje genel yayından kaldırılacak ve yalnızca sizin panelinizde görüntülenecektir. Devam etmek istiyor musunuz?')) {
+      return;
+    }
+    try {
+      const res = await unpublishProject(projectId, token);
+      alert(res.message || 'Proje genel yayından kaldırıldı.');
+      loadData();
+    } catch (err) {
+      alert(err.message);
+    }
+  };
+
   const filteredProjTagSuggestions = editProjTagSearch.trim()
     ? allTags.filter(t => 
         t.label.toLowerCase().includes(editProjTagSearch.toLowerCase()) &&
@@ -451,17 +477,6 @@ export default function DashboardPage({ onNavigate, routeParam }) {
       loadMeetings();
     } catch (err) {
       alert('İşlem gerçekleştirilemedi: ' + err.message);
-    }
-  };
-
-  const handlePublishProject = async (projectId) => {
-    if (!token) return;
-    try {
-      await publishProject(projectId, token);
-      alert('🚀 Projeniz başarıyla yayınlandı ve uyumlu araştırmacılara duyuruldu!');
-      loadDashboard();
-    } catch (err) {
-      alert('Proje yayınlanamadı: ' + err.message);
     }
   };
 
@@ -814,106 +829,106 @@ export default function DashboardPage({ onNavigate, routeParam }) {
 
             {myProjects.length === 0 ? (
               <div className="card-glass" style={{ textAlign: 'center', padding: '2.5rem' }}>
-                <p style={{ color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>Henüz açtığınız bir proje veya kaydedilmiş taslak bulunmuyor.</p>
+                <p style={{ color: 'var(--text-secondary)', marginBottom: '1.25rem' }}>Henüz eklediğiniz veya panelinize kaydettiğiniz bir proje bulunmuyor.</p>
                 <button onClick={() => onNavigate('create-project')} className="btn-primary" style={{ fontSize: '0.9rem' }}>
-                  Hemen Proje Aç
+                  Hemen Proje Oluştur
                 </button>
               </div>
             ) : (
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '2rem' }}>
-                {/* 1. PUBLISHED PROJECTS */}
-                {myProjects.filter(p => p.status !== 'draft').length > 0 && (
-                  <div>
-                    <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--accent-primary)', marginBottom: '1rem' }}>
-                      🚀 Yayınlanan Aktif Projeler ({myProjects.filter(p => p.status !== 'draft').length})
-                    </h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-                      {myProjects.filter(p => p.status !== 'draft').map(p => (
-                        <div
-                          key={p.id}
-                          onClick={() => onNavigate('project-detail', p.id)}
-                          className="card-glass"
-                          style={{ cursor: 'pointer' }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
-                            <span className="badge" style={{ background: 'rgba(56,149,255,0.15)', color: 'var(--accent-primary)' }}>
-                              Proje Sahibi ({p.member_count} Üye)
-                            </span>
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '1.5rem' }}>
+                <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--accent-primary)', marginBottom: '0.5rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                  <FolderGit2 size={18} />
+                  <span>Proje Yönetim Paneli ({myProjects.length})</span>
+                </h4>
+
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(340px, 1fr))', gap: '1.5rem' }}>
+                  {myProjects.map(p => {
+                    const isPublic = Number(p.is_public) === 1 || p.status === 'published' || p.status === 'open';
+                    return (
+                      <div
+                        key={p.id}
+                        onClick={() => onNavigate('project-detail', p.id)}
+                        className="card-glass"
+                        style={{
+                          cursor: 'pointer',
+                          borderLeft: isPublic ? '4px solid var(--success)' : '4px solid #3895ff',
+                          position: 'relative'
+                        }}
+                      >
+                        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: '0.75rem', gap: '0.5rem' }}>
+                          <div>
+                            {isPublic ? (
+                              <span className="badge badge-success" style={{ fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                                🌐 Tüm Akademik Projelerde Yayında
+                              </span>
+                            ) : (
+                              <span className="badge" style={{ background: 'rgba(56, 149, 255, 0.15)', color: '#3895ff', border: '1px solid rgba(56, 149, 255, 0.4)', fontWeight: 700, display: 'inline-flex', alignItems: 'center', gap: '0.3rem' }}>
+                                <Lock size={12} />
+                                🔒 Yalnızca Panelinizde Görünüyor
+                              </span>
+                            )}
+                          </div>
+
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleOpenEditProject(p);
+                            }}
+                            className="btn-secondary"
+                            style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.2rem', margin: 0 }}
+                          >
+                            <Edit3 size={12} />
+                            <span>Düzenle</span>
+                          </button>
+                        </div>
+
+                        <h4 style={{ fontSize: '1.15rem', marginBottom: '0.4rem', color: 'var(--text-primary)' }}>{p.title}</h4>
+                        <p style={{ fontSize: '0.86rem', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden', marginBottom: '1rem' }}>
+                          {p.description}
+                        </p>
+
+                        <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.75rem', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                          <span style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>
+                            👥 {p.member_count || 1} Ekip Üyesi
+                          </span>
+
+                          {isPublic ? (
                             <button
                               onClick={(e) => {
                                 e.stopPropagation();
-                                handleOpenEditProject(p);
+                                handleUnpublishProject(p.id);
                               }}
                               className="btn-secondary"
-                              style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.25rem', margin: 0 }}
+                              style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', background: 'rgba(239, 68, 68, 0.1)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)', margin: 0 }}
                             >
-                              <Edit3 size={12} />
-                              <span>Düzenle</span>
+                              <span>Yayından Kaldır</span>
                             </button>
-                          </div>
-                          <h4 style={{ fontSize: '1.15rem', marginBottom: '0.5rem' }}>{p.title}</h4>
-                          <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                            {p.description}
-                          </p>
+                          ) : (
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handlePublishProject(p.id);
+                              }}
+                              className="btn-primary"
+                              style={{ padding: '0.4rem 0.85rem', fontSize: '0.8rem', margin: 0 }}
+                            >
+                              <Sparkles size={13} />
+                              <span>Tüm Akademik Projelerde Yayınla</span>
+                            </button>
+                          )}
                         </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
-
-                {/* 2. DRAFT PROJECTS */}
-                {myProjects.filter(p => p.status === 'draft').length > 0 && (
-                  <div>
-                    <h4 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--warning)', marginBottom: '1rem', display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
-                      💾 Taslak Projelerim ({myProjects.filter(p => p.status === 'draft').length}) — Yayınlanmadı
-                    </h4>
-                    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
-                      {myProjects.filter(p => p.status === 'draft').map(p => (
-                        <div
-                          key={p.id}
-                          className="card-glass"
-                          style={{ borderLeft: '4px solid var(--warning)' }}
-                        >
-                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '0.6rem' }}>
-                            <span className="badge" style={{ background: 'rgba(245, 158, 11, 0.15)', color: 'var(--warning)', fontWeight: 700 }}>
-                              📝 Taslak Proje
-                            </span>
-                            <div style={{ display: 'flex', gap: '0.4rem' }}>
-                              <button
-                                onClick={() => handlePublishProject(p.id)}
-                                className="btn-primary"
-                                style={{ padding: '0.35rem 0.75rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.25rem', margin: 0 }}
-                              >
-                                <Sparkles size={12} />
-                                <span>Şimdi Yayınla</span>
-                              </button>
-                              <button
-                                onClick={() => handleOpenEditProject(p)}
-                                className="btn-secondary"
-                                style={{ padding: '0.35rem 0.65rem', fontSize: '0.78rem', display: 'flex', alignItems: 'center', gap: '0.25rem', margin: 0 }}
-                              >
-                                <Edit3 size={12} />
-                                <span>Düzenle</span>
-                              </button>
-                            </div>
-                          </div>
-                          <h4 style={{ fontSize: '1.15rem', marginBottom: '0.5rem', color: 'var(--text-primary)' }}>{p.title}</h4>
-                          <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical', overflow: 'hidden' }}>
-                            {p.description}
-                          </p>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
+                      </div>
+                    );
+                  })}
+                </div>
               </div>
             )}
           </div>
 
           {/* Joined projects */}
           {joinedProjects.length > 0 && (
-            <div>
-              <h3 style={{ fontSize: '1.4rem', marginBottom: '1.25rem' }}>Araştırmacı Olarak Katıldığım Projeler</h3>
+            <div style={{ marginTop: '2rem' }}>
+              <h3 style={{ fontSize: '1.3rem', marginBottom: '1.25rem' }}>Araştırmacı Olarak Katıldığım Projeler</h3>
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '1.5rem' }}>
                 {joinedProjects.map(p => (
                   <div
@@ -937,7 +952,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
         </div>
       )}
 
-      {/* TAB 2: INCOMING REQUESTS */}
+      {/* TAB 2: INCOMING REQUESTS WITH PRIVACY CALLOUT */}
       {activeTab === 'requests' && (
         <div>
           {incomingRequests.length === 0 ? (
@@ -959,17 +974,37 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                     </div>
 
                     <h4 
-                      onClick={() => onNavigate('project-detail', reqItem.project_id)}
-                      style={{ fontSize: '1.15rem', marginBottom: '0.35rem', cursor: 'pointer', color: 'var(--accent-primary)', textDecoration: 'underline' }}
-                      title="Proje detaylarını görüntülemek için tıklayın"
+                      onClick={() => {
+                        if (reqItem.type !== 'invitation' || reqItem.status === 'accepted') {
+                          onNavigate('project-detail', reqItem.project_id);
+                        }
+                      }}
+                      style={{
+                        fontSize: '1.1rem',
+                        marginBottom: '0.35rem',
+                        color: reqItem.type === 'invitation' && reqItem.status !== 'accepted' ? '#94a3b8' : 'var(--accent-primary)',
+                        cursor: reqItem.type === 'invitation' && reqItem.status !== 'accepted' ? 'default' : 'pointer'
+                      }}
                     >
-                      Proje: {reqItem.project_title}
+                      {reqItem.project_title}
                     </h4>
 
-                    {reqItem.message && (
-                      <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', background: 'var(--bg-secondary)', padding: '0.75rem', borderRadius: '8px', marginTop: '0.5rem' }}>
-                        "{reqItem.message}"
-                      </p>
+                    {reqItem.type === 'invitation' && reqItem.status !== 'accepted' ? (
+                      <div style={{ background: 'rgba(56, 149, 255, 0.08)', border: '1px solid rgba(56, 149, 255, 0.25)', borderRadius: '8px', padding: '0.85rem 1rem', marginTop: '0.6rem' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '0.4rem', color: '#3895ff', fontWeight: 700, fontSize: '0.86rem', marginBottom: '0.3rem' }}>
+                          <Lock size={15} />
+                          <span>Akademik Gizlilik Koruması Etkin</span>
+                        </div>
+                        <p style={{ fontSize: '0.85rem', color: '#f8fafc', margin: 0, lineHeight: 1.5 }}>
+                          Dr. / Prof. <strong>{reqItem.sender_name}</strong> sizi bir akademik projede görev almaya davet etti. Projeye ait başlık, özet ve detaylar gizlilik nedeniyle davet kabul edilene kadar gösterilmeyecektir.
+                        </p>
+                      </div>
+                    ) : (
+                      reqItem.message && (
+                        <p style={{ fontSize: '0.9rem', color: 'var(--text-secondary)', background: 'var(--bg-secondary)', padding: '0.75rem', borderRadius: '8px', marginTop: '0.5rem' }}>
+                          "{reqItem.message}"
+                        </p>
+                      )
                     )}
                   </div>
 

@@ -418,27 +418,16 @@ export default function CreateProjectPage({ onNavigate }) {
             </div>
           </div>
 
-          {/* Action Buttons: Save Draft vs Publish */}
+          {/* Action Buttons: Single Submit Button */}
           <div style={{ display: 'flex', gap: '1rem', flexWrap: 'wrap' }}>
             <button
               type="submit"
               disabled={loading || draftLoading}
               className="btn-primary"
-              style={{ flex: 2, padding: '0.95rem', minWidth: '220px', justifyContent: 'center' }}
+              style={{ width: '100%', padding: '0.95rem', justifyContent: 'center', fontSize: '1rem' }}
             >
               <PlusCircle size={20} />
-              <span>{loading ? 'Yayınlanıyor...' : '🚀 Projeyi Yayınla & Eşleştirmeye Başla'}</span>
-            </button>
-
-            <button
-              type="button"
-              disabled={loading || draftLoading}
-              onClick={(e) => handleSubmit(e, 'draft')}
-              className="btn-secondary"
-              style={{ flex: 1, padding: '0.95rem', minWidth: '180px', justifyContent: 'center' }}
-            >
-              <Save size={18} color="var(--accent-primary)" />
-              <span>{draftLoading ? 'Kaydediliyor...' : '💾 Taslak Olarak Kaydet'}</span>
+              <span>{loading ? 'Kaydediliyor...' : '💾 Projeyi Kaydet (Panelimde Oluştur)'}</span>
             </button>
           </div>
         </form>

@@ -1,26 +1,32 @@
 import React, { useState, useEffect } from 'react';
-import { fetchProjectById, applyToProject, announceProjectCall } from '../services/api';
+import { fetchProjectById, applyToProject, publishProject, unpublishProject } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import SmartMatchingPanel from '../components/SmartMatchingPanel';
-import { FolderGit2, Users, Sparkles, ArrowLeft, Send, CheckCircle2, Award, Calendar, DollarSign, Megaphone, Clock } from 'lucide-react';
+import { FolderGit2, Users, Sparkles, ArrowLeft, Send, CheckCircle2, Award, Calendar, Clock, Lock } from 'lucide-react';
 
 export default function ProjectDetailPage({ id, onNavigate }) {
   const { user, token } = useAuth();
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [privateError, setPrivateError] = useState(null);
   const [activeTab, setActiveTab] = useState('info'); // 'info' | 'matching'
   const [applyMsg, setApplyMsg] = useState('');
   const [applyModalOpen, setApplyModalOpen] = useState(false);
   const [applied, setApplied] = useState(false);
-  const [announcing, setAnnouncing] = useState(false);
-  const [announceSuccessMsg, setAnnounceSuccessMsg] = useState('');
+  const [actionLoading, setActionLoading] = useState(false);
 
   useEffect(() => {
-    fetchProjectById(id)
+    fetchProjectById(id, token)
       .then(d => setData(d))
-      .catch(() => {})
+      .catch(err => {
+        if (err.data && err.data.is_private) {
+          setPrivateError(err.data);
+        } else {
+          setPrivateError({ error: err.message });
+        }
+      })
       .finally(() => setLoading(false));
-  }, [id]);
+  }, [id, token]);
 
   const handleApply = async (e) => {
     e.preventDefault();
@@ -34,24 +40,61 @@ export default function ProjectDetailPage({ id, onNavigate }) {
     }
   };
 
-  const handleBroadcastAnnouncement = async () => {
+  const handleTogglePublish = async (currentlyPublic) => {
     if (!token) return alert('Lütfen giriş yapın.');
-    setAnnouncing(true);
+    const confirmMsg = currentlyPublic
+      ? 'Bu proje genel yayından kaldırılacak ve yalnızca sizin panelinizde görüntülenecektir. Devam etmek istiyor musunuz?'
+      : 'Bu proje Tüm Akademik Projeler alanında diğer kullanıcılar tarafından görüntülenebilir hâle gelecektir. Devam etmek istiyor musunuz?';
+
+    if (!window.confirm(confirmMsg)) return;
+
+    setActionLoading(true);
     try {
-      const res = await announceProjectCall(id, token);
-      setAnnounceSuccessMsg(res.message);
-      setTimeout(() => setAnnounceSuccessMsg(''), 4000);
+      if (currentlyPublic) {
+        const res = await unpublishProject(id, token);
+        alert(res.message || 'Proje genel yayından kaldırıldı.');
+      } else {
+        const res = await publishProject(id, token);
+        alert(res.message || 'Proje Tüm Akademik Projelerde yayımlandı.');
+      }
+      const updated = await fetchProjectById(id, token);
+      setData(updated);
     } catch (err) {
       alert(err.message);
     } finally {
-      setAnnouncing(false);
+      setActionLoading(false);
     }
   };
 
   if (loading) {
     return (
       <div style={{ textAlign: 'center', padding: '6rem' }}>
-        <div style={{ color: 'var(--text-secondary)' }}>Proje yükleniyor...</div>
+        <div style={{ color: 'var(--text-secondary)' }}>Proje detayları yükleniyor...</div>
+      </div>
+    );
+  }
+
+  if (privateError) {
+    return (
+      <div style={{ maxWidth: '750px', margin: '4rem auto', padding: '0 1rem' }}>
+        <button onClick={() => onNavigate('dashboard')} className="btn-secondary" style={{ marginBottom: '1.5rem' }}>
+          <ArrowLeft size={16} />
+          <span>Panele Dön</span>
+        </button>
+        <div className="card-glass" style={{ padding: '2.5rem', textAlign: 'center', borderLeft: '4px solid #3895ff' }}>
+          <div style={{ background: 'rgba(56, 149, 255, 0.15)', width: '60px', height: '60px', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 1.25rem' }}>
+            <Lock size={30} color="#3895ff" />
+          </div>
+          <h3 style={{ fontSize: '1.4rem', fontWeight: 800, marginBottom: '0.75rem', color: '#ffffff' }}>
+            🔒 Gizli Proje İçeriği
+          </h3>
+          <p style={{ color: '#f8fafc', fontSize: '1rem', lineHeight: 1.6, marginBottom: '1.5rem', background: 'rgba(15, 23, 42, 0.6)', padding: '1.25rem', borderRadius: 'var(--radius-md)', border: '1px solid rgba(56, 149, 255, 0.3)' }}>
+            Dr. / Prof. <strong>{privateError.owner_title || ''} {privateError.owner_name || 'Proje Yürütücüsü'}</strong> sizi bir akademik projede görev almaya davet etti. Projeye ait başlık, özet ve detaylar gizlilik nedeniyle davet kabul edilene kadar gösterilmeyecektir.
+          </p>
+          <button onClick={() => onNavigate('dashboard', { tab: 'requests' })} className="btn-primary" style={{ padding: '0.8rem 1.75rem', fontSize: '0.95rem' }}>
+            Gelen Davetlere Git & Kabul Et
+          </button>
+        </div>
       </div>
     );
   }
@@ -66,6 +109,7 @@ export default function ProjectDetailPage({ id, onNavigate }) {
 
   const { project } = data;
   const isOwnerOrLeader = user && String(user.id) === String(project.owner_id);
+  const isPublic = Number(project.is_public) === 1 || project.status === 'published' || project.status === 'open';
 
   return (
     <div style={{ maxWidth: '1240px', margin: '0 auto', padding: '2.5rem 2rem 5rem' }}>
@@ -82,8 +126,19 @@ export default function ProjectDetailPage({ id, onNavigate }) {
       <div className="card-glass" style={{ marginBottom: '2rem', padding: '2.5rem' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', flexWrap: 'wrap', gap: '1.5rem' }}>
           <div style={{ maxWidth: '800px' }}>
-            <div style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-primary)', marginBottom: '0.5rem', textTransform: 'uppercase' }}>
-              {project.owner_faculty || 'Recep Tayyip Erdoğan Üniversitesi'}
+            <div style={{ display: 'flex', alignItems: 'center', gap: '0.75rem', marginBottom: '0.5rem' }}>
+              <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--accent-primary)', textTransform: 'uppercase' }}>
+                {project.owner_faculty || 'Recep Tayyip Erdoğan Üniversitesi'}
+              </span>
+              {isPublic ? (
+                <span className="badge badge-success" style={{ fontWeight: 700 }}>
+                  🌐 Tüm Akademik Projelerde Yayında
+                </span>
+              ) : (
+                <span className="badge" style={{ background: 'rgba(56, 149, 255, 0.15)', color: '#3895ff', border: '1px solid rgba(56, 149, 255, 0.4)', fontWeight: 700 }}>
+                  🔒 Yalnızca Panelinizde Görünüyor
+                </span>
+              )}
             </div>
             <h1 style={{ fontSize: '2.2rem', marginBottom: '1rem', lineHeight: 1.3 }}>
               {project.title}
@@ -126,27 +181,33 @@ export default function ProjectDetailPage({ id, onNavigate }) {
 
             {project.budget && (
               <div style={{ marginBottom: '1.25rem', display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
-                <DollarSign size={16} color="var(--success)" />
-                <span style={{ fontSize: '0.9rem' }}><strong>Bütçe:</strong> {project.budget}</span>
-              </div>
-            )}
-
-            {announceSuccessMsg && (
-              <div style={{ padding: '0.65rem 0.85rem', background: 'var(--success-bg)', color: 'var(--success)', borderRadius: '8px', fontSize: '0.82rem', marginBottom: '0.85rem', border: '1px solid rgba(16, 185, 129, 0.3)', fontWeight: 600 }}>
-                {announceSuccessMsg}
+                <span style={{ color: 'var(--success)', fontWeight: 800, fontSize: '1.1rem' }}>₺</span>
+                <span style={{ fontSize: '0.9rem' }}><strong>Bütçe:</strong> {project.budget.includes('₺') ? project.budget : `₺${project.budget}`}</span>
               </div>
             )}
 
             {user && isOwnerOrLeader && (
               <button
                 type="button"
-                onClick={handleBroadcastAnnouncement}
-                disabled={announcing}
-                className="btn-secondary"
-                style={{ width: '100%', border: '1px solid rgba(56, 149, 255, 0.4)', background: 'rgba(56, 149, 255, 0.1)', color: 'var(--accent-primary)', fontSize: '0.86rem' }}
+                onClick={() => handleTogglePublish(isPublic)}
+                disabled={actionLoading}
+                className={isPublic ? "btn-secondary" : "btn-primary"}
+                style={{
+                  width: '100%',
+                  justify: 'center',
+                  background: isPublic ? 'rgba(239, 68, 68, 0.1)' : undefined,
+                  color: isPublic ? '#f87171' : undefined,
+                  border: isPublic ? '1px solid rgba(239, 68, 68, 0.3)' : undefined
+                }}
               >
-                <Megaphone size={16} />
-                <span>{announcing ? 'Duyuruluyor...' : '📢 Çağrıyı Uzman Araştırmacılara Duyur'}</span>
+                {isPublic ? (
+                  <span>Yayından Kaldır</span>
+                ) : (
+                  <>
+                    <Sparkles size={16} />
+                    <span>Tüm Akademik Projelerde Yayınla</span>
+                  </>
+                )}
               </button>
             )}
 

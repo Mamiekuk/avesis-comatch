@@ -105,6 +105,23 @@ try {
           AND avesis_profile_url LIKE '%avesis.erdogan.edu.tr/%';
       `);
     } catch (e) {}
+
+    // Dynamic schema updates for project publishing & visibility
+    try {
+      db.prepare("ALTER TABLE projects ADD COLUMN is_public INTEGER DEFAULT 0").run();
+    } catch (e) {}
+
+    try {
+      db.prepare("ALTER TABLE projects ADD COLUMN published_at DATETIME").run();
+    } catch (e) {}
+
+    try {
+      db.prepare("ALTER TABLE projects ADD COLUMN published_by INTEGER").run();
+    } catch (e) {}
+
+    try {
+      db.prepare("UPDATE projects SET is_public = 1 WHERE status = 'open' OR status = 'published'").run();
+    } catch (e) {}
   }
 } catch (error) {
   console.error("❌ VERİTABANI BAŞLATILIRKEN HATA OLUŞTU:");

@@ -138,10 +138,18 @@ export async function fetchProjects(params = {}) {
   return res.json();
 }
 
-export async function fetchProjectById(id) {
-  const res = await fetch(`${API_BASE}/projects/${id}`);
-  if (!res.ok) throw new Error('Proje detayı yüklenemedi.');
-  return res.json();
+export async function fetchProjectById(id, token) {
+  const res = await fetch(`${API_BASE}/projects/${id}`, {
+    headers: getHeaders(token)
+  });
+  const data = await res.json();
+  if (!res.ok) {
+    const err = new Error(data.error || 'Proje detayı yüklenemedi.');
+    err.status = res.status;
+    err.data = data;
+    throw err;
+  }
+  return data;
 }
 
 export async function createProject(payload, token) {
@@ -331,13 +339,23 @@ export async function resetForgotPassword(email, code, newPassword) {
   return data;
 }
 
-export async function announceProjectCall(projectId, token) {
-  const res = await fetch(`${API_BASE}/projects/${projectId}/announce`, {
+export async function publishProject(projectId, token) {
+  const res = await fetch(`${API_BASE}/projects/${projectId}/publish`, {
     method: 'POST',
     headers: getHeaders(token)
   });
   const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Proje çağrısı duyurulamadı.');
+  if (!res.ok) throw new Error(data.error || 'Proje genel yayına alınamadı.');
+  return data;
+}
+
+export async function unpublishProject(projectId, token) {
+  const res = await fetch(`${API_BASE}/projects/${projectId}/unpublish`, {
+    method: 'POST',
+    headers: getHeaders(token)
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'Proje genel yayından kaldırılamadı.');
   return data;
 }
 
@@ -345,16 +363,6 @@ export async function fetchTubitakCalls() {
   const res = await fetch(`${API_BASE}/tubitak/calls`);
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'TÜBİTAK çağrıları alınamadı.');
-  return data;
-}
-
-export async function publishProject(projectId, token) {
-  const res = await fetch(`${API_BASE}/projects/${projectId}/publish`, {
-    method: 'POST',
-    headers: getHeaders(token)
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Proje yayınlanamadı.');
   return data;
 }
 

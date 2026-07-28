@@ -936,9 +936,9 @@ app.get('/api/projects', (req, res) => {
   try {
     const { search = '', tag_id } = req.query;
     const params = [];
-    let whereSQL = '';
 
-    const clauses = [];
+    const clauses = ['p.is_public = 1'];
+
     if (search.trim()) {
       clauses.push('(turkish_lower(p.title) LIKE turkish_lower(?) OR turkish_lower(p.description) LIKE turkish_lower(?))');
       const q = `%${search.trim()}%`;
@@ -950,9 +950,7 @@ app.get('/api/projects', (req, res) => {
       params.push(tag_id);
     }
 
-    if (clauses.length > 0) {
-      whereSQL = `WHERE ${clauses.join(' AND ')}`;
-    }
+    const whereSQL = `WHERE ${clauses.join(' AND ')}`;
 
     const projects = db.prepare(`
       SELECT p.*, u.full_name as owner_name, u.title as owner_title, f.name as owner_faculty
@@ -980,8 +978,8 @@ app.get('/api/projects', (req, res) => {
   }
 });
 
-// Single Project Detail
-app.get('/api/projects/:id', (req, res) => {
+// Single Project Detail with strict Backend Authorization & Privacy Check
+app.get('/api/projects/:id', optionalAuthMiddleware, (req, res) => {
   try {
     const project = db.prepare(`
       SELECT p.*, u.full_name as owner_name, u.title as owner_title, f.name as owner_faculty
@@ -993,6 +991,22 @@ app.get('/api/projects/:id', (req, res) => {
 
     if (!project) {
       return res.status(404).json({ error: 'Proje bulunamadı.' });
+    }
+
+    // Check visibility authorization
+    const isPublic = Number(project.is_public) === 1 || project.status === 'published' || project.status === 'open';
+    const isOwner = req.user && Number(req.user.id) === Number(project.owner_id);
+    const isMember = req.user && db.prepare('SELECT 1 FROM project_members WHERE project_id = ? AND user_id = ?').get(project.id, req.user.id);
+    const isAcceptedInvitee = req.user && db.prepare("SELECT 1 FROM applications_invitations WHERE project_id = ? AND receiver_id = ? AND status = 'accepted'").get(project.id, req.user.id);
+
+    if (!isPublic && !isOwner && !isMember && !isAcceptedInvitee) {
+      return res.status(403).json({
+        error: 'Proje başlığı ve detayları, akademik fikrin güvenliğini korumak amacıyla davet kabul edilene kadar gizli tutulmaktadır.',
+        is_private: true,
+        project_id: project.id,
+        owner_name: project.owner_name,
+        owner_title: project.owner_title
+      });
     }
 
     project.tags = db.prepare(`
@@ -1010,16 +1024,21 @@ app.get('/api/projects/:id', (req, res) => {
       WHERE pm.project_id = ?
     `).all(project.id);
 
-    project.invitations = db.prepare(`
-      SELECT ai.*, 
-             s.full_name as sender_name, s.title as sender_title,
-             r.full_name as receiver_name, r.title as receiver_title, r.photo_url as receiver_photo
-      FROM applications_invitations ai
-      JOIN users s ON s.id = ai.sender_id
-      JOIN users r ON r.id = ai.receiver_id
-      WHERE ai.project_id = ?
-      ORDER BY ai.id DESC
-    `).all(project.id);
+    // Only return detailed invitations list to project owner
+    if (isOwner) {
+      project.invitations = db.prepare(`
+        SELECT ai.*, 
+               s.full_name as sender_name, s.title as sender_title,
+               r.full_name as receiver_name, r.title as receiver_title, r.photo_url as receiver_photo
+        FROM applications_invitations ai
+        JOIN users s ON s.id = ai.sender_id
+        JOIN users r ON r.id = ai.receiver_id
+        WHERE ai.project_id = ?
+        ORDER BY ai.id DESC
+      `).all(project.id);
+    } else {
+      project.invitations = [];
+    }
 
     res.json({ project });
   } catch (err) {
@@ -1027,63 +1046,19 @@ app.get('/api/projects/:id', (req, res) => {
   }
 });
 
-// Helper: Automatic Notification & Chat Announcement for Projects (TÜBİTAK, BAP, vb.)
-function notifyMatchingAcademiciansForProjectCall(projectId, title, objectives, ownerId, researchAreaIds) {
-  try {
-    let targetUsers = [];
-    if (Array.isArray(researchAreaIds) && researchAreaIds.length > 0) {
-      const placeholders = researchAreaIds.map(() => '?').join(',');
-      targetUsers = db.prepare(`
-        SELECT DISTINCT u.id, u.full_name, u.email
-        FROM users u
-        JOIN user_research_areas ura ON ura.user_id = u.id
-        WHERE ura.research_area_id IN (${placeholders}) AND u.id != ? AND u.is_active = 1
-      `).all(...researchAreaIds, ownerId);
-    }
-
-    if (!targetUsers || targetUsers.length === 0) {
-      targetUsers = db.prepare(`
-        SELECT id, full_name, email FROM users
-        WHERE id != ? AND is_active = 1
-        LIMIT 25
-      `).all(ownerId);
-    }
-
-    const typeName = objectives || 'BAP / TÜBİTAK';
-    const notifTitle = `📢 Yeni ${typeName} Proje Çağrısı: ${title}`;
-    const notifBody = `Uzmanlık alanınızla doğrudan örtüşen yeni bir ${typeName} projesi açıldı. İncelemek için tıklayın.`;
-    const systemBotId = 1236; // Sistem Yöneticisi / Bot ID
-
-    for (const u of targetUsers) {
-      // In-App Notification Bell
-      try {
-        db.prepare(`
-          INSERT INTO notifications (user_id, title, body, link)
-          VALUES (?, ?, ?, ?)
-        `).run(u.id, notifTitle, notifBody, `/project-detail?id=${projectId}`);
-      } catch (e) {}
-    }
-
-    console.log(`🚀 Automatic ${typeName} project announcement broadcasted to ${targetUsers.length} matching academicians!`);
-  } catch (err) {
-    console.error('Error sending automatic project call notifications:', err);
-  }
-}
-
-// Create Project (Open or Draft)
+// Create Project (Private by default, Panel Only)
 app.post('/api/projects', authMiddleware, (req, res) => {
-  const { title, description, objectives, teamSize = 3, duration, budget, researchAreaIds = [], status = 'open' } = req.body;
+  const { title, description, objectives, teamSize = 3, duration, budget, researchAreaIds = [] } = req.body;
 
   if (!title || !description) {
     return res.status(400).json({ error: 'Proje başlığı ve açıklaması zorunludur.' });
   }
 
-  const projStatus = status === 'draft' ? 'draft' : 'open';
-
+  // Initial status is saved in panel (is_public = 0)
   const result = db.prepare(`
-    INSERT INTO projects (title, description, objectives, owner_id, team_size, duration, budget, status)
-    VALUES (?, ?, ?, ?, ?, ?, ?, ?)
-  `).run(title, description, objectives || null, req.user.id, teamSize, duration || null, budget || null, projStatus);
+    INSERT INTO projects (title, description, objectives, owner_id, team_size, duration, budget, status, is_public)
+    VALUES (?, ?, ?, ?, ?, ?, ?, 'saved_in_panel', 0)
+  `).run(title, description, objectives || null, req.user.id, teamSize, duration || null, budget || null);
 
   const projectId = result.lastInsertRowid;
 
@@ -1097,16 +1072,10 @@ app.post('/api/projects', authMiddleware, (req, res) => {
     insertProjArea.run(projectId, tagId);
   }
 
-  if (projStatus === 'open') {
-    // Trigger automatic project call broadcast to matching researchers
-    notifyMatchingAcademiciansForProjectCall(projectId, title, objectives, req.user.id, researchAreaIds);
-    res.status(201).json({ message: 'Proje başarıyla yayınlandı ve uyumlu araştırmacılara duyuruldu!', projectId });
-  } else {
-    res.status(201).json({ message: 'Proje taslak olarak kaydedildi.', projectId, isDraft: true });
-  }
+  res.status(201).json({ message: 'Proje panelinize kaydedildi.', projectId });
 });
 
-// Publish Draft Project Endpoint
+// Publish Project to All Academic Projects Endpoint
 app.post('/api/projects/:id/publish', authMiddleware, (req, res) => {
   try {
     const projectId = req.params.id;
@@ -1116,24 +1085,20 @@ app.post('/api/projects/:id/publish', authMiddleware, (req, res) => {
     }
 
     if (project.owner_id !== req.user.id) {
-      return res.status(403).json({ error: 'Sadece proje yürütücüsü projeyi yayınlayabilir.' });
+      return res.status(403).json({ error: 'Sadece proje yürütücüsü projeyi genel yayına alabilir.' });
     }
 
-    db.prepare("UPDATE projects SET status = 'open' WHERE id = ?").run(projectId);
+    db.prepare("UPDATE projects SET is_public = 1, status = 'published', published_at = datetime('now', 'localtime'), published_by = ? WHERE id = ?")
+      .run(req.user.id, projectId);
 
-    const tags = db.prepare('SELECT research_area_id FROM project_research_areas WHERE project_id = ?').all(projectId);
-    const researchAreaIds = tags.map(t => t.research_area_id);
-
-    notifyMatchingAcademiciansForProjectCall(projectId, project.title, project.objectives, req.user.id, researchAreaIds);
-
-    res.json({ success: true, message: 'Proje başarıyla yayınlandı ve araştırmacılara bildirildi!' });
+    res.json({ success: true, message: 'Proje Tüm Akademik Projelerde yayımlandı.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Announce / Re-broadcast Project Call Endpoint
-app.post('/api/projects/:id/announce', authMiddleware, (req, res) => {
+// Unpublish Project from All Academic Projects Endpoint
+app.post('/api/projects/:id/unpublish', authMiddleware, (req, res) => {
   try {
     const projectId = req.params.id;
     const project = db.prepare('SELECT p.* FROM projects p WHERE p.id = ?').get(projectId);
@@ -1142,15 +1107,12 @@ app.post('/api/projects/:id/announce', authMiddleware, (req, res) => {
     }
 
     if (project.owner_id !== req.user.id) {
-      return res.status(403).json({ error: 'Sadece proje yürütücüsü çağrı duyurusu yapabilir.' });
+      return res.status(403).json({ error: 'Sadece proje yürütücüsü projeyi genel yayından kaldırabilir.' });
     }
 
-    const tags = db.prepare('SELECT research_area_id FROM project_research_areas WHERE project_id = ?').all(projectId);
-    const researchAreaIds = tags.map(t => t.research_area_id);
+    db.prepare("UPDATE projects SET is_public = 0, status = 'saved_in_panel' WHERE id = ?").run(projectId);
 
-    notifyMatchingAcademiciansForProjectCall(projectId, project.title, project.objectives, req.user.id, researchAreaIds);
-
-    res.json({ success: true, message: 'Proje çağrısı uyumlu uzman akademisyenlere başarıyla mesaj ve bildirim olarak iletildi!' });
+    res.json({ success: true, message: 'Proje genel yayından kaldırıldı.' });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
@@ -1343,57 +1305,105 @@ app.get('/api/projects/:id/match', authMiddleware, (req, res) => {
       owner_cluster: ownerClusterInfo.tag_cluster || null,
       all_clusters: allClusters,
       total_candidates_found: matches.length,
-      matches: matches.slice(0, 100) // top 100 smart recommendations across selected/all clusters
+      matches: matches.slice(0, 100) 
     });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Invite Academician to Project
-app.post('/api/projects/:id/invite', authMiddleware, (req, res) => {
-  const { receiverId, message } = req.body;
-  const projectId = req.params.id;
+// Invite Academician to Project with Privacy & Email Notification
+app.post('/api/projects/:id/invite', authMiddleware, async (req, res) => {
+  try {
+    const { receiverId, message } = req.body;
+    const projectId = req.params.id;
 
-  const project = db.prepare('SELECT owner_id, title FROM projects WHERE id = ?').get(projectId);
-  if (!project) return res.status(404).json({ error: 'Proje bulunamadı.' });
+    const project = db.prepare('SELECT owner_id, title FROM projects WHERE id = ?').get(projectId);
+    if (!project) return res.status(404).json({ error: 'Proje bulunamadı.' });
 
-  if (project.owner_id !== req.user.id) {
-    return res.status(403).json({ error: 'Bu projeye davet gönderme yetkiniz bulunmamaktadır.' });
+    if (project.owner_id !== req.user.id) {
+      return res.status(403).json({ error: 'Bu projeye davet gönderme yetkiniz bulunmamaktadır.' });
+    }
+
+    const receiver = db.prepare('SELECT id, full_name, title, email FROM users WHERE id = ?').get(receiverId);
+    if (!receiver) return res.status(404).json({ error: 'Davet edilecek akademisyen bulunamadı.' });
+
+    const existing = db.prepare(`
+      SELECT id FROM applications_invitations
+      WHERE project_id = ? AND receiver_id = ? AND type = 'invitation' AND status = 'pending'
+    `).get(projectId, receiverId);
+
+    if (existing) {
+      return res.status(400).json({ error: 'Bu akademisyene zaten bekleyen bir davet gönderdiniz.' });
+    }
+
+    const isMember = db.prepare('SELECT 1 FROM project_members WHERE project_id = ? AND user_id = ?').get(projectId, receiverId);
+    if (isMember) {
+      return res.status(400).json({ error: 'Bu akademisyen zaten bu projenin üyesidir.' });
+    }
+
+    const inviterName = `${req.user.title || ''} ${req.user.full_name}`.trim();
+    const privacyMsg = `Dr. / Prof. ${inviterName} sizi bir akademik projede görev almaya davet etti. Projeye ait başlık, özet ve detaylar gizlilik nedeniyle davet kabul edilene kadar gösterilmeyecektir.`;
+
+    db.prepare(`
+      INSERT INTO applications_invitations (project_id, sender_id, receiver_id, type, status, message)
+      VALUES (?, ?, ?, 'invitation', 'pending', ?)
+    `).run(projectId, req.user.id, receiverId, message || privacyMsg);
+
+    db.prepare(`
+      INSERT INTO notifications (user_id, title, body, link)
+      VALUES (?, ?, ?, ?)
+    `).run(
+      receiverId,
+      'Yeni Proje Daveti Aldınız!',
+      `${inviterName} sizi bir akademik projede görev almaya davet etti. Proje bilgileri davet kabul edilene kadar gizli tutulmaktadır.`,
+      '/dashboard'
+    );
+
+    let emailSent = false;
+    if (receiver.email) {
+      try {
+        const mailSubject = 'Akademik Proje Daveti - AVESİS CoMatch';
+        const mailText = `Sayın ${receiver.title || ''} ${receiver.full_name},\n\n` +
+          `${inviterName} tarafından bir akademik projeye davet edildiniz. Proje bilgileri, akademik fikrin gizliliğini korumak amacıyla daveti kabul edene kadar paylaşılmamaktadır.\n\n` +
+          `Daveti görüntülemek, kabul etmek veya reddetmek için hesabınıza giriş yapabilirsiniz.\n\n` +
+          `Bu e-posta sistem tarafından otomatik olarak gönderilmiştir.`;
+
+        const mailHtml = `
+          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff; color: #1e293b;">
+            <h3 style="color: #0f172a; margin-top: 0;">Sayın ${receiver.title || ''} ${receiver.full_name},</h3>
+            <p style="color: #334155; line-height: 1.6; font-size: 15px;">
+              <strong>${inviterName}</strong> tarafından bir akademik projeye davet edildiniz. Proje bilgileri, akademik fikrin gizliliğini korumak amacıyla daveti kabul edene kadar paylaşılmamaktadır.
+            </p>
+            <p style="color: #334155; line-height: 1.6; font-size: 15px;">
+              Daveti görüntülemek, kabul etmek veya reddetmek için hesabınıza giriş yapabilirsiniz.
+            </p>
+            <div style="margin: 28px 0;">
+              <a href="http://localhost:5173/dashboard" style="background-color: #3895ff; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
+                Daveti Görüntüle
+              </a>
+            </div>
+            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
+            <p style="color: #94a3b8; font-size: 12px; margin: 0;">
+              Bu e-posta sistem tarafından otomatik olarak gönderilmiştir.
+            </p>
+          </div>
+        `;
+
+        emailSent = await mailer.sendMail({ to: receiver.email, subject: mailSubject, text: mailText, html: mailHtml });
+      } catch (mailErr) {
+        console.error('E-posta gönderim hatası:', mailErr);
+      }
+    }
+
+    if (emailSent) {
+      res.json({ success: true, message: 'Proje daveti gönderildi ve alıcının e-posta adresine iletildi.' });
+    } else {
+      res.json({ success: true, message: 'Proje daveti gönderildi ancak e-posta teslim edilemedi.' });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
   }
-
-  // Check if already invited or member
-  const existing = db.prepare(`
-    SELECT id FROM applications_invitations
-    WHERE project_id = ? AND receiver_id = ? AND type = 'invitation' AND status = 'pending'
-  `).get(projectId, receiverId);
-
-  if (existing) {
-    return res.status(400).json({ error: 'Bu akademisyene zaten bekleyen bir davet gönderdiniz.' });
-  }
-
-  const isMember = db.prepare('SELECT 1 FROM project_members WHERE project_id = ? AND user_id = ?').get(projectId, receiverId);
-  if (isMember) {
-    return res.status(400).json({ error: 'Bu akademisyen zaten bu projenin üyesidir.' });
-  }
-
-  db.prepare(`
-    INSERT INTO applications_invitations (project_id, sender_id, receiver_id, type, status, message)
-    VALUES (?, ?, ?, 'invitation', 'pending', ?)
-  `).run(projectId, req.user.id, receiverId, message || `${project.title} projesine davet edildiniz.`);
-
-  // Create notification
-  db.prepare(`
-    INSERT INTO notifications (user_id, title, body, link)
-    VALUES (?, ?, ?, ?)
-  `).run(
-    receiverId,
-    'Yeni Proje Daveti Aldınız!',
-    `${req.user.name} sizi "${project.title}" projesine davet etti.`,
-    '/dashboard'
-  );
-
-  res.json({ message: 'Davet başarıyla gönderildi!' });
 });
 
 // Apply to join a Project
@@ -1423,7 +1433,6 @@ app.post('/api/projects/:id/apply', authMiddleware, (req, res) => {
     VALUES (?, ?, ?, 'application', 'pending', ?)
   `).run(projectId, req.user.id, project.owner_id, message || `${project.title} projenize katılmak istiyorum.`);
 
-  // Create notification for owner
   db.prepare(`
     INSERT INTO notifications (user_id, title, body, link)
     VALUES (?, ?, ?, ?)
@@ -1446,45 +1455,40 @@ app.post('/api/invitations/:id/respond', authMiddleware, (req, res) => {
 
   db.prepare('UPDATE applications_invitations SET status = ? WHERE id = ?').run(status, inv.id);
 
-  const project = db.prepare('SELECT title FROM projects WHERE id = ?').get(inv.project_id);
-
   if (status === 'accepted') {
-    // Add user to project members
     const memberId = inv.type === 'invitation' ? inv.receiver_id : inv.sender_id;
     db.prepare('INSERT OR IGNORE INTO project_members (project_id, user_id, role) VALUES (?, ?, ?)')
       .run(inv.project_id, memberId, 'researcher');
 
-    // Send notification
+    const project = db.prepare('SELECT title FROM projects WHERE id = ?').get(inv.project_id);
     db.prepare('INSERT INTO notifications (user_id, title, body, link) VALUES (?, ?, ?, ?)').run(
       memberId,
       'Katılım Onaylandı!',
-      `"${project.title}" projesine katılımınız onaylandı.`,
-      `/projects/${inv.project_id}`
+      'Daveti kabul ettiniz. Projenin tüm detaylarına ve ekibine artık erişebilirsiniz.',
+      `/project-detail?id=${inv.project_id}`
     );
-  }
 
-  res.json({ message: `Talep durumu "${status === 'accepted' ? 'Kabul Edildi' : 'Reddedildi'}" olarak güncellendi.` });
+    res.json({ message: 'Daveti kabul ettiniz. Proje detaylarına artık erişebilirsiniz.', accepted: true });
+  } else {
+    res.json({ message: 'Davet reddedildi.', accepted: false });
+  }
 });
 
-// ==========================================
-// 5. KULLANICI PANELS & BİLDİRİMLER (Dashboard)
-// ==========================================
+// Get User Dashboard (My Projects, Invitations with Privacy Redaction)
 app.get('/api/dashboard', authMiddleware, (req, res) => {
   try {
     const userId = req.user.id;
 
-    const userRow = db.prepare(`
-      SELECT u.*, f.name as faculty_name, d.name as department_name
-      FROM users u
-      LEFT JOIN faculties f ON f.id = u.faculty_id
-      LEFT JOIN departments d ON d.id = u.department_id
-      WHERE u.id = ?
-    `).get(userId);
+    const userObj = db.prepare('SELECT * FROM users WHERE id = ?').get(userId);
+    if (userObj) {
+      delete userObj.password_hash;
+    }
 
-    const userObj = userRow ? {
-      ...userRow,
+    const fullProfile = userObj ? {
+      ...userObj,
       research_areas: db.prepare(`
-        SELECT ra.* FROM user_research_areas ura
+        SELECT ra.id, ra.label
+        FROM user_research_areas ura
         JOIN research_areas ra ON ra.id = ura.research_area_id
         WHERE ura.user_id = ?
       `).all(userId),
@@ -1492,7 +1496,6 @@ app.get('/api/dashboard', authMiddleware, (req, res) => {
       metric_cluster: kmeansEngine.getUserClusterInfo(userId)?.metric_cluster || null
     } : null;
 
-    // My Created Projects
     const myProjects = db.prepare(`
       SELECT p.*,
         (SELECT COUNT(*) FROM project_members WHERE project_id = p.id) as member_count
@@ -1501,7 +1504,6 @@ app.get('/api/dashboard', authMiddleware, (req, res) => {
       ORDER BY p.id DESC
     `).all(userId);
 
-    // Joined Projects
     const joinedProjects = db.prepare(`
       SELECT p.*, pm.role as my_role
       FROM projects p
@@ -1510,9 +1512,8 @@ app.get('/api/dashboard', authMiddleware, (req, res) => {
       ORDER BY p.id DESC
     `).all(userId, userId);
 
-    // Incoming Invitations & Applications
     const incomingRequests = db.prepare(`
-      SELECT ai.*, p.title as project_title,
+      SELECT ai.*, p.title as raw_project_title,
              u.full_name as sender_name, u.title as sender_title, u.photo_url as sender_photo
       FROM applications_invitations ai
       JOIN projects p ON p.id = ai.project_id
@@ -1521,7 +1522,16 @@ app.get('/api/dashboard', authMiddleware, (req, res) => {
       ORDER BY ai.created_at DESC
     `).all(userId);
 
-    // Notifications
+    for (const reqItem of incomingRequests) {
+      if (reqItem.type === 'invitation' && reqItem.status !== 'accepted') {
+        reqItem.project_title = '🔒 [Gizli Proje Daveti]';
+        reqItem.message = `Dr. / Prof. ${reqItem.sender_title || ''} ${reqItem.sender_name} sizi bir akademik projede görev almaya davet etti. Proje başlığı, özeti ve detayları gizlilik nedeniyle davet kabul edilene kadar gösterilmeyecektir.`;
+        reqItem.privacy_note = `Dr. / Prof. ${reqItem.sender_title || ''} ${reqItem.sender_name} sizi bir akademik projede görev almaya davet etti. Projeye ait başlık, özet ve detaylar gizlilik nedeniyle davet kabul edilene kadar gösterilmeyecektir.`;
+      } else {
+        reqItem.project_title = reqItem.raw_project_title;
+      }
+    }
+
     const notifications = db.prepare(`
       SELECT * FROM notifications
       WHERE user_id = ?
@@ -1529,7 +1539,7 @@ app.get('/api/dashboard', authMiddleware, (req, res) => {
     `).all(userId);
 
     res.json({
-      user: userObj,
+      user: fullProfile,
       myProjects,
       joinedProjects,
       incomingRequests,

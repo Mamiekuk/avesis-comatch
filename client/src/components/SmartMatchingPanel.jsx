@@ -51,9 +51,8 @@ export default function SmartMatchingPanel({ projectId, onNavigateAcademician })
 
   const openInviteModal = (candidate) => {
     const acc = candidate.academician;
-    const projectTitle = data?.project_title || 'projemiz';
     setInviteModalTarget(candidate);
-    setInviteMessage(`Merhaba Sayın ${acc.title} ${acc.full_name}, "${projectTitle}" başlıklı projemizdeki uzmanlık alanı eşleşmeniz ve yüksek akademik uyumunuz nedeniyle ekibimize araştırmacı olarak katılmanızı dileriz.`);
+    setInviteMessage(`Sayın ${acc.title || ''} ${acc.full_name}, akademik uzmanlık alanlarınızdaki yüksek uyumunuz nedeniyle sizi ekibimize davet etmekten onur duyarız. Proje bilgileri, fikri mülkiyet gizliliğini korumak amacıyla daveti kabul ettiğinizde açılacaktır.`);
   };
 
   const handleSendCustomInvite = async (e) => {
