@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { 
   MessageSquare, ChevronUp, ChevronDown, Edit3, MoreHorizontal, X, 
-  Send, Paperclip, ArrowLeft, FileText, Download, Trash2, Search 
+  Send, Paperclip, ArrowLeft, FileText, Download, Trash2, Search, FolderGit2 
 } from 'lucide-react';
 import { 
   fetchChatContacts, fetchChatHistory, sendChatMessage, 
-  deleteChatMessage, uploadChatFile, fetchAcademicians, BACKEND_URL 
+  deleteChatMessage, uploadChatFile, fetchAcademicians, fetchDashboard, inviteToProject, BACKEND_URL 
 } from '../services/api';
 
 export default function FloatingChatWidget() {
@@ -20,6 +20,13 @@ export default function FloatingChatWidget() {
   const [searchQuery, setSearchQuery] = useState('');
   const [allAcademicians, setAllAcademicians] = useState([]);
   const [showSearch, setShowSearch] = useState(false);
+
+  // Invite Modal States
+  const [inviteModalOpen, setInviteModalOpen] = useState(false);
+  const [userProjects, setUserProjects] = useState([]);
+  const [selectedProjectId, setSelectedProjectId] = useState('');
+  const [inviteMsg, setInviteMsg] = useState('');
+  const [inviteLoading, setInviteLoading] = useState(false);
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -159,6 +166,51 @@ export default function FloatingChatWidget() {
       setMessages(prev => prev.filter(m => m.id !== msgId));
     } catch (err) {
       alert('Mesaj silinemedi.');
+    }
+  };
+
+  const handleOpenInviteModal = async () => {
+    if (!token || !activeContact) return;
+    try {
+      const dash = await fetchDashboard(token);
+      const myProjs = dash.myProjects || [];
+      if (myProjs.length === 0) {
+        alert('Henüz oluşturulmuş bir projeniz bulunmuyor. Proje eklemek için Panele gidiniz.');
+        return;
+      }
+      setUserProjects(myProjs);
+      setSelectedProjectId(myProjs[0].id);
+      setInviteMsg(`Sayın ${activeContact.title || ''} ${activeContact.full_name}, akademik uzmanlık alanlarınızdaki yüksek uyumunuz nedeniyle sizi ekibimize davet etmekten onur duyarız. Proje bilgileri, fikri mülkiyet gizliliğini korumak amacıyla daveti kabul ettiğinizde açılacaktır.`);
+      setInviteModalOpen(true);
+    } catch (err) {
+      alert('Projeler yüklenemedi: ' + err.message);
+    }
+  };
+
+  const handleSendInvite = async (e) => {
+    e.preventDefault();
+    if (!token || !activeContact || !selectedProjectId) return;
+    setInviteLoading(true);
+    try {
+      const res = await inviteToProject(selectedProjectId, activeContact.id, inviteMsg, token);
+      alert(res.message || 'Davet başarıyla gönderildi!');
+      setInviteModalOpen(false);
+
+      // Post automatic message into chat thread
+      try {
+        const chatRes = await sendChatMessage(
+          activeContact.id,
+          `🤝 Sizi bir akademik projemize davet ettim! Davet ayrıntılarını ve onaylama seçeneklerini Panelim > Gelen Davetler alanından görüntüleyebilirsiniz.`,
+          token
+        );
+        if (chatRes.success && chatRes.message) {
+          setMessages(prev => [...prev, chatRes.message]);
+        }
+      } catch (e) {}
+    } catch (err) {
+      alert('Davet gönderilemedi: ' + err.message);
+    } finally {
+      setInviteLoading(false);
     }
   };
 
@@ -322,6 +374,28 @@ export default function FloatingChatWidget() {
                     </div>
                   </div>
                 </div>
+
+                <button
+                  onClick={handleOpenInviteModal}
+                  style={{
+                    padding: '0.3rem 0.6rem',
+                    fontSize: '0.74rem',
+                    background: 'rgba(56, 149, 255, 0.15)',
+                    color: 'var(--accent-primary)',
+                    border: '1px solid rgba(56, 149, 255, 0.4)',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: '0.25rem',
+                    fontWeight: 600,
+                    whiteSpace: 'nowrap'
+                  }}
+                  title="Bu akademisyene projenize katılma daveti gönderin"
+                >
+                  <FolderGit2 size={13} />
+                  <span>Davet Et</span>
+                </button>
               </div>
 
               {/* Messages List */}
@@ -560,67 +634,159 @@ export default function FloatingChatWidget() {
                     </div>
                   </>
                 ) : (
-                  /* DEFAULT RECENT CONTACTS STATE */
                   contacts.length === 0 ? (
                     <div style={{ textAlign: 'center', padding: '2rem 1rem', fontSize: '0.78rem', color: 'var(--text-muted)' }}>
                       Aktif bir sohbetiniz bulunmuyor. Yeni bir sohbet başlatmak için arama simgesine tıklayın.
                     </div>
                   ) : (
-                    contacts.map(c => {
-                      const initials = c.full_name ? c.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '?';
-                      return (
-                        <div 
-                          key={c.id}
-                          onClick={() => {
-                            setActiveContact(c);
-                            setContacts(prev => prev.map(item => item.id === c.id ? { ...item, unread_count: 0 } : item));
-                          }}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.55rem',
-                            padding: '0.55rem 0.75rem',
-                            borderRadius: '8px',
-                            cursor: 'pointer',
-                            transition: 'all 0.2s',
-                            marginBottom: '0.2rem'
-                          }}
-                          className="chat-contact-item"
-                        >
-                          <div style={{ position: 'relative', display: 'flex' }}>
-                            {c.photo_url ? (
-                              <img src={c.photo_url} alt={c.full_name} style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover' }} />
-                            ) : (
-                              <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 700 }}>
-                                {initials}
-                              </div>
-                            )}
-                            {getOnlineStatus(c.last_active_at) && <span style={{ position: 'absolute', bottom: 0, right: 0, width: '9px', height: '9px', borderRadius: '50%', background: '#10b981', border: '1.5px solid var(--bg-card)' }} />}
-                          </div>
+                    contacts.map(c => (
+                      <div 
+                        key={c.id}
+                        onClick={() => {
+                          setActiveContact(c);
+                          setContacts(prev => prev.map(item => item.id === c.id ? { ...item, unread_count: 0 } : item));
+                        }}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.55rem',
+                          padding: '0.55rem 0.75rem',
+                          borderRadius: '8px',
+                          cursor: 'pointer',
+                          transition: 'all 0.2s',
+                          marginBottom: '0.2rem'
+                        }}
+                        className="chat-contact-item"
+                      >
+                        <div style={{ position: 'relative', display: 'flex' }}>
+                          {c.photo_url ? (
+                            <img src={c.photo_url} alt={c.full_name} style={{ width: '34px', height: '34px', borderRadius: '50%', objectFit: 'cover' }} />
+                          ) : (
+                            <div style={{ width: '34px', height: '34px', borderRadius: '50%', background: 'var(--bg-secondary)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.8rem', fontWeight: 700 }}>
+                              {c.full_name ? c.full_name.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase() : '?'}
+                            </div>
+                          )}
+                          {getOnlineStatus(c.last_active_at) && <span style={{ position: 'absolute', bottom: 0, right: 0, width: '9px', height: '9px', borderRadius: '50%', background: '#10b981', border: '1.5px solid var(--bg-card)' }} />}
+                        </div>
 
-                          <div style={{ flex: 1, minWidth: 0 }}>
-                            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
-                              <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-                                {c.title} {c.full_name}
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'baseline' }}>
+                            <span style={{ fontSize: '0.82rem', fontWeight: 600, color: 'var(--text-primary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+                              {c.title} {c.full_name}
+                            </span>
+                            {c.unread_count > 0 && (
+                              <span style={{ background: 'var(--danger)', color: '#fff', fontSize: '0.65rem', padding: '1px 5px', borderRadius: '99px', fontWeight: 800 }}>
+                                {c.unread_count}
                               </span>
-                              {c.unread_count > 0 && (
-                                <span style={{ background: 'var(--danger)', color: '#fff', fontSize: '0.65rem', padding: '1px 5px', borderRadius: '99px', fontWeight: 800 }}>
-                                  {c.unread_count}
-                                </span>
-                              )}
-                            </div>
-                            <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
-                              {c.last_message || 'Dosya paylaştı.'}
-                            </div>
+                            )}
+                          </div>
+                          <div style={{ fontSize: '0.72rem', color: 'var(--text-secondary)', whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis', marginTop: '2px' }}>
+                            {c.last_message || 'Dosya paylaştı.'}
                           </div>
                         </div>
-                      );
-                    })
+                      </div>
+                    ))
                   )
                 )}
               </div>
             </div>
           )}
+        </div>
+      )}
+
+      {/* IN-WIDGET INVITE MODAL OVERLAY */}
+      {inviteModalOpen && activeContact && (
+        <div
+          className="modal-overlay"
+          onClick={() => setInviteModalOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justify: 'center',
+            background: 'rgba(15, 23, 42, 0.85)',
+            backdropFilter: 'blur(10px)',
+            padding: '1rem',
+            overflowY: 'auto'
+          }}
+        >
+          <div
+            className="modal-content"
+            onClick={e => e.stopPropagation()}
+            style={{
+              maxWidth: '480px',
+              width: '100%',
+              margin: 'auto',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              position: 'relative',
+              zIndex: 100000,
+              padding: '1.5rem'
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+              <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                <FolderGit2 size={20} color="var(--accent-primary)" />
+                <span>Projeye Davet Et</span>
+              </h3>
+              <button
+                onClick={() => setInviteModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <div style={{ background: 'rgba(56, 149, 255, 0.08)', border: '1px solid rgba(56, 149, 255, 0.25)', borderRadius: '8px', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.82rem', color: '#f8fafc' }}>
+              Davet edilen akademisyen: <strong>{activeContact.title || ''} {activeContact.full_name}</strong>
+            </div>
+
+            <form onSubmit={handleSendInvite}>
+              <div style={{ marginBottom: '1rem' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.35rem' }}>
+                  Projenizi Seçin
+                </label>
+                <select
+                  className="form-select"
+                  value={selectedProjectId}
+                  onChange={e => setSelectedProjectId(e.target.value)}
+                  style={{ fontSize: '0.85rem' }}
+                >
+                  {userProjects.map(mp => (
+                    <option key={mp.id} value={mp.id}>{mp.title}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.35rem' }}>
+                  Davet Mesajınız
+                </label>
+                <textarea
+                  rows={3}
+                  className="form-input"
+                  style={{ fontSize: '0.84rem' }}
+                  value={inviteMsg}
+                  onChange={e => setInviteMsg(e.target.value)}
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={inviteLoading}
+                className="btn-primary"
+                style={{ width: '100%', justifyContent: 'center', padding: '0.75rem' }}
+              >
+                <Send size={15} />
+                <span>{inviteLoading ? 'Davet İletiliyor...' : 'Davet Et & Mesajda Gönder'}</span>
+              </button>
+            </form>
+          </div>
         </div>
       )}
     </div>

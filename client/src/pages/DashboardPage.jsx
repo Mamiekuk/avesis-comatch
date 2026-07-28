@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { fetchDashboard, respondToInvitation, fetchMetadata, updateUserProfile, updateProject, fetchProjectById, fetchChatContacts, fetchChatHistory, sendChatMessage, deleteChatMessage, uploadChatFile, clearChatHistory, fetchMeetings, createMeeting, respondToMeeting, BACKEND_URL, createResearchArea, fetchKMeansNeighbors, publishProject, unpublishProject, fetchAcademicians, syncAvesisProfile } from '../services/api';
+import { fetchDashboard, respondToInvitation, fetchMetadata, updateUserProfile, updateProject, fetchProjectById, fetchChatContacts, fetchChatHistory, sendChatMessage, deleteChatMessage, uploadChatFile, clearChatHistory, fetchMeetings, createMeeting, respondToMeeting, BACKEND_URL, createResearchArea, fetchKMeansNeighbors, publishProject, unpublishProject, fetchAcademicians, syncAvesisProfile, inviteToProject } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { LayoutDashboard, FolderGit2, Mail, Bell, CheckCircle2, XCircle, ArrowRight, Sparkles, Building2, Edit3, Save, X, Plus, BookOpen, AlertCircle, MessageSquare, Trash2, Paperclip, Calendar, FileText, Image, Download, MapPin, Video, Clock, UserCheck, Search, RefreshCw, Lock } from 'lucide-react';
+import { LayoutDashboard, FolderGit2, Mail, Bell, CheckCircle2, XCircle, ArrowRight, Sparkles, Building2, Edit3, Save, X, Plus, BookOpen, AlertCircle, MessageSquare, Trash2, Paperclip, Calendar, FileText, Image, Download, MapPin, Video, Clock, UserCheck, Search, RefreshCw, Lock, Send } from 'lucide-react';
 
 const cleanClusterName = (name) => {
   if (!name) return '';
@@ -46,13 +46,18 @@ export default function DashboardPage({ onNavigate, routeParam }) {
   const [editProjLoading, setEditProjLoading] = useState(false);
   const [editProjSuccess, setEditProjSuccess] = useState(false);
 
-  // Chat States
+  // Chat States & Chat Invite Modal States
   const [chatContacts, setChatContacts] = useState([]);
   const [selectedContact, setSelectedContact] = useState(null);
   const [chatMessages, setChatMessages] = useState([]);
   const [chatInput, setChatInput] = useState('');
   const [chatLoading, setChatLoading] = useState(false);
   const [chatContactsLoading, setChatContactsLoading] = useState(false);
+  const [chatInviteModalOpen, setChatInviteModalOpen] = useState(false);
+  const [chatInviteTargetContact, setChatInviteTargetContact] = useState(null);
+  const [chatInviteSelectedProjectId, setChatInviteSelectedProjectId] = useState('');
+  const [chatInviteMsg, setChatInviteMsg] = useState('');
+  const [chatInviteLoading, setChatInviteLoading] = useState(false);
   const messagesContainerRef = useRef(null);
   const lastMessagesCountRef = useRef(0);
   const lastContactIdRef = useRef(null);
@@ -354,6 +359,47 @@ export default function DashboardPage({ onNavigate, routeParam }) {
         !editProjTags.some(st => st.id === t.id)
       ).slice(0, 8)
     : [];
+
+  const handleOpenChatInviteModal = (contact) => {
+    const myProjectsList = (data?.myProjects || []);
+    if (myProjectsList.length === 0) {
+      alert('Henüz oluşturulmuş bir projeniz bulunmuyor. Lütfen önce Panele projenizi ekleyin veya Yeni Proje Oluştur butonunu kullanın.');
+      return;
+    }
+    setChatInviteTargetContact(contact);
+    setChatInviteSelectedProjectId(myProjectsList[0].id);
+    setChatInviteMsg(`Sayın ${contact.title || ''} ${contact.full_name}, akademik uzmanlık alanlarınızdaki yüksek uyumunuz nedeniyle sizi ekibimize davet etmekten onur duyarız. Proje bilgileri, fikri mülkiyet gizliliğini korumak amacıyla daveti kabul ettiğinizde açılacaktır.`);
+    setChatInviteModalOpen(true);
+  };
+
+  const handleSendChatInvite = async (e) => {
+    e.preventDefault();
+    if (!token || !chatInviteTargetContact || !chatInviteSelectedProjectId) return;
+    setChatInviteLoading(true);
+    try {
+      const res = await inviteToProject(chatInviteSelectedProjectId, chatInviteTargetContact.id, chatInviteMsg, token);
+      alert(res.message || 'Proje davetiniz başarıyla iletildi!');
+      setChatInviteModalOpen(false);
+
+      // Post automatic message into chat thread
+      try {
+        const chatRes = await sendChatMessage(
+          chatInviteTargetContact.id,
+          `🤝 Sizi projemize katılmanız için davet ettim! Davet ayrıntılarını ve gizlilik bildirimini Panelim > Gelen Davetler alanından inceleyebilirsiniz.`,
+          token
+        );
+        if (chatRes.success && chatRes.message) {
+          setChatMessages(prev => [...prev, chatRes.message]);
+        }
+      } catch (e) {}
+
+      loadData();
+    } catch (err) {
+      alert('Davet gönderilemedi: ' + err.message);
+    } finally {
+      setChatInviteLoading(false);
+    }
+  };
 
   // Load Chat History
   const loadChatHistory = async (contactId) => {
@@ -1297,6 +1343,16 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                   </div>
 
                   <div style={{ display: 'flex', gap: '0.75rem' }}>
+                    <button
+                      onClick={() => handleOpenChatInviteModal(selectedContact)}
+                      className="btn-primary"
+                      style={{ padding: '0.45rem 0.85rem', fontSize: '0.82rem', display: 'flex', alignItems: 'center', gap: '0.35rem', margin: 0 }}
+                      title="Bu akademisyene projenize katılma daveti gönderin"
+                    >
+                      <FolderGit2 size={14} />
+                      <span>Projeme Davet Et</span>
+                    </button>
+
                     <button
                       onClick={() => setMeetingModalOpen(true)}
                       className="btn-secondary"
@@ -2558,6 +2614,100 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                 ))
               )}
             </div>
+          </div>
+        </div>
+      )}
+
+      {/* CHAT INVITE MODAL OVERLAY */}
+      {chatInviteModalOpen && chatInviteTargetContact && (
+        <div
+          className="modal-overlay"
+          onClick={() => setChatInviteModalOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justify: 'center',
+            background: 'rgba(15, 23, 42, 0.85)',
+            backdropFilter: 'blur(10px)',
+            padding: '1rem',
+            overflowY: 'auto'
+          }}
+        >
+          <div
+            className="modal-content"
+            onClick={e => e.stopPropagation()}
+            style={{
+              maxWidth: '520px',
+              width: '100%',
+              margin: 'auto',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              position: 'relative',
+              zIndex: 100000
+            }}
+          >
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.25rem' }}>
+              <h3 style={{ fontSize: '1.3rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                <FolderGit2 size={22} color="var(--accent-primary)" />
+                <span>Projeye Davet Gönder</span>
+              </h3>
+              <button
+                onClick={() => setChatInviteModalOpen(false)}
+                style={{ background: 'none', border: 'none', color: 'var(--text-muted)', cursor: 'pointer' }}
+              >
+                <X size={20} />
+              </button>
+            </div>
+
+            <div style={{ background: 'rgba(56, 149, 255, 0.08)', border: '1px solid rgba(56, 149, 255, 0.2)', borderRadius: '8px', padding: '0.85rem', marginBottom: '1.25rem', fontSize: '0.85rem', color: '#f8fafc' }}>
+              Davet edilen akademisyen: <strong>{chatInviteTargetContact.title || ''} {chatInviteTargetContact.full_name}</strong>
+            </div>
+
+            <form onSubmit={handleSendChatInvite}>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>
+                  Projenizi Seçin <span style={{ color: 'var(--danger)' }}>*</span>
+                </label>
+                <select
+                  className="form-select"
+                  value={chatInviteSelectedProjectId}
+                  onChange={e => setChatInviteSelectedProjectId(e.target.value)}
+                >
+                  {(data?.myProjects || []).map(mp => (
+                    <option key={mp.id} value={mp.id}>{mp.title}</option>
+                  ))}
+                </select>
+              </div>
+
+              <div style={{ marginBottom: '1.5rem' }}>
+                <label style={{ display: 'block', fontSize: '0.85rem', fontWeight: 600, marginBottom: '0.4rem' }}>
+                  Davet Mesajınız
+                </label>
+                <textarea
+                  rows={3}
+                  className="form-input"
+                  value={chatInviteMsg}
+                  onChange={e => setChatInviteMsg(e.target.value)}
+                  placeholder="Araştırmacıya projenizdeki rolünü ve davet nedeninizi iletin..."
+                />
+              </div>
+
+              <button
+                type="submit"
+                disabled={chatInviteLoading}
+                className="btn-primary"
+                style={{ width: '100%', justifyContent: 'center' }}
+              >
+                <Send size={16} />
+                <span>{chatInviteLoading ? 'Davet İletiliyor...' : 'Daveti Gönder & Mesajda Bildir'}</span>
+              </button>
+            </form>
           </div>
         </div>
       )}

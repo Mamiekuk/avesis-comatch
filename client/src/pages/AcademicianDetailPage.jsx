@@ -442,8 +442,38 @@ export default function AcademicianDetailPage({ id, onNavigate, onOpenClaimModal
 
       {/* INVITE MODAL */}
       {inviteModalOpen && (
-        <div className="modal-overlay" onClick={() => setInviteModalOpen(false)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()}>
+        <div
+          className="modal-overlay"
+          onClick={() => setInviteModalOpen(false)}
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            zIndex: 99999,
+            display: 'flex',
+            alignItems: 'center',
+            justify: 'center',
+            background: 'rgba(15, 23, 42, 0.85)',
+            backdropFilter: 'blur(10px)',
+            padding: '1rem',
+            overflowY: 'auto'
+          }}
+        >
+          <div
+            className="modal-content"
+            onClick={e => e.stopPropagation()}
+            style={{
+              maxWidth: '520px',
+              width: '100%',
+              margin: 'auto',
+              maxHeight: '85vh',
+              overflowY: 'auto',
+              position: 'relative',
+              zIndex: 100000
+            }}
+          >
             <h3 style={{ fontSize: '1.35rem', marginBottom: '1rem' }}>Projeye Davet Gönder</h3>
             {hasNoProjects ? (
               <p style={{ color: 'var(--text-secondary)' }}>
