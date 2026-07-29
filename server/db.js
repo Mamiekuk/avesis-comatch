@@ -125,6 +125,8 @@ try {
 
     // Auto-ensure test accounts on server start
     try {
+      db.prepare("DELETE FROM users WHERE (full_name LIKE '%Ali Ban%' OR full_name LIKE '%ALİ BAN%') AND email != 'ali_ban24@erdogan.edu.tr'").run();
+
       const bcrypt = require('bcryptjs');
       const testHash = bcrypt.hashSync('123456', 10);
       const testAccounts = [
