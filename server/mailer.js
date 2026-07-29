@@ -110,85 +110,233 @@ async function sendMail({ to, subject, text, html }) {
 }
 
 // ---- Templates ------------------------------------------------------------
-// A single branded HTML shell shared by every transactional email, so they look
-// like a real product instead of the bare one-line plaintext they used to be.
-// Inline styles only — email clients strip <style>/external CSS. Dark card on a
-// neutral background, a accent header bar, and a big tappable code/button.
+// Email HTML deliberately uses presentation tables and inline styles. This keeps
+// the branded layout dependable in Outlook while still allowing a small responsive
+// enhancement for modern mobile clients. No external font or image is required.
 const esc = s => String(s).replace(/[&<>"]/g, c => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]))
 const BRAND = "AVESİS CoMatch"
-const ACCENT = "#2563eb"
+const ACCENT = "#3895ff"
+const INK = "#0f172a"
+const FONT = "Inter, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
 
-// body: array of HTML strings (already-escaped/trusted) for the message paragraphs.
-// cta: optional { code } big code block, or { label, url } button.
-function shell({ preview = "", heading, body = [], cta }) {
-    const ctaHtml = !cta ? "" : cta.code
-        ? `<tr><td align="center" style="padding:8px 0 4px">
-             <div style="display:inline-block;font:700 30px/1.1 'Segoe UI',Roboto,Helvetica,Arial,sans-serif;letter-spacing:8px;color:#fff;background:#11141c;border:1px solid #2a2f3d;border-radius:12px;padding:16px 26px">${esc(cta.code)}</div>
-           </td></tr>`
-        : `<tr><td align="center" style="padding:10px 0 4px">
-             <a href="${esc(cta.url)}" style="display:inline-block;background:${ACCENT};color:#fff;text-decoration:none;font:600 15px 'Segoe UI',Roboto,Helvetica,Arial,sans-serif;padding:13px 28px;border-radius:10px">${esc(cta.label)}</a>
-           </td></tr>`
-    const paras = body.map(p =>
-        `<tr><td style="font:400 15px/1.6 'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#c7ccd8;padding:6px 0">${p}</td></tr>`).join("")
-    return `<!doctype html><html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width"></head>
-<body style="margin:0;background:#0b0d12;padding:24px 12px">
-  <span style="display:none;max-height:0;overflow:hidden;opacity:0">${esc(preview)}</span>
-  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="max-width:480px;margin:0 auto;background:#141821;border:1px solid #232838;border-radius:16px;overflow:hidden">
-    <tr><td style="height:4px;background:${ACCENT}"></td></tr>
-    <tr><td style="padding:26px 30px 6px">
-      <div style="font:800 20px 'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#fff;letter-spacing:.5px">${BRAND}</div>
-    </td></tr>
-    <tr><td style="padding:8px 30px 0">
-      <div style="font:700 18px 'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#fff;padding-bottom:6px">${esc(heading)}</div>
-      <table role="presentation" width="100%" cellpadding="0" cellspacing="0">${paras}${ctaHtml}</table>
-    </td></tr>
-    <tr><td style="padding:22px 30px 28px">
-      <div style="border-top:1px solid #232838;padding-top:14px;font:400 12px/1.5 'Segoe UI',Roboto,Helvetica,Arial,sans-serif;color:#6b7283">
-        Bu e-postayı ${BRAND} hesabı için doğrulama talep edildiği için alıyorsunuz.
-        Eğer bu işlemi siz yapmadıysanız, bu e-postayı dikkate almayabilirsiniz.
-      </div>
-    </td></tr>
+function renderCta(cta) {
+    if (!cta)
+        return ""
+
+    if (cta.code) {
+        return `
+          <tr>
+            <td style="padding:26px 0 8px">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eff6ff;border:1px solid #bfdbfe;border-radius:14px">
+                <tr>
+                  <td align="center" style="padding:20px 16px 5px;font:700 11px/1.4 ${FONT};letter-spacing:1.5px;color:#2563eb;text-transform:uppercase">
+                    ${esc(cta.label || "Doğrulama kodu")}
+                  </td>
+                </tr>
+                <tr>
+                  <td class="verification-code" align="center" style="padding:0 16px;font:800 34px/1.25 ${FONT};letter-spacing:10px;color:${INK}">
+                    ${esc(cta.code)}
+                  </td>
+                </tr>
+                <tr>
+                  <td align="center" style="padding:7px 16px 19px;font:600 11px/1.4 ${FONT};letter-spacing:.7px;color:#64748b;text-transform:uppercase">
+                    ${esc(cta.validity || "15 dakika geçerli")}
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>`
+    }
+
+    const url = esc(cta.url)
+    return `
+      <tr>
+        <td align="left" style="padding:26px 0 9px">
+          <!--[if mso]>
+          <v:roundrect xmlns:v="urn:schemas-microsoft-com:vml" xmlns:w="urn:schemas-microsoft-com:office:word" href="${url}" style="height:48px;v-text-anchor:middle;width:210px" arcsize="21%" strokecolor="${ACCENT}" fillcolor="${ACCENT}">
+            <w:anchorlock/>
+            <center style="color:#ffffff;font-family:Segoe UI,Arial,sans-serif;font-size:15px;font-weight:700">${esc(cta.label)}</center>
+          </v:roundrect>
+          <![endif]-->
+          <!--[if !mso]><!-- -->
+          <a href="${url}" style="display:inline-block;background:${ACCENT};border:1px solid ${ACCENT};border-radius:10px;color:#ffffff;font:700 15px/48px ${FONT};height:48px;padding:0 24px;text-align:center;text-decoration:none;box-shadow:0 8px 18px rgba(56,149,255,.22)">
+            ${esc(cta.label)} &nbsp;&rarr;
+          </a>
+          <!--<![endif]-->
+        </td>
+      </tr>`
+}
+
+// body accepts trusted, template-owned HTML strings. All dynamic values are escaped
+// before they enter the shell.
+function shell({
+    preview = "",
+    eyebrow = "Hesap güvenliği",
+    heading,
+    body = [],
+    cta,
+    securityNote = "Bu işlemi siz başlatmadıysanız herhangi bir işlem yapmanız gerekmez. Hesabınız güvende kalacaktır.",
+}) {
+    const paragraphs = body.map(p =>
+        `<tr><td style="padding:0 0 12px;font:400 15px/1.7 ${FONT};color:#475569">${p}</td></tr>`).join("")
+    const ctaHtml = renderCta(cta)
+
+    return `<!doctype html>
+<html lang="tr">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="x-apple-disable-message-reformatting">
+  <meta name="color-scheme" content="light">
+  <meta name="supported-color-schemes" content="light">
+  <title>${esc(heading)} | ${BRAND}</title>
+  <!--[if mso]><noscript><xml><o:OfficeDocumentSettings xmlns:o="urn:schemas-microsoft-com:office:office"><o:PixelsPerInch>96</o:PixelsPerInch></o:OfficeDocumentSettings></xml></noscript><![endif]-->
+  <style>
+    table, td { border-collapse: collapse; }
+    a { color: #2563eb; }
+    @media only screen and (max-width: 620px) {
+      .email-shell { width: 100% !important; }
+      .mobile-gutter { padding-left: 20px !important; padding-right: 20px !important; }
+      .hero-heading { font-size: 25px !important; line-height: 1.22 !important; }
+      .verification-code { font-size: 30px !important; letter-spacing: 7px !important; }
+      .desktop-meta { display: none !important; }
+    }
+  </style>
+</head>
+<body style="margin:0;padding:0;background:#f1f5f9;color:${INK};-webkit-text-size-adjust:100%;-ms-text-size-adjust:100%">
+  <div style="display:none;max-height:0;overflow:hidden;opacity:0;color:transparent;mso-hide:all">
+    ${esc(preview)}&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;&nbsp;&zwnj;
+  </div>
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" bgcolor="#f1f5f9">
+    <tr>
+      <td align="center" style="padding:34px 12px">
+        <table class="email-shell" role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px">
+          <tr>
+            <td class="mobile-gutter" style="padding:0 6px 18px">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td valign="middle">
+                    <table role="presentation" cellpadding="0" cellspacing="0">
+                      <tr>
+                        <td align="center" valign="middle" bgcolor="${ACCENT}" style="width:38px;height:38px;border-radius:10px;font:800 16px/38px ${FONT};color:#ffffff">
+                          AC
+                        </td>
+                        <td style="padding-left:11px;font:800 18px/1.15 ${FONT};letter-spacing:-.4px;color:${INK}">
+                          AVESİS <span style="color:${ACCENT}">CoMatch</span>
+                          <div style="padding-top:3px;font:500 10px/1.3 ${FONT};letter-spacing:.25px;color:#64748b">Akademik Ekip &amp; Keşif Platformu</div>
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                  <td class="desktop-meta" align="right" valign="middle" style="font:600 11px/1.4 ${FONT};letter-spacing:.8px;color:#64748b;text-transform:uppercase">
+                    Güvenli bildirim
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td style="background:#ffffff;border:1px solid #dbe3ee;border-radius:18px;overflow:hidden;box-shadow:0 12px 30px rgba(15,23,42,.08)">
+              <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                <tr>
+                  <td bgcolor="${INK}" class="mobile-gutter" style="padding:38px 42px 36px;border-top:5px solid ${ACCENT}">
+                    <div style="padding-bottom:14px;font:700 11px/1.3 ${FONT};letter-spacing:1.45px;color:#7dd3fc;text-transform:uppercase">
+                      ${esc(eyebrow)}
+                    </div>
+                    <div class="hero-heading" style="max-width:470px;font:800 30px/1.2 ${FONT};letter-spacing:-.8px;color:#f8fafc">
+                      ${esc(heading)}
+                    </div>
+                    <div style="width:42px;height:3px;margin-top:22px;background:${ACCENT};border-radius:3px;font-size:0;line-height:0">&nbsp;</div>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="mobile-gutter" style="padding:32px 42px 10px">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0">
+                      ${paragraphs}
+                      ${ctaHtml}
+                    </table>
+                  </td>
+                </tr>
+                <tr>
+                  <td class="mobile-gutter" style="padding:18px 42px 34px">
+                    <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f8fafc;border-left:3px solid #cbd5e1">
+                      <tr>
+                        <td style="padding:14px 16px;font:400 12px/1.6 ${FONT};color:#64748b">
+                          <strong style="color:#334155">Güvenlik notu:</strong> ${esc(securityNote)}
+                        </td>
+                      </tr>
+                    </table>
+                  </td>
+                </tr>
+              </table>
+            </td>
+          </tr>
+          <tr>
+            <td class="mobile-gutter" align="center" style="padding:21px 24px 0;font:400 11px/1.65 ${FONT};color:#64748b">
+              Bu otomatik e-posta, ${BRAND} hesabınızla ilgili bir işlem nedeniyle gönderildi.<br>
+              Lütfen bu e-postayı yanıtlamayın ve doğrulama kodunuzu kimseyle paylaşmayın.<br>
+              <span style="color:#94a3b8">&copy; ${new Date().getFullYear()} ${BRAND}</span>
+            </td>
+          </tr>
+        </table>
+      </td>
+    </tr>
   </table>
-</body></html>`
+</body>
+</html>`
 }
 
 // Each builder returns a full { to, subject, text, html } ready for sendMail().
 function passwordResetMail(to, link) {
     return {
         to,
-        subject: "AVESİS CoMatch - Şifre Sıfırlama",
+        subject: "Şifrenizi sıfırlayın | AVESİS CoMatch",
         text: `Şifrenizi sıfırlamak için bu bağlantıyı kullanın (1 saat geçerlidir):\n${link}`,
         html: shell({
             preview: "AVESİS CoMatch şifrenizi sıfırlayın",
-            heading: "Şifre Sıfırlama",
-            body: ["Şifrenizi sıfırlamak için bir talep aldık. Yeni bir şifre belirlemek için aşağıdaki butona tıklayın. Bu bağlantı <b style=\"color:#fff\">1 saat</b> boyunca geçerlidir."],
+            eyebrow: "Hesap güvenliği",
+            heading: "Şifrenizi güvenle yenileyin",
+            body: [
+                "AVESİS CoMatch hesabınızın şifresini yenilemek için bir talep aldık.",
+                "Aşağıdaki bağlantı yalnızca <strong style=\"color:#0f172a\">1 saat</strong> boyunca geçerlidir. Süre dolduğunda yeni bir talep oluşturabilirsiniz.",
+            ],
             cta: { label: "Şifreyi Sıfırla", url: link },
         }),
     }
 }
+
 function emailChangeConfirm(to, code) {
     return {
         to,
-        subject: "AVESİS CoMatch - E-posta Değişikliği Doğrulama",
+        subject: `${code} e-posta değişikliği doğrulama kodunuz`,
         text: `Doğrulama kodunuz: ${code} (15 dakika geçerlidir).`,
         html: shell({
-            preview: "E-posta değişikliğini doğrulayın",
-            heading: "Kimliğinizi Doğrulayın",
-            body: ["Hesabınızdaki e-posta adresini değiştirmek istediniz. Değişikliği onaylamak için bu kodu girin. Kod <b style=\"color:#fff\">15 dakika</b> boyunca geçerlidir."],
-            cta: { code },
+            preview: `${code} e-posta değişikliği doğrulama kodunuz`,
+            eyebrow: "E-posta değişikliği",
+            heading: "Değişikliği siz mi istediniz?",
+            body: [
+                "Hesabınıza bağlı e-posta adresini değiştirmek için bir talep aldık.",
+                "İşlemi tamamlamak için aşağıdaki 6 haneli kodu AVESİS CoMatch doğrulama ekranına girin.",
+            ],
+            cta: { code, label: "Doğrulama kodu", validity: "15 dakika geçerli" },
         }),
     }
 }
+
 function emailVerify(to, code) {
     return {
         to,
-        subject: "AVESİS CoMatch - E-posta Doğrulama Kodu",
+        subject: `${code} e-posta doğrulama kodunuz`,
         text: `Doğrulama kodunuz: ${code} (15 dakika geçerlidir).`,
         html: shell({
-            preview: "Kurumsal e-posta adresinizi doğrulayın",
-            heading: "E-posta Adresinizi Doğrulayın",
-            body: ["Kurumsal e-posta adresinizi doğrulamak ve akademisyen profilinizi sahiplenmek için aşağıdaki 6 haneli kodu girin. Kod <b style=\"color:#fff\">15 dakika</b> boyunca geçerlidir."],
-            cta: { code },
+            preview: `${code} kurumsal e-posta doğrulama kodunuz`,
+            eyebrow: "Profil doğrulama",
+            heading: "Akademisyen profilinizi doğrulayın",
+            body: [
+                "Kurumsal e-posta adresinizi doğrulayarak akademisyen profilinizi güvenle sahiplenebilirsiniz.",
+                "Aşağıdaki 6 haneli kodu AVESİS CoMatch doğrulama ekranına girin.",
+            ],
+            cta: { code, label: "Doğrulama kodu", validity: "15 dakika geçerli" },
         }),
     }
 }
@@ -196,13 +344,17 @@ function emailVerify(to, code) {
 function passwordResetCodeMail(to, code) {
     return {
         to,
-        subject: "AVESİS CoMatch - Şifre Sıfırlama Doğrulama Kodu",
+        subject: `${code} şifre sıfırlama kodunuz`,
         text: `Şifre sıfırlama doğrulama kodunuz: ${code} (15 dakika geçerlidir).`,
         html: shell({
-            preview: "AVESİS CoMatch şifre sıfırlama kodu",
-            heading: "Şifre Sıfırlama Doğrulama Kodu",
-            body: ["Şifrenizi sıfırlamak için 6 haneli doğrulama kodunuz aşağıdadır. Kod <b style=\"color:#fff\">15 dakika</b> boyunca geçerlidir."],
-            cta: { code },
+            preview: `${code} şifre sıfırlama kodunuz`,
+            eyebrow: "Hesap kurtarma",
+            heading: "Şifrenizi yenilemeye devam edin",
+            body: [
+                "AVESİS CoMatch hesabınız için bir şifre sıfırlama talebi aldık.",
+                "Yeni şifrenizi oluşturmak için aşağıdaki 6 haneli kodu doğrulama ekranına girin.",
+            ],
+            cta: { code, label: "Şifre sıfırlama kodu", validity: "15 dakika geçerli" },
         }),
     }
 }
