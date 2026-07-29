@@ -126,13 +126,14 @@ try {
     // Auto-ensure test accounts on server start
     try {
       db.prepare("DELETE FROM users WHERE (full_name LIKE '%Ali Ban%' OR full_name LIKE '%ALİ BAN%') AND email != 'ali_ban24@erdogan.edu.tr'").run();
+      db.prepare("UPDATE users SET email = 'aslihaneksi@ogr.iu.edu.tr' WHERE (full_name LIKE '%Aslıhan Ekşi%' OR full_name LIKE '%ASLIHAN EKŞİ%') OR email = 'aslihan_eksi@erdogan.edu.tr'").run();
 
       const bcrypt = require('bcryptjs');
       const testHash = bcrypt.hashSync('123456', 10);
       const testAccounts = [
         { title: 'Doç. Dr.', full_name: 'Ali Ban', email: 'ali_ban24@erdogan.edu.tr', bio: 'Yazılım Mimarisi, Yapay Zeka ve Veri Analitiği alanında akademisyen ve araştırmacı.' },
         { title: 'Prof. Dr.', full_name: 'Muhammet Emin Kuk', email: 'muhammetemin_kuk24@erdogan.edu.tr', bio: 'Akıllı Üretim Sistemleri, Mekatronik ve Sonlu Elemanlar Yöntemi uzmanı.' },
-        { title: 'Dr. Öğr. Üyesi', full_name: 'Aslıhan Ekşi', email: 'aslihan_eksi@erdogan.edu.tr', bio: 'Biyomedikal Teknolojiler, Klinik Araştırmalar ve Sağlık Veri Madenciliği araştırmacısı.' }
+        { title: 'Dr. Öğr. Üyesi', full_name: 'Aslıhan Ekşi', email: 'aslihaneksi@ogr.iu.edu.tr', bio: 'Biyomedikal Teknolojiler, Klinik Araştırmalar ve Sağlık Veri Madenciliği araştırmacısı.' }
       ];
 
       testAccounts.forEach(u => {

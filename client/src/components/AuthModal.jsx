@@ -385,7 +385,7 @@ export default function AuthModal({ isOpen, onClose, onNavigate }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => fillDemoLogin('aslihan_eksi@erdogan.edu.tr')}
+                  onClick={() => fillDemoLogin('aslihaneksi@ogr.iu.edu.tr')}
                   style={{
                     fontSize: '0.78rem',
                     padding: '0.4rem 0.75rem',
