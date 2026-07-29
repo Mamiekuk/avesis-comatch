@@ -210,13 +210,22 @@ app.post('/api/auth/login', (req, res) => {
     return res.status(400).json({ error: 'E-posta ve şifre zorunludur.' });
   }
 
+  const cleanEmail = String(email).trim().toLowerCase();
+  const parts = cleanEmail.split('@');
+  const userPart = parts[0] || '';
+  const domainPart = parts[1] || '';
+
+  const altEmail1 = `${userPart.replace(/_/g, '.')}@${domainPart}`;
+  const altEmail2 = `${userPart.replace(/\./g, '_')}@${domainPart}`;
+
   const user = db.prepare(`
     SELECT u.*, f.name as faculty_name, d.name as department_name
     FROM users u
     LEFT JOIN faculties f ON f.id = u.faculty_id
     LEFT JOIN departments d ON d.id = u.department_id
-    WHERE u.email = ? AND u.is_active = 1
-  `).get(email);
+    WHERE (LOWER(TRIM(u.email)) = ? OR LOWER(TRIM(u.email)) = ? OR LOWER(TRIM(u.email)) = ?)
+      AND u.is_active = 1
+  `).get(cleanEmail, altEmail1, altEmail2);
 
   if (!user || !user.password_hash) {
     return res.status(401).json({ error: 'Geçersiz e-posta veya şifre.' });
