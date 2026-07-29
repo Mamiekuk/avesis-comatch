@@ -449,16 +449,15 @@ export default function AcademicianDetailPage({ id, onNavigate, onOpenClaimModal
             position: 'fixed',
             top: 0,
             left: 0,
-            right: 0,
-            bottom: 0,
-            zIndex: 99999,
+            width: '100vw',
+            height: '100vh',
+            zIndex: 999999,
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
             background: 'rgba(15, 23, 42, 0.85)',
             backdropFilter: 'blur(10px)',
-            padding: '1rem',
-            overflowY: 'auto'
+            padding: '1.5rem'
           }}
         >
           <div
@@ -467,14 +466,40 @@ export default function AcademicianDetailPage({ id, onNavigate, onOpenClaimModal
             style={{
               maxWidth: '520px',
               width: '100%',
-              margin: 'auto',
+              margin: 0,
               maxHeight: '85vh',
               overflowY: 'auto',
               position: 'relative',
-              zIndex: 100000
+              zIndex: 1000000,
+              background: 'var(--bg-card)',
+              border: '1px solid var(--border-color)',
+              borderRadius: '16px',
+              padding: '2rem',
+              boxShadow: '0 25px 60px rgba(0, 0, 0, 0.6)'
             }}
           >
-            <h3 style={{ fontSize: '1.35rem', marginBottom: '1rem' }}>Projeye Davet Gönder</h3>
+            <button
+              type="button"
+              onClick={() => setInviteModalOpen(false)}
+              style={{
+                position: 'absolute',
+                top: '1.25rem',
+                right: '1.25rem',
+                background: 'transparent',
+                border: 'none',
+                color: 'var(--text-muted)',
+                cursor: 'pointer',
+                padding: '4px',
+                borderRadius: '6px',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center'
+              }}
+              title="Kapat"
+            >
+              <X size={20} />
+            </button>
+            <h3 style={{ fontSize: '1.35rem', marginBottom: '1rem', color: 'var(--text-primary)' }}>Projeye Davet Gönder</h3>
             {hasNoProjects ? (
               <p style={{ color: 'var(--text-secondary)' }}>
                 Önce bir proje oluşturmanız gerekmektedir.
