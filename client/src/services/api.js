@@ -214,6 +214,17 @@ export async function respondToInvitation(invitationId, status, token) {
   return data;
 }
 
+export async function respondToInvitationBySender(senderId, status, token) {
+  const res = await fetch(`${API_BASE}/invitations/respond-by-sender`, {
+    method: 'POST',
+    headers: getHeaders(token),
+    body: JSON.stringify({ senderId, status })
+  });
+  const data = await res.json();
+  if (!res.ok) throw new Error(data.error || 'İşlem yapılamadı.');
+  return data;
+}
+
 export async function fetchDashboard(token) {
   const res = await fetch(`${API_BASE}/dashboard`, {
     headers: getHeaders(token)

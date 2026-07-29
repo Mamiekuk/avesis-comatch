@@ -2,11 +2,11 @@ import React, { useState, useEffect, useRef } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { 
   MessageSquare, ChevronUp, ChevronDown, Edit3, MoreHorizontal, X, 
-  Send, Paperclip, ArrowLeft, FileText, Download, Trash2, Search, FolderGit2 
+  Send, Paperclip, ArrowLeft, FileText, Download, Trash2, Search, FolderGit2, CheckCircle2 
 } from 'lucide-react';
 import { 
   fetchChatContacts, fetchChatHistory, sendChatMessage, 
-  deleteChatMessage, uploadChatFile, fetchAcademicians, fetchDashboard, inviteToProject, BACKEND_URL 
+  deleteChatMessage, uploadChatFile, fetchAcademicians, fetchDashboard, inviteToProject, respondToInvitationBySender, BACKEND_URL 
 } from '../services/api';
 
 export default function FloatingChatWidget() {
@@ -21,12 +21,14 @@ export default function FloatingChatWidget() {
   const [allAcademicians, setAllAcademicians] = useState([]);
   const [showSearch, setShowSearch] = useState(false);
 
-  // Invite Modal States
+  // Invite Modal States & Chat Invitation States
   const [inviteModalOpen, setInviteModalOpen] = useState(false);
   const [userProjects, setUserProjects] = useState([]);
   const [selectedProjectId, setSelectedProjectId] = useState('');
   const [inviteMsg, setInviteMsg] = useState('');
   const [inviteLoading, setInviteLoading] = useState(false);
+  const [chatPendingInvite, setChatPendingInvite] = useState(null);
+  const [chatAcceptedInvite, setChatAcceptedInvite] = useState(false);
 
   const messagesEndRef = useRef(null);
   const fileInputRef = useRef(null);
@@ -43,16 +45,16 @@ export default function FloatingChatWidget() {
       osc.type = 'sine';
       osc.frequency.setValueAtTime(587.33, ctx.currentTime); // D5
       osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15); // A5
-      gain.gain.setValueAtTime(0.15, ctx.currentTime);
-      gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
+      gain.gain.setValueAtTime(0.08, ctx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.25);
       osc.connect(gain);
       gain.connect(ctx.destination);
       osc.start();
-      osc.stop(ctx.currentTime + 0.3);
+      osc.stop(ctx.currentTime + 0.25);
     } catch (e) {}
   };
 
-  // Poll contacts always when logged in (even when widget is collapsed)
+  // Poll contacts list every 5s
   useEffect(() => {
     if (!token) return;
 
@@ -60,12 +62,12 @@ export default function FloatingChatWidget() {
       fetchChatContacts(token)
         .then(res => {
           const list = res.contacts || [];
-          setContacts(list);
           const totalUnread = list.reduce((sum, c) => sum + (c.unread_count || 0), 0);
-          if (totalUnread > prevUnreadRef.current && prevUnreadRef.current >= 0) {
+          if (totalUnread > prevUnreadRef.current && prevUnreadRef.current !== 0) {
             playChime();
           }
           prevUnreadRef.current = totalUnread;
+          setContacts(list);
         })
         .catch(err => console.error('Floating chat contacts load error:', err));
     };
@@ -83,6 +85,8 @@ export default function FloatingChatWidget() {
       fetchChatHistory(activeContact.id, token)
         .then(res => {
           setMessages(res.history || []);
+          setChatPendingInvite(res.pendingInvitation || null);
+          setChatAcceptedInvite(Boolean(res.acceptedInvitation));
           setContacts(prev => prev.map(c => c.id === activeContact.id ? { ...c, unread_count: 0 } : c));
         })
         .catch(err => console.error('Floating chat messages load error:', err));
@@ -211,6 +215,29 @@ export default function FloatingChatWidget() {
       alert('Davet gönderilemedi: ' + err.message);
     } finally {
       setInviteLoading(false);
+    }
+  };
+
+  const handleAcceptChatInvite = async (senderId) => {
+    if (!token || !senderId) return;
+    try {
+      const res = await respondToInvitationBySender(senderId, 'accepted', token);
+      alert(res.message || 'Daveti kabul ettiniz! Proje ekibine katıldınız.');
+      setChatAcceptedInvite(true);
+      setChatPendingInvite(null);
+
+      try {
+        const chatRes = await sendChatMessage(
+          senderId,
+          `✓ Proje davetinizi kabul ettim! Proje ekibine katıldım.`,
+          token
+        );
+        if (chatRes.success && chatRes.message) {
+          setMessages(prev => [...prev, chatRes.message]);
+        }
+      } catch (e) {}
+    } catch (err) {
+      alert('İşlem gerçekleştirilemedi: ' + err.message);
     }
   };
 
@@ -460,7 +487,43 @@ export default function FloatingChatWidget() {
                                 </div>
                               )
                             ) : (
-                              msg.message
+                                <div>
+                                  <div>{msg.message}</div>
+                                  {!isMe && (msg.message?.includes('davet ettim') || msg.message?.includes('Proje Daveti')) && (
+                                    <div style={{ marginTop: '0.5rem', paddingTop: '0.45rem', borderTop: '1px solid rgba(255,255,255,0.15)' }}>
+                                      {chatAcceptedInvite ? (
+                                        <div style={{ background: '#10b981', color: '#fff', padding: '0.35rem 0.65rem', borderRadius: '6px', fontSize: '0.76rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.3rem', justifyContent: 'center' }}>
+                                          <CheckCircle2 size={14} />
+                                          <span>✓ Proje Daveti Kabul Edildi</span>
+                                        </div>
+                                      ) : (
+                                        <button
+                                          onClick={() => handleAcceptChatInvite(msg.sender_id)}
+                                          style={{
+                                            width: '100%',
+                                            padding: '0.45rem 0.75rem',
+                                            background: '#10b981',
+                                            color: '#ffffff',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            fontWeight: 700,
+                                            fontSize: '0.78rem',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '0.35rem',
+                                            boxShadow: '0 2px 8px rgba(16, 185, 129, 0.4)',
+                                            transition: 'all 0.2s'
+                                          }}
+                                        >
+                                          <CheckCircle2 size={14} />
+                                          <span>✓ Kabul Et (Ekibe Katıl)</span>
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                             )}
                           </div>
                           {isMe && (

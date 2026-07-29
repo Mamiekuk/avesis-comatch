@@ -1474,6 +1474,52 @@ app.post('/api/invitations/:id/respond', authMiddleware, (req, res) => {
   }
 });
 
+// Respond to Pending Invitation by Sender ID (used directly inside chat)
+app.post('/api/invitations/respond-by-sender', authMiddleware, (req, res) => {
+  try {
+    const { senderId, status } = req.body; // 'accepted' | 'rejected'
+    const receiverId = req.user.id;
+
+    const inv = db.prepare(`
+      SELECT * FROM applications_invitations 
+      WHERE sender_id = ? AND receiver_id = ? AND type = 'invitation' AND status = 'pending'
+      ORDER BY id DESC LIMIT 1
+    `).get(senderId, receiverId);
+
+    if (!inv) {
+      return res.status(404).json({ error: 'Bekleyen proje daveti bulunamadı veya zaten yanıtlandı.' });
+    }
+
+    db.prepare('UPDATE applications_invitations SET status = ? WHERE id = ?').run(status, inv.id);
+
+    if (status === 'accepted') {
+      db.prepare('INSERT OR IGNORE INTO project_members (project_id, user_id, role) VALUES (?, ?, ?)')
+        .run(inv.project_id, receiverId, 'researcher');
+
+      const inviter = db.prepare('SELECT title, full_name FROM users WHERE id = ?').get(senderId);
+      const inviterName = inviter ? `${inviter.title || ''} ${inviter.full_name}`.trim() : 'Proje Yürütücüsü';
+
+      db.prepare('INSERT INTO notifications (user_id, title, body, link) VALUES (?, ?, ?, ?)').run(
+        receiverId,
+        'Proje Ekibine Katıldınız! 🎉',
+        `${inviterName} tarafından gönderilen proje davetini kabul ettiniz. Projenin tüm detaylarına artık erişebilirsiniz.`,
+        `/project-detail?id=${inv.project_id}`
+      );
+
+      return res.json({ 
+        success: true, 
+        message: 'Daveti kabul ettiniz. Proje detaylarına ve ekibine erişim sağlandı.', 
+        accepted: true,
+        project_id: inv.project_id
+      });
+    } else {
+      return res.json({ success: true, message: 'Davet reddedildi.', accepted: false });
+    }
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Get User Dashboard (My Projects, Invitations with Privacy Redaction)
 app.get('/api/dashboard', authMiddleware, (req, res) => {
   try {
@@ -1631,15 +1677,20 @@ app.get('/api/chat/messages/:contactId', authMiddleware, (req, res) => {
       WHERE sender_id = ? AND receiver_id = ?
     `).run(contactId, userId);
 
-    // Fetch history
-    const history = db.prepare(`
-      SELECT * FROM messages
-      WHERE (sender_id = ? AND receiver_id = ?)
-         OR (sender_id = ? AND receiver_id = ?)
-      ORDER BY id ASC
-    `).all(userId, contactId, contactId, userId);
+    // Check pending/accepted invitation between contactId (as sender) and userId (as receiver)
+    const pendingInvitation = db.prepare(`
+      SELECT id, project_id, status FROM applications_invitations
+      WHERE sender_id = ? AND receiver_id = ? AND type = 'invitation' AND status = 'pending'
+      ORDER BY id DESC LIMIT 1
+    `).get(contactId, userId) || null;
 
-    res.json({ history });
+    const acceptedInvitation = db.prepare(`
+      SELECT id, project_id, status FROM applications_invitations
+      WHERE sender_id = ? AND receiver_id = ? AND type = 'invitation' AND status = 'accepted'
+      ORDER BY id DESC LIMIT 1
+    `).get(contactId, userId) || null;
+
+    res.json({ history, pendingInvitation, acceptedInvitation });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

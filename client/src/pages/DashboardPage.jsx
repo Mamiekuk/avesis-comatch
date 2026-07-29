@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { fetchDashboard, respondToInvitation, fetchMetadata, updateUserProfile, updateProject, fetchProjectById, fetchChatContacts, fetchChatHistory, sendChatMessage, deleteChatMessage, uploadChatFile, clearChatHistory, fetchMeetings, createMeeting, respondToMeeting, BACKEND_URL, createResearchArea, fetchKMeansNeighbors, publishProject, unpublishProject, fetchAcademicians, syncAvesisProfile, inviteToProject } from '../services/api';
+import { fetchDashboard, respondToInvitation, respondToInvitationBySender, fetchMetadata, updateUserProfile, updateProject, fetchProjectById, fetchChatContacts, fetchChatHistory, sendChatMessage, deleteChatMessage, uploadChatFile, clearChatHistory, fetchMeetings, createMeeting, respondToMeeting, BACKEND_URL, createResearchArea, fetchKMeansNeighbors, publishProject, unpublishProject, fetchAcademicians, syncAvesisProfile, inviteToProject } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, FolderGit2, Mail, Bell, CheckCircle2, XCircle, ArrowRight, Sparkles, Building2, Edit3, Save, X, Plus, BookOpen, AlertCircle, MessageSquare, Trash2, Paperclip, Calendar, FileText, Image, Download, MapPin, Video, Clock, UserCheck, Search, RefreshCw, Lock, Send } from 'lucide-react';
 
@@ -58,6 +58,8 @@ export default function DashboardPage({ onNavigate, routeParam }) {
   const [chatInviteSelectedProjectId, setChatInviteSelectedProjectId] = useState('');
   const [chatInviteMsg, setChatInviteMsg] = useState('');
   const [chatInviteLoading, setChatInviteLoading] = useState(false);
+  const [chatPendingInvite, setChatPendingInvite] = useState(null);
+  const [chatAcceptedInvite, setChatAcceptedInvite] = useState(false);
   const messagesContainerRef = useRef(null);
   const lastMessagesCountRef = useRef(0);
   const lastContactIdRef = useRef(null);
@@ -408,12 +410,39 @@ export default function DashboardPage({ onNavigate, routeParam }) {
     try {
       const res = await fetchChatHistory(contactId, token);
       setChatMessages(res.history || []);
+      setChatPendingInvite(res.pendingInvitation || null);
+      setChatAcceptedInvite(Boolean(res.acceptedInvitation));
       // Refresh contacts to update unread badge
       loadChatContacts();
     } catch (err) {
       console.error('Sohbet geçmişi yüklenemedi:', err);
     } finally {
       setChatLoading(false);
+    }
+  };
+
+  const handleAcceptChatInvite = async (senderId) => {
+    if (!token || !senderId) return;
+    try {
+      const res = await respondToInvitationBySender(senderId, 'accepted', token);
+      alert(res.message || 'Daveti kabul ettiniz! Proje ekibine katıldınız.');
+      setChatAcceptedInvite(true);
+      setChatPendingInvite(null);
+
+      try {
+        const chatRes = await sendChatMessage(
+          senderId,
+          `✓ Proje davetinizi kabul ettim! Proje ekibine katıldım.`,
+          token
+        );
+        if (chatRes.success && chatRes.message) {
+          setChatMessages(prev => [...prev, chatRes.message]);
+        }
+      } catch (e) {}
+
+      loadData();
+    } catch (err) {
+      alert('İşlem gerçekleştirilemedi: ' + err.message);
     }
   };
 
@@ -1079,22 +1108,24 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                       <span>İletişime Geç</span>
                     </button>
 
-                    <button
-                      onClick={() => handleResponse(reqItem.id, 'accepted')}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.4rem',
-                        padding: '0.65rem 1.25rem',
-                        background: 'var(--success)',
-                        color: '#fff',
-                        fontWeight: 600,
-                        borderRadius: '8px'
-                      }}
-                    >
-                      <CheckCircle2 size={16} />
-                      <span>Kabul Et</span>
-                    </button>
+                    {reqItem.type !== 'invitation' && (
+                      <button
+                        onClick={() => handleResponse(reqItem.id, 'accepted')}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          padding: '0.65rem 1.25rem',
+                          background: 'var(--success)',
+                          color: '#fff',
+                          fontWeight: 600,
+                          borderRadius: '8px'
+                        }}
+                      >
+                        <CheckCircle2 size={16} />
+                        <span>Kabul Et</span>
+                      </button>
+                    )}
 
                     <button
                       onClick={() => handleResponse(reqItem.id, 'rejected')}
@@ -1442,7 +1473,43 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                                   </div>
                                 )
                               ) : (
-                                msg.message
+                                <div>
+                                  <div>{msg.message}</div>
+                                  {!isMe && (msg.message?.includes('davet ettim') || msg.message?.includes('Proje Daveti')) && (
+                                    <div style={{ marginTop: '0.65rem', paddingTop: '0.55rem', borderTop: '1px solid rgba(255,255,255,0.15)' }}>
+                                      {chatAcceptedInvite ? (
+                                        <div style={{ background: '#10b981', color: '#fff', padding: '0.45rem 0.85rem', borderRadius: '6px', fontSize: '0.82rem', fontWeight: 700, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
+                                          <CheckCircle2 size={16} />
+                                          <span>✓ Proje Daveti Kabul Edildi</span>
+                                        </div>
+                                      ) : (
+                                        <button
+                                          onClick={() => handleAcceptChatInvite(msg.sender_id)}
+                                          style={{
+                                            width: '100%',
+                                            padding: '0.55rem 0.95rem',
+                                            background: '#10b981',
+                                            color: '#ffffff',
+                                            border: 'none',
+                                            borderRadius: '6px',
+                                            fontWeight: 700,
+                                            fontSize: '0.84rem',
+                                            cursor: 'pointer',
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            justifyContent: 'center',
+                                            gap: '0.4rem',
+                                            boxShadow: '0 2px 10px rgba(16, 185, 129, 0.4)',
+                                            transition: 'all 0.2s'
+                                          }}
+                                        >
+                                          <CheckCircle2 size={16} />
+                                          <span>✓ Kabul Et (Proje Ekibine Katıl)</span>
+                                        </button>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
                               )}
                             </div>
                             {isMe && (
