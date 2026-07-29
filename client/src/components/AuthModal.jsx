@@ -353,22 +353,6 @@ export default function AuthModal({ isOpen, onClose, onNavigate }) {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <button
                   type="button"
-                  onClick={() => fillDemoLogin('ali_ban24@erdogan.edu.tr')}
-                  style={{
-                    fontSize: '0.78rem',
-                    padding: '0.4rem 0.75rem',
-                    background: 'rgba(56, 149, 255, 0.15)',
-                    color: 'var(--accent-primary)',
-                    borderRadius: '6px',
-                    fontWeight: 600,
-                    cursor: 'pointer',
-                    border: '1px solid rgba(56, 149, 255, 0.3)'
-                  }}
-                >
-                  Doç. Dr. Ali Ban (Bilgisayar Müh.)
-                </button>
-                <button
-                  type="button"
                   onClick={() => fillDemoLogin('muhammetemin_kuk24@erdogan.edu.tr')}
                   style={{
                     fontSize: '0.78rem',

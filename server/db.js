@@ -123,13 +123,14 @@ try {
       db.prepare("UPDATE projects SET is_public = 1 WHERE status = 'open' OR status = 'published'").run();
     } catch (e) {}
 
-    // Auto-ensure 3 test accounts on server start
+    // Auto-ensure test accounts on server start & remove Ali Ban
     try {
+      db.prepare("DELETE FROM users WHERE full_name LIKE '%Ali Ban%' OR email LIKE '%ali_ban%' OR email LIKE '%ali.ban%'").run();
+
       const bcrypt = require('bcryptjs');
       const testHash = bcrypt.hashSync('123456', 10);
       const testAccounts = [
         { title: 'Prof. Dr.', full_name: 'Muhammet Emin Kuk', email: 'muhammetemin_kuk24@erdogan.edu.tr', bio: 'Akıllı Üretim Sistemleri, Mekatronik ve Sonlu Elemanlar Yöntemi uzmanı.' },
-        { title: 'Doç. Dr.', full_name: 'Ali Ban', email: 'ali_ban24@erdogan.edu.tr', bio: 'Yazılım Mimarisi, Yapay Zeka ve Veri Analitiği alanında akademisyen ve araştırmacı.' },
         { title: 'Dr. Öğr. Üyesi', full_name: 'Aslıhan Ekşi', email: 'aslihan_eksi@erdogan.edu.tr', bio: 'Biyomedikal Teknolojiler, Klinik Araştırmalar ve Sağlık Veri Madenciliği araştırmacısı.' }
       ];
 
@@ -148,7 +149,7 @@ try {
           `).run(u.title, u.full_name, u.email, testHash, u.bio);
         }
       });
-      console.log('✅ Örnek 3 Test Akademisyen Hesabı Veritabanında Doğrulandı (Şifre: 123456)');
+      console.log('✅ Örnek Test Akademisyen Hesapları Veritabanında Doğrulandı (Şifre: 123456)');
     } catch (e) {
       console.error('⚠️ Test hesapları oluşturulurken hata:', e);
     }
