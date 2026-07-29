@@ -2699,7 +2699,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
             zIndex: 99999,
             display: 'flex',
             alignItems: 'center',
-            justify: 'center',
+            justifyContent: 'center',
             background: 'rgba(15, 23, 42, 0.85)',
             backdropFilter: 'blur(10px)',
             padding: '1rem',
