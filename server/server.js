@@ -1677,6 +1677,14 @@ app.get('/api/chat/messages/:contactId', authMiddleware, (req, res) => {
       WHERE sender_id = ? AND receiver_id = ?
     `).run(contactId, userId);
 
+    // Fetch history
+    const history = db.prepare(`
+      SELECT * FROM messages
+      WHERE (sender_id = ? AND receiver_id = ?)
+         OR (sender_id = ? AND receiver_id = ?)
+      ORDER BY id ASC
+    `).all(userId, contactId, contactId, userId);
+
     // Check pending/accepted invitation between contactId (as sender) and userId (as receiver)
     const pendingInvitation = db.prepare(`
       SELECT id, project_id, status FROM applications_invitations
