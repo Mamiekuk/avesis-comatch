@@ -3,9 +3,13 @@
   "version": "1.0.0",
   "description": "AVESİS CoMatch Akademik Ekip Oluşturma ve Akademisyen Keşif Platformu",
   "scripts": {
-    "start": "cd server && node server.js",
+    "dev": "concurrently --kill-others \"npm run server\" \"npm run client\"",
+    "start": "concurrently --kill-others \"npm run server\" \"npm run client\"",
     "seed": "cd server && node scripts/seed.js",
     "server": "cd server && node server.js",
     "client": "cd client && npm run dev"
+  },
+  "devDependencies": {
+    "concurrently": "^10.0.4"
   }
 }

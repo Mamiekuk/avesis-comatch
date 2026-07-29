@@ -43,14 +43,21 @@ export async function createResearchArea(label, token) {
 }
 
 export async function loginUser(email, password) {
-  const res = await fetch(`${API_BASE}/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password })
-  });
-  const data = await res.json();
-  if (!res.ok) throw new Error(data.error || 'Giriş yapılamadı.');
-  return data;
+  try {
+    const res = await fetch(`${API_BASE}/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email: String(email).trim(), password })
+    });
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Giriş yapılamadı.');
+    return data;
+  } catch (err) {
+    if (err.message && (err.message.includes('fetch') || err.message.includes('NetworkError') || err.message.includes('Failed to fetch'))) {
+      throw new Error('Sunucuya bağlanılamadı. Lütfen backend sunucusunu (npm run server veya npm dev) çalıştırdığınızdan emin olun.');
+    }
+    throw err;
+  }
 }
 
 async function parseResponse(res, defaultError) {
