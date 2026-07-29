@@ -1413,7 +1413,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                     </div>
                   ) : (
                     chatMessages.map(msg => {
-                      const isMe = msg.sender_id === user.id;
+                      const isMe = Number(msg.sender_id) === Number(user?.id);
                       const msgTime = msg.created_at ? new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
                       const isImage = msg.file_url && /\.(jpg|jpeg|png|webp|gif)$/i.test(msg.file_url);
                       return (

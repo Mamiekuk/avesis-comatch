@@ -115,7 +115,7 @@ export default function FloatingChatWidget() {
       fetchAcademicians({ search: searchQuery })
         .then(res => {
           // Filter out current logged in user
-          const list = (res.academicians || []).filter(a => a.id !== user.id);
+          const list = (res.academicians || []).filter(a => Number(a.id) !== Number(user?.id));
           setAllAcademicians(list);
         })
         .catch(err => console.error('Search academicians error:', err));
@@ -433,7 +433,7 @@ export default function FloatingChatWidget() {
                   </div>
                 ) : (
                   messages.map(msg => {
-                    const isMe = msg.sender_id === user.id;
+                    const isMe = Number(msg.sender_id) === Number(user?.id);
                     const isImage = msg.file_url && /\.(jpg|jpeg|png|webp|gif)$/i.test(msg.file_url);
                     return (
                       <div 

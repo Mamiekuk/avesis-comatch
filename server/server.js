@@ -1624,7 +1624,7 @@ app.post('/api/notifications/read-all', authMiddleware, (req, res) => {
 // 1. Get Chat Contacts
 app.get('/api/chat/contacts', authMiddleware, (req, res) => {
   try {
-    const userId = req.user.id;
+    const userId = Number(req.user.id);
 
     const contacts = db.prepare(`
       SELECT DISTINCT 
@@ -1668,8 +1668,8 @@ app.get('/api/chat/contacts', authMiddleware, (req, res) => {
 // 2. Get Message History between current user and contactId
 app.get('/api/chat/messages/:contactId', authMiddleware, (req, res) => {
   try {
-    const userId = req.user.id;
-    const contactId = req.params.contactId;
+    const userId = Number(req.user.id);
+    const contactId = Number(req.params.contactId);
 
     // Mark messages from contact to current user as read
     db.prepare(`
@@ -1707,8 +1707,9 @@ app.get('/api/chat/messages/:contactId', authMiddleware, (req, res) => {
 // 3. Send Message
 app.post('/api/chat/messages', authMiddleware, (req, res) => {
   try {
-    const userId = req.user.id;
-    const { receiverId, message, fileUrl, fileName } = req.body;
+    const userId = Number(req.user.id);
+    const { message, fileUrl, fileName } = req.body;
+    const receiverId = Number(req.body.receiverId);
 
     if (!receiverId || (!message && !fileUrl)) {
       return res.status(400).json({ error: 'Alıcı ve mesaj içeriği veya dosya zorunludur.' });
