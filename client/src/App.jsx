@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Navbar from './components/Navbar';
 import AuthModal from './components/AuthModal';
 import HomePage from './pages/HomePage';
