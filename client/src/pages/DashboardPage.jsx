@@ -347,7 +347,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
 
   const handleOpenEditProject = async (p) => {
     try {
-      const detail = await fetchProjectById(p.id);
+      const detail = await fetchProjectById(p.id, token);
       const fullProj = detail.project;
       setEditingProject(fullProj);
       setEditProjTitle(fullProj.title || '');
