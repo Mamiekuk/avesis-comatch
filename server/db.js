@@ -122,6 +122,36 @@ try {
     try {
       db.prepare("UPDATE projects SET is_public = 1 WHERE status = 'open' OR status = 'published'").run();
     } catch (e) {}
+
+    // Auto-ensure 3 test accounts on server start
+    try {
+      const bcrypt = require('bcryptjs');
+      const testHash = bcrypt.hashSync('123456', 10);
+      const testAccounts = [
+        { title: 'Prof. Dr.', full_name: 'Muhammet Emin Kuk', email: 'muhammetemin_kuk24@erdogan.edu.tr', bio: 'Akıllı Üretim Sistemleri, Mekatronik ve Sonlu Elemanlar Yöntemi uzmanı.' },
+        { title: 'Doç. Dr.', full_name: 'Ali Ban', email: 'ali_ban24@erdogan.edu.tr', bio: 'Yazılım Mimarisi, Yapay Zeka ve Veri Analitiği alanında akademisyen ve araştırmacı.' },
+        { title: 'Dr. Öğr. Üyesi', full_name: 'Aslıhan Ekşi', email: 'aslihan_eksi@erdogan.edu.tr', bio: 'Biyomedikal Teknolojiler, Klinik Araştırmalar ve Sağlık Veri Madenciliği araştırmacısı.' }
+      ];
+
+      testAccounts.forEach(u => {
+        let existing = db.prepare("SELECT id FROM users WHERE email = ?").get(u.email);
+        if (existing) {
+          db.prepare(`
+            UPDATE users SET
+              title = ?, full_name = ?, email = ?, password_hash = ?, bio = ?, is_claimed = 1, is_active = 1
+            WHERE id = ?
+          `).run(u.title, u.full_name, u.email, testHash, u.bio, existing.id);
+        } else {
+          db.prepare(`
+            INSERT INTO users (title, full_name, email, password_hash, bio, is_claimed, is_active)
+            VALUES (?, ?, ?, ?, ?, 1, 1)
+          `).run(u.title, u.full_name, u.email, testHash, u.bio);
+        }
+      });
+      console.log('✅ Örnek 3 Test Akademisyen Hesabı Veritabanında Doğrulandı (Şifre: 123456)');
+    } catch (e) {
+      console.error('⚠️ Test hesapları oluşturulurken hata:', e);
+    }
   }
 } catch (error) {
   console.error("❌ VERİTABANI BAŞLATILIRKEN HATA OLUŞTU:");

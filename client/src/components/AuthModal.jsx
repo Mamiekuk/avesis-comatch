@@ -169,9 +169,22 @@ export default function AuthModal({ isOpen, onClose, onNavigate }) {
     }
   };
 
-  const fillDemoLogin = (email, pwd = '123456') => {
+  const fillDemoLogin = async (email, pwd = '123456') => {
     setLoginEmail(email);
     setLoginPassword(pwd);
+    setError(null);
+    setSuccessMsg(null);
+    setLoading(true);
+    try {
+      const res = await loginUser(email, pwd);
+      login(res.token, res.user);
+      onClose();
+      if (onNavigate) onNavigate('dashboard');
+    } catch (err) {
+      setError(err.message || 'Giriş yapılamadı.');
+    } finally {
+      setLoading(false);
+    }
   };
 
   return (
