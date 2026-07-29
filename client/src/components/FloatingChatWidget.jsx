@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { useAuth } from '../context/AuthContext';
 import { 
   MessageSquare, ChevronUp, ChevronDown, Edit3, MoreHorizontal, X, 
@@ -757,17 +758,14 @@ export default function FloatingChatWidget() {
         </div>
       )}
 
-      {/* IN-WIDGET INVITE MODAL OVERLAY */}
-      {inviteModalOpen && activeContact && (
+      {/* IN-WIDGET INVITE MODAL OVERLAY PORTAL */}
+      {inviteModalOpen && activeContact && ReactDOM.createPortal(
         <div
           className="modal-overlay"
           onClick={() => setInviteModalOpen(false)}
           style={{
             position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
+            inset: 0,
             zIndex: 999999,
             display: 'flex',
             alignItems: 'center',
@@ -798,7 +796,7 @@ export default function FloatingChatWidget() {
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
               <h3 style={{ fontSize: '1.2rem', fontWeight: 800, margin: 0, display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
                 <FolderGit2 size={20} color="var(--accent-primary)" />
-                <span>Projeye Davet Et</span>
+                <span>Projeye Davet Gönder</span>
               </h3>
               <button
                 onClick={() => setInviteModalOpen(false)}
@@ -808,30 +806,30 @@ export default function FloatingChatWidget() {
               </button>
             </div>
 
-            <div style={{ background: 'rgba(56, 149, 255, 0.08)', border: '1px solid rgba(56, 149, 255, 0.25)', borderRadius: '8px', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.82rem', color: '#f8fafc' }}>
+            <div style={{ background: 'rgba(56, 149, 255, 0.08)', border: '1px solid rgba(56, 149, 255, 0.2)', borderRadius: '8px', padding: '0.75rem', marginBottom: '1rem', fontSize: '0.82rem', color: '#f8fafc' }}>
               Davet edilen akademisyen: <strong>{activeContact.title || ''} {activeContact.full_name}</strong>
             </div>
 
             <form onSubmit={handleSendInvite}>
               <div style={{ marginBottom: '1rem' }}>
                 <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.35rem' }}>
-                  Projenizi Seçin
+                  Projenizi Seçin <span style={{ color: 'var(--danger)' }}>*</span>
                 </label>
                 <select
-                  className="form-select"
+                  className="form-input"
+                  style={{ fontSize: '0.84rem' }}
                   value={selectedProjectId}
                   onChange={e => setSelectedProjectId(e.target.value)}
-                  style={{ fontSize: '0.85rem' }}
                 >
-                  {userProjects.map(mp => (
-                    <option key={mp.id} value={mp.id}>{mp.title}</option>
+                  {userProjects.map(p => (
+                    <option key={p.id} value={p.id}>{p.title}</option>
                   ))}
                 </select>
               </div>
 
               <div style={{ marginBottom: '1.25rem' }}>
                 <label style={{ display: 'block', fontSize: '0.82rem', fontWeight: 600, marginBottom: '0.35rem' }}>
-                  Davet Mesajınız
+                  Davet Mesajı
                 </label>
                 <textarea
                   rows={3}
@@ -853,7 +851,8 @@ export default function FloatingChatWidget() {
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { fetchDashboard, respondToInvitation, respondToInvitationBySender, fetchMetadata, updateUserProfile, updateProject, fetchProjectById, fetchChatContacts, fetchChatHistory, sendChatMessage, deleteChatMessage, uploadChatFile, clearChatHistory, fetchMeetings, createMeeting, respondToMeeting, BACKEND_URL, createResearchArea, fetchKMeansNeighbors, publishProject, unpublishProject, fetchAcademicians, syncAvesisProfile, inviteToProject } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, FolderGit2, Mail, Bell, CheckCircle2, XCircle, ArrowRight, Sparkles, Building2, Edit3, Save, X, Plus, BookOpen, AlertCircle, MessageSquare, Trash2, Paperclip, Calendar, FileText, Image, Download, MapPin, Video, Clock, UserCheck, Search, RefreshCw, Lock, Send } from 'lucide-react';
@@ -2685,17 +2686,14 @@ export default function DashboardPage({ onNavigate, routeParam }) {
         </div>
       )}
 
-      {/* CHAT INVITE MODAL OVERLAY */}
-      {chatInviteModalOpen && chatInviteTargetContact && (
+      {/* CHAT INVITE MODAL OVERLAY PORTAL */}
+      {chatInviteModalOpen && chatInviteTargetContact && ReactDOM.createPortal(
         <div
           className="modal-overlay"
           onClick={() => setChatInviteModalOpen(false)}
           style={{
             position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
+            inset: 0,
             zIndex: 999999,
             display: 'flex',
             alignItems: 'center',
@@ -2736,9 +2734,9 @@ export default function DashboardPage({ onNavigate, routeParam }) {
               </button>
             </div>
 
-            <div style={{ background: 'rgba(56, 149, 255, 0.08)', border: '1px solid rgba(56, 149, 255, 0.2)', borderRadius: '8px', padding: '0.85rem', marginBottom: '1.25rem', fontSize: '0.85rem', color: '#f8fafc' }}>
-              Davet edilen akademisyen: <strong>{chatInviteTargetContact.title || ''} {chatInviteTargetContact.full_name}</strong>
-            </div>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', marginBottom: '1.25rem' }}>
+              <strong>{chatInviteTargetContact.title} {chatInviteTargetContact.full_name}</strong> akademisyenine katılmasını istediğiniz projenizi seçin.
+            </p>
 
             <form onSubmit={handleSendChatInvite}>
               <div style={{ marginBottom: '1.25rem' }}>
@@ -2746,7 +2744,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                   Projenizi Seçin <span style={{ color: 'var(--danger)' }}>*</span>
                 </label>
                 <select
-                  className="form-select"
+                  className="form-input"
                   value={chatInviteSelectedProjectId}
                   onChange={e => setChatInviteSelectedProjectId(e.target.value)}
                 >
@@ -2780,7 +2778,8 @@ export default function DashboardPage({ onNavigate, routeParam }) {
               </button>
             </form>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );

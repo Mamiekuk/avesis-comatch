@@ -1,7 +1,8 @@
 import React, { useState, useEffect } from 'react';
+import ReactDOM from 'react-dom';
 import { fetchAcademicianById, inviteToProject, fetchDashboard } from '../services/api';
 import { useAuth } from '../context/AuthContext';
-import { ExternalLink, CheckCircle2, ShieldAlert, Award, Send, UserCheck, ArrowLeft, Building2, BookOpen, MessageSquare } from 'lucide-react';
+import { ExternalLink, CheckCircle2, ShieldAlert, Award, Send, UserCheck, ArrowLeft, Building2, BookOpen, MessageSquare, X } from 'lucide-react';
 
 export default function AcademicianDetailPage({ id, onNavigate, onOpenClaimModal }) {
   const { user, token } = useAuth();
@@ -440,17 +441,14 @@ export default function AcademicianDetailPage({ id, onNavigate, onOpenClaimModal
         )}
       </div>
 
-      {/* INVITE MODAL */}
-      {inviteModalOpen && (
+      {/* INVITE MODAL PORTAL */}
+      {inviteModalOpen && ReactDOM.createPortal(
         <div
           className="modal-overlay"
           onClick={() => setInviteModalOpen(false)}
           style={{
             position: 'fixed',
-            top: 0,
-            left: 0,
-            width: '100vw',
-            height: '100vh',
+            inset: 0,
             zIndex: 999999,
             display: 'flex',
             alignItems: 'center',
@@ -550,7 +548,8 @@ export default function AcademicianDetailPage({ id, onNavigate, onOpenClaimModal
               </form>
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
