@@ -185,14 +185,14 @@ async function seed() {
     {
       title: 'Doç. Dr.',
       full_name: 'Ali Ban',
-      email: 'ali.ban@erdogan.edu.tr',
+      email: 'ali.ban24@erdogan.edu.tr',
       bio: 'Yazılım Mimarisi, Yapay Zeka ve Veri Analitiği alanında akademisyen ve araştırmacı.',
       photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80'
     },
     {
       title: 'Prof. Dr.',
       full_name: 'Muhammet Emin Kuk',
-      email: 'muhammetemin.kuk@erdogan.edu.tr',
+      email: 'muhammetemin.kuk24@erdogan.edu.tr',
       bio: 'Akıllı Üretim Sistemleri, Mekatronik ve Sonlu Elemanlar Yöntemi uzmanı.',
       photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80'
     },

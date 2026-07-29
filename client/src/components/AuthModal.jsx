@@ -340,7 +340,7 @@ export default function AuthModal({ isOpen, onClose, onNavigate }) {
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem' }}>
                 <button
                   type="button"
-                  onClick={() => fillDemoLogin('ali.ban@erdogan.edu.tr')}
+                  onClick={() => fillDemoLogin('ali.ban24@erdogan.edu.tr')}
                   style={{
                     fontSize: '0.78rem',
                     padding: '0.4rem 0.75rem',
@@ -356,7 +356,7 @@ export default function AuthModal({ isOpen, onClose, onNavigate }) {
                 </button>
                 <button
                   type="button"
-                  onClick={() => fillDemoLogin('muhammetemin.kuk@erdogan.edu.tr')}
+                  onClick={() => fillDemoLogin('muhammetemin.kuk24@erdogan.edu.tr')}
                   style={{
                     fontSize: '0.78rem',
                     padding: '0.4rem 0.75rem',
