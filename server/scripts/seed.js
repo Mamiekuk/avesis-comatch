@@ -181,50 +181,45 @@ async function seed() {
   console.log('--- Örnek Aktif (Sahiplenilmiş) Akademisyenler & Projeler Ekleniyor ---');
   const defaultHash = bcrypt.hashSync('123456', 10);
 
-  // Claim Prof. Dr. MURAT YAYLACI
-  const murat = db.prepare("SELECT id FROM users WHERE full_name LIKE '%MURAT YAYLACI%' LIMIT 1").get();
-  if (murat) {
-    db.prepare(`
-      UPDATE users SET
-        email = 'murat.yaylaci@erdogan.edu.tr',
-        password_hash = ?,
-        bio = 'Recep Tayyip Erdoğan Üniversitesi İnşaat Mühendisliği Bölümü Öğretim Üyesi. Yapı Mekaniği, Katı Cisimler Mekaniği ve Sonlu Elemanlar Yöntemleri alanında araştırmalar yürütmektedir.',
-        photo_url = 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80',
-        is_claimed = 1,
-        is_active = 1
-      WHERE id = ?
-    `).run(defaultHash, murat.id);
-  }
+  const testDemoUsers = [
+    {
+      title: 'Doç. Dr.',
+      full_name: 'Ali Ban',
+      email: 'ali.ban@erdogan.edu.tr',
+      bio: 'Yazılım Mimarisi, Yapay Zeka ve Veri Analitiği alanında akademisyen ve araştırmacı.',
+      photo_url: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?w=400&auto=format&fit=crop&q=80'
+    },
+    {
+      title: 'Prof. Dr.',
+      full_name: 'Muhammet Emin Kuk',
+      email: 'muhammetemin.kuk@erdogan.edu.tr',
+      bio: 'Akıllı Üretim Sistemleri, Mekatronik ve Sonlu Elemanlar Yöntemi uzmanı.',
+      photo_url: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80'
+    },
+    {
+      title: 'Dr. Öğr. Üyesi',
+      full_name: 'Aslıhan Ekşi',
+      email: 'aslihan.eksi@erdogan.edu.tr',
+      bio: 'Biyomedikal Teknolojiler, Klinik Araştırmalar ve Sağlık Veri Madenciliği araştırmacısı.',
+      photo_url: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80'
+    }
+  ];
 
-  // Claim Prof. Dr. ZEYNEP GÜMRÜKÇÜ
-  const zeynep = db.prepare("SELECT id FROM users WHERE full_name LIKE '%ZEYNEP GÜMRÜKÇÜ%' LIMIT 1").get();
-  if (zeynep) {
-    db.prepare(`
-      UPDATE users SET
-        email = 'zeynep.gumrukcu@erdogan.edu.tr',
-        password_hash = ?,
-        bio = 'Diş Hekimliği Fakültesi Ağız, Diş ve Çene Cerrahisi Ana Bilim Dalı Öğretim Üyesi. Klinik Biyomalzemeler ve İmplantoloji üzerine projeler geliştirmektedir.',
-        photo_url = 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=400&auto=format&fit=crop&q=80',
-        is_claimed = 1,
-        is_active = 1
-      WHERE id = ?
-    `).run(defaultHash, zeynep.id);
-  }
-
-  // Claim Prof. Dr. VELİ SÜME
-  const veli = db.prepare("SELECT id FROM users WHERE full_name LIKE '%VELİ SÜME%' LIMIT 1").get();
-  if (veli) {
-    db.prepare(`
-      UPDATE users SET
-        email = 'veli.sume@erdogan.edu.tr',
-        password_hash = ?,
-        bio = 'Hidroloji, Meteorolojik Afet Analizi ve Kıyı Mühendisliği uzmanı. İklim değişikliği ve su kaynaklarının korunması alanında TÜBİTAK projeleri yürütmektedir.',
-        photo_url = 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=400&auto=format&fit=crop&q=80',
-        is_claimed = 1,
-        is_active = 1
-      WHERE id = ?
-    `).run(defaultHash, veli.id);
-  }
+  testDemoUsers.forEach(u => {
+    let existing = db.prepare("SELECT id FROM users WHERE full_name LIKE ? OR email = ?").get(`%${u.full_name}%`, u.email);
+    if (existing) {
+      db.prepare(`
+        UPDATE users SET
+          title = ?, full_name = ?, email = ?, password_hash = ?, bio = ?, photo_url = ?, is_claimed = 1, is_active = 1
+        WHERE id = ?
+      `).run(u.title, u.full_name, u.email, defaultHash, u.bio, u.photo_url, existing.id);
+    } else {
+      db.prepare(`
+        INSERT INTO users (title, full_name, email, password_hash, bio, photo_url, is_claimed, is_active)
+        VALUES (?, ?, ?, ?, ?, ?, 1, 1)
+      `).run(u.title, u.full_name, u.email, defaultHash, u.bio, u.photo_url);
+    }
+  });
 
   // Create an Admin user
   const anyFaculty = db.prepare("SELECT id FROM faculties LIMIT 1").get();
