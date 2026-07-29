@@ -1372,34 +1372,19 @@ app.post('/api/projects/:id/invite', authMiddleware, async (req, res) => {
     let emailSent = false;
     if (receiver.email) {
       try {
-        const mailSubject = 'Akademik Proje Daveti - AVESİS CoMatch';
-        const mailText = `Sayın ${receiver.title || ''} ${receiver.full_name},\n\n` +
-          `${inviterName} tarafından bir akademik projeye davet edildiniz. Proje bilgileri, akademik fikrin gizliliğini korumak amacıyla daveti kabul edene kadar paylaşılmamaktadır.\n\n` +
-          `Daveti görüntülemek, kabul etmek veya reddetmek için hesabınıza giriş yapabilirsiniz.\n\n` +
-          `Bu e-posta sistem tarafından otomatik olarak gönderilmiştir.`;
+        const appUrl = String(
+          process.env.APP_URL || process.env.FRONTEND_URL || process.env.RENDER_EXTERNAL_URL || 'http://localhost:5173'
+        ).replace(/\/+$/, '');
+        const dashboardUrl = `${appUrl}/#/dashboard/requests`;
+        const recipientName = `${receiver.title || ''} ${receiver.full_name}`.trim();
+        const mailOptions = mailer.projectInvitationMail({
+          to: receiver.email,
+          recipientName,
+          inviterName,
+          dashboardUrl
+        });
 
-        const mailHtml = `
-          <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto; padding: 24px; border: 1px solid #e2e8f0; border-radius: 8px; background: #ffffff; color: #1e293b;">
-            <h3 style="color: #0f172a; margin-top: 0;">Sayın ${receiver.title || ''} ${receiver.full_name},</h3>
-            <p style="color: #334155; line-height: 1.6; font-size: 15px;">
-              <strong>${inviterName}</strong> tarafından bir akademik projeye davet edildiniz. Proje bilgileri, akademik fikrin gizliliğini korumak amacıyla daveti kabul edene kadar paylaşılmamaktadır.
-            </p>
-            <p style="color: #334155; line-height: 1.6; font-size: 15px;">
-              Daveti görüntülemek, kabul etmek veya reddetmek için hesabınıza giriş yapabilirsiniz.
-            </p>
-            <div style="margin: 28px 0;">
-              <a href="http://localhost:5173/dashboard" style="background-color: #3895ff; color: #ffffff; padding: 12px 24px; text-decoration: none; border-radius: 6px; font-weight: bold; display: inline-block;">
-                Daveti Görüntüle
-              </a>
-            </div>
-            <hr style="border: none; border-top: 1px solid #e2e8f0; margin: 20px 0;" />
-            <p style="color: #94a3b8; font-size: 12px; margin: 0;">
-              Bu e-posta sistem tarafından otomatik olarak gönderilmiştir.
-            </p>
-          </div>
-        `;
-
-        emailSent = await mailer.sendMail({ to: receiver.email, subject: mailSubject, text: mailText, html: mailHtml });
+        emailSent = await mailer.sendMail(mailOptions);
       } catch (mailErr) {
         console.error('E-posta gönderim hatası:', mailErr);
       }

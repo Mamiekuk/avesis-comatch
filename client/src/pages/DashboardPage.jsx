@@ -674,10 +674,13 @@ export default function DashboardPage({ onNavigate, routeParam }) {
     }
   }, [selectedContact]);
 
-  // Handle routeParam (for deep linking to chat from other pages)
+  // Handle routeParam (for email and in-app deep links)
   useEffect(() => {
+    const validTabs = ['projects', 'requests', 'notifications', 'edit-profile', 'chat', 'calendar'];
+    if (routeParam?.tab && validTabs.includes(routeParam.tab)) {
+      setActiveTab(routeParam.tab);
+    }
     if (routeParam && routeParam.tab === 'chat') {
-      setActiveTab('chat');
       const targetContact = routeParam.contact;
       if (targetContact) {
         setSelectedContact(targetContact);

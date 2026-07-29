@@ -176,6 +176,7 @@ function shell({
     body = [],
     cta,
     securityNote = "Bu işlemi siz başlatmadıysanız herhangi bir işlem yapmanız gerekmez. Hesabınız güvende kalacaktır.",
+    footerNote = "Lütfen bu e-postayı yanıtlamayın ve doğrulama kodunuzu kimseyle paylaşmayın.",
 }) {
     const paragraphs = body.map(p =>
         `<tr><td style="padding:0 0 12px;font:400 15px/1.7 ${FONT};color:#475569">${p}</td></tr>`).join("")
@@ -274,7 +275,7 @@ function shell({
           <tr>
             <td class="mobile-gutter" align="center" style="padding:21px 24px 0;font:400 11px/1.65 ${FONT};color:#64748b">
               Bu otomatik e-posta, ${BRAND} hesabınızla ilgili bir işlem nedeniyle gönderildi.<br>
-              Lütfen bu e-postayı yanıtlamayın ve doğrulama kodunuzu kimseyle paylaşmayın.<br>
+              ${esc(footerNote)}<br>
               <span style="color:#94a3b8">&copy; ${new Date().getFullYear()} ${BRAND}</span>
             </td>
           </tr>
@@ -359,4 +360,43 @@ function passwordResetCodeMail(to, code) {
     }
 }
 
-module.exports = { init, isConfigured, sendMail, passwordResetMail, passwordResetCodeMail, emailChangeConfirm, emailVerify }
+function projectInvitationMail({ to, recipientName, inviterName, dashboardUrl }) {
+    const safeRecipientName = esc(recipientName || "Değerli Akademisyen")
+    const safeInviterName = esc(inviterName || "Bir akademisyen")
+    const safeDashboardUrl = String(dashboardUrl || "")
+
+    return {
+        to,
+        subject: "Yeni bir akademik proje davetiniz var | AVESİS CoMatch",
+        text: `Sayın ${recipientName || "Değerli Akademisyen"},\n\n${inviterName || "Bir akademisyen"} sizi bir akademik projede görev almaya davet etti. Akademik fikrin gizliliğini korumak amacıyla proje bilgileri daveti kabul edene kadar paylaşılmayacaktır.\n\nDaveti görüntülemek ve yanıtlamak için:\n${safeDashboardUrl}`,
+        html: shell({
+            preview: `${inviterName || "Bir akademisyen"} sizi akademik bir projeye davet etti`,
+            eyebrow: "Akademik iş birliği",
+            heading: "Yeni bir proje davetiniz var",
+            body: [
+                `Sayın <strong style="color:#0f172a">${safeRecipientName}</strong>,`,
+                `${safeInviterName}, sizi AVESİS CoMatch üzerinden akademik bir projede görev almaya davet etti.`,
+                `<table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="margin:8px 0 2px;background:#f8fafc;border:1px solid #e2e8f0;border-radius:12px">
+                  <tr>
+                    <td style="padding:16px 18px;border-bottom:1px solid #e2e8f0">
+                      <div style="font:700 10px/1.4 ${FONT};letter-spacing:1.2px;color:#64748b;text-transform:uppercase">Davet eden</div>
+                      <div style="padding-top:4px;font:700 15px/1.45 ${FONT};color:${INK}">${safeInviterName}</div>
+                    </td>
+                  </tr>
+                  <tr>
+                    <td style="padding:16px 18px">
+                      <div style="font:700 10px/1.4 ${FONT};letter-spacing:1.2px;color:#64748b;text-transform:uppercase">Proje bilgileri</div>
+                      <div style="padding-top:4px;font:600 14px/1.5 ${FONT};color:#475569">Daveti kabul ettikten sonra görüntülenebilir</div>
+                    </td>
+                  </tr>
+                </table>`,
+                "Akademik fikrin gizliliğini korumak amacıyla proje başlığı, özeti ve detayları daveti kabul edene kadar paylaşılmamaktadır.",
+            ],
+            cta: { label: "Daveti Görüntüle", url: safeDashboardUrl },
+            securityNote: "Davetinizi yalnızca AVESİS CoMatch hesabınız üzerinden kabul edin veya reddedin. Şüpheli bağlantılarda hesap bilgilerinizi paylaşmayın.",
+            footerNote: "Lütfen bu e-postayı yanıtlamayın. Daveti AVESİS CoMatch hesabınız üzerinden yönetin.",
+        }),
+    }
+}
+
+module.exports = { init, isConfigured, sendMail, passwordResetMail, passwordResetCodeMail, emailChangeConfirm, emailVerify, projectInvitationMail }

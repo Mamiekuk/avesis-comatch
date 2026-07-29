@@ -13,17 +13,38 @@ import FloatingChatWidget from './components/FloatingChatWidget';
 import { useAuth } from './context/AuthContext';
 import './styles/design-system.css';
 
+const VALID_ROUTES = new Set([
+  'home', 'academicians', 'academician-detail', 'projects', 'project-detail',
+  'create-project', 'dashboard', 'announcements'
+]);
+
+function readInitialRoute() {
+  const hashPath = window.location.hash.replace(/^#\/?/, '');
+  if (!hashPath) return { page: 'home', param: null };
+
+  const [page, rawParam] = hashPath.split('/');
+  if (!VALID_ROUTES.has(page)) return { page: 'home', param: null };
+
+  const param = page === 'dashboard' && rawParam
+    ? { tab: rawParam }
+    : (rawParam || null);
+
+  return { page, param };
+}
+
+const initialRoute = readInitialRoute();
 export default function App() {
   const { user, token } = useAuth();
-  const [route, setRoute] = useState('home'); // 'home' | 'academicians' | 'academician-detail' | 'projects' | 'project-detail' | 'create-project' | 'dashboard'
-  const [routeParam, setRouteParam] = useState(null); // ID for detail pages
+  const [route, setRoute] = useState(initialRoute.page); // 'home' | 'academicians' | 'academician-detail' | 'projects' | 'project-detail' | 'create-project' | 'dashboard'
+  const [routeParam, setRouteParam] = useState(initialRoute.param); // ID or deep-link data for detail/dashboard pages
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
   // Initialize and listen to Browser History (PopState)
   useEffect(() => {
     // Initial history state setup
     if (!window.history.state) {
-      window.history.replaceState({ page: 'home', param: null }, '', '#/home');
+      const initialHash = window.location.hash || '#/home';
+      window.history.replaceState({ page: initialRoute.page, param: initialRoute.param }, '', initialHash);
     }
 
     const handlePopState = (event) => {
@@ -46,11 +67,22 @@ export default function App() {
   const handleNavigate = (page, param = null) => {
     setRoute(page);
     setRouteParam(param);
-    const hash = `#/${page}` + (param ? `/${param}` : '');
+    const hashParam = param && typeof param === 'object' ? param.tab : param;
+    const hash = `#/${page}` + (hashParam ? `/${hashParam}` : '');
     window.history.pushState({ page, param }, '', hash);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  const handleAuthNavigate = (page, param = null) => {
+    const shouldPreserveDeepLink = page === 'dashboard' && route === 'dashboard' && routeParam?.tab;
+    handleNavigate(page, shouldPreserveDeepLink ? routeParam : param);
+  };
+
+  useEffect(() => {
+    if (route === 'dashboard' && !token) {
+      setAuthModalOpen(true);
+    }
+  }, [route, token]);
   return (
     <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh' }}>
       <Navbar
@@ -167,7 +199,7 @@ export default function App() {
       <AuthModal
         isOpen={authModalOpen}
         onClose={() => setAuthModalOpen(false)}
-        onNavigate={handleNavigate}
+        onNavigate={handleAuthNavigate}
       />
 
       {/* Floating LinkedIn Chat Widget */}
