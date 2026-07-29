@@ -2276,9 +2276,9 @@ export default function DashboardPage({ onNavigate, routeParam }) {
       )}
 
       {/* EDIT PROJECT MODAL */}
-      {editingProject && (
-        <div className="modal-overlay" onClick={() => setEditingProject(null)}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '780px', width: '90%', maxHeight: '90vh', overflowY: 'auto', padding: '2rem' }}>
+      {editingProject && ReactDOM.createPortal(
+        <div className="modal-overlay" onClick={() => setEditingProject(null)} style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '780px', width: '95%', maxHeight: '90vh', overflowY: 'auto', padding: '2rem' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
               <h3 style={{ fontSize: '1.35rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <FolderGit2 size={20} color="var(--accent-primary)" />
@@ -2293,7 +2293,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
               {/* Title */}
               <div style={{ marginBottom: '1.25rem' }}>
                 <label style={{ display: 'block', fontWeight: 600, fontSize: '0.88rem', marginBottom: '0.4rem' }}>
-                  Proje Başlığı *
+                  Konu Başlığı *
                 </label>
                 <input
                   type="text"
@@ -2318,119 +2318,97 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                 />
               </div>
 
-              {/* Objectives (Başvurulan Proje Selection) */}
+              {/* Objectives */}
               <div style={{ marginBottom: '1.25rem' }}>
-                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.88rem', marginBottom: '0.5rem' }}>
-                  Başvurulan Proje Türü
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.88rem', marginBottom: '0.4rem' }}>
+                  Proje Hedefleri & Beklenen Çıktılar
                 </label>
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.75rem' }}>
-                  {['BAP', 'TÜBİTAK', 'Uluslararası', 'Diğer Projeler'].map(opt => (
-                    <label 
-                      key={opt}
-                      style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.4rem',
-                        background: 'var(--bg-secondary)',
-                        border: editProjObjectives === opt ? '2px solid var(--accent-primary)' : '1px solid var(--border-color)',
-                        padding: '0.5rem 1rem',
-                        borderRadius: '6px',
-                        cursor: 'pointer',
-                        fontWeight: 600,
-                        fontSize: '0.88rem',
-                        color: editProjObjectives === opt ? 'var(--accent-primary)' : 'var(--text-secondary)',
-                        transition: 'all 0.2s'
-                      }}
-                    >
-                      <input
-                        type="radio"
-                        name="editProjectType"
-                        value={opt}
-                        checked={editProjObjectives === opt}
-                        onChange={e => setEditProjObjectives(e.target.value)}
-                        style={{ accentColor: 'var(--accent-primary)' }}
-                      />
-                      <span>{opt}</span>
-                    </label>
-                  ))}
-                </div>
+                <textarea
+                  rows={3}
+                  className="form-textarea"
+                  value={editProjObjectives}
+                  onChange={e => setEditProjObjectives(e.target.value)}
+                />
               </div>
 
-              {/* RESEARCH AREA TAG PICKER */}
-              <div style={{
-                background: 'var(--bg-secondary)',
-                border: '1px solid var(--border-highlight)',
-                borderRadius: 'var(--radius-md)',
-                padding: '1.25rem',
-                marginBottom: '1.25rem'
-              }}>
-                <label style={{ display: 'block', fontWeight: 700, fontSize: '0.9rem', marginBottom: '0.4rem', color: 'var(--accent-primary)' }}>
-                  🎯 Aranan Araştırma Alanı Etiketleri ({editProjTags.length} Seçili)
+              {/* Tags Search & Selected Tags */}
+              <div style={{ marginBottom: '1.25rem' }}>
+                <label style={{ display: 'block', fontWeight: 600, fontSize: '0.88rem', marginBottom: '0.4rem' }}>
+                  Araştırma Alanı Etiketleri * (En az 1 adet)
                 </label>
                 
-                <div style={{ position: 'relative', marginBottom: '1rem' }}>
-                  <input
-                    type="text"
-                    className="form-input"
-                    placeholder="Etiket arayın (Örn: Yapay Zeka, Mekanik...)"
-                    value={editProjTagSearch}
-                    onChange={e => setEditProjTagSearch(e.target.value)}
-                  />
-
-                  {filteredProjTagSuggestions.length > 0 && (
-                    <div style={{
-                      position: 'absolute',
-                      top: '100%',
-                      left: 0,
-                      right: 0,
-                      zIndex: 100,
-                      background: 'var(--bg-card)',
-                      border: '1px solid var(--border-highlight)',
-                      borderRadius: 'var(--radius-md)',
-                      boxShadow: 'var(--shadow-md)',
-                      marginTop: '4px',
-                      maxHeight: '180px',
-                      overflowY: 'auto'
-                    }}>
-                      {filteredProjTagSuggestions.map(tag => (
-                        <div
-                          key={tag.id}
-                          onClick={() => addTagToEditProj(tag)}
-                          style={{
-                            padding: '0.65rem 1rem',
-                            borderBottom: '1px solid var(--border-color)',
-                            cursor: 'pointer',
-                            fontSize: '0.88rem'
-                          }}
-                        >
-                          + {tag.label}
-                        </div>
-                      ))}
-                    </div>
-                  )}
-                </div>
-
-                {/* Selected tags */}
-                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem' }}>
-                  {editProjTags.map(tag => (
-                    <span key={tag.id} className="badge badge-tag" style={{ padding: '0.35rem 0.75rem', fontSize: '0.8rem', display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
-                      {tag.label}
-                      <X size={12} style={{ cursor: 'pointer' }} onClick={() => removeTagFromEditProj(tag.id)} />
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.6rem' }}>
+                  {editProjTags.map(t => (
+                    <span
+                      key={t.id}
+                      style={{
+                        fontSize: '0.78rem',
+                        background: 'rgba(56, 149, 255, 0.15)',
+                        color: 'var(--accent-primary)',
+                        padding: '0.25rem 0.65rem',
+                        borderRadius: '9999px',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        gap: '0.35rem',
+                        border: '1px solid rgba(56, 149, 255, 0.3)'
+                      }}
+                    >
+                      {t.label}
+                      <X
+                        size={13}
+                        style={{ cursor: 'pointer' }}
+                        onClick={() => removeTagFromEditProj(t.id)}
+                      />
                     </span>
                   ))}
                 </div>
+
+                <input
+                  type="text"
+                  className="form-input"
+                  placeholder="Etiket arayın ve ekleyin..."
+                  value={editProjTagSearch}
+                  onChange={e => setEditProjTagSearch(e.target.value)}
+                />
+
+                {filteredProjTagSuggestions.length > 0 && (
+                  <div style={{
+                    marginTop: '0.35rem',
+                    background: 'var(--bg-secondary)',
+                    border: '1px solid var(--border-color)',
+                    borderRadius: '8px',
+                    maxHeight: '150px',
+                    overflowY: 'auto'
+                  }}>
+                    {filteredProjTagSuggestions.map(t => (
+                      <div
+                        key={t.id}
+                        onClick={() => addTagToEditProj(t)}
+                        style={{
+                          padding: '0.45rem 0.85rem',
+                          fontSize: '0.82rem',
+                          cursor: 'pointer',
+                          borderBottom: '1px solid var(--border-color)',
+                          color: 'var(--text-primary)'
+                        }}
+                      >
+                        + {t.label}
+                      </div>
+                    ))}
+                  </div>
+                )}
               </div>
 
-              {/* Size, Duration, Budget */}
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: '1rem', marginBottom: '2rem' }}>
+              {/* Grid Properties */}
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: '1rem', marginBottom: '1.5rem' }}>
                 <div>
-                  <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.4rem' }}>
-                    Ekip Büyüklüğü
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.3rem' }}>
+                    Aranan Ekip Üyesi Sayısı
                   </label>
                   <input
                     type="number"
-                    min="2"
-                    max="20"
+                    min={1}
+                    max={20}
                     className="form-input"
                     value={editProjTeamSize}
                     onChange={e => setEditProjTeamSize(e.target.value)}
@@ -2438,24 +2416,26 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.4rem' }}>
-                    Süre
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.3rem' }}>
+                    Proje Süresi
                   </label>
                   <input
                     type="text"
                     className="form-input"
+                    placeholder="Örn: 12 Ay"
                     value={editProjDuration}
                     onChange={e => setEditProjDuration(e.target.value)}
                   />
                 </div>
 
                 <div>
-                  <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.4rem' }}>
-                    Bütçe
+                  <label style={{ display: 'block', fontWeight: 600, fontSize: '0.82rem', marginBottom: '0.3rem' }}>
+                    Bütçe / Destek
                   </label>
                   <input
                     type="text"
                     className="form-input"
+                    placeholder="Örn: 250.000 TL"
                     value={editProjBudget}
                     onChange={e => setEditProjBudget(e.target.value)}
                   />

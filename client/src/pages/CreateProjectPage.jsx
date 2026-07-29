@@ -95,10 +95,10 @@ export default function CreateProjectPage({ onNavigate }) {
       }, token);
 
       if (projStatus === 'open') {
-        alert('🚀 Proje başarıyla yayınlandı ve uyumlu araştırmacılara çağrı duyuruldu!');
-        onNavigate('project-detail', res.projectId);
+        alert('🚀 Projeniz panelim kısmında yayınlandı!');
+        onNavigate('dashboard', { tab: 'projects' });
       } else {
-        alert('💾 Projeniz taslak olarak kaydedildi. Dilediğiniz zaman Panelim sayfasından düzenleyip yayınlayabilirsiniz.');
+        alert('🚀 Projeniz panelim kısmında yayınlandı!');
         onNavigate('dashboard', { tab: 'projects' });
       }
     } catch (err) {
