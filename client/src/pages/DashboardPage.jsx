@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import ReactDOM from 'react-dom';
-import { fetchDashboard, respondToInvitation, respondToInvitationBySender, fetchMetadata, updateUserProfile, updateProject, fetchProjectById, fetchChatContacts, fetchChatHistory, sendChatMessage, deleteChatMessage, uploadChatFile, clearChatHistory, fetchMeetings, createMeeting, respondToMeeting, BACKEND_URL, createResearchArea, fetchKMeansNeighbors, publishProject, unpublishProject, fetchAcademicians, syncAvesisProfile, inviteToProject } from '../services/api';
+import { fetchDashboard, respondToInvitation, respondToInvitationBySender, fetchMetadata, updateUserProfile, updateProject, fetchProjectById, fetchChatContacts, fetchChatHistory, sendChatMessage, deleteChatMessage, uploadChatFile, clearChatHistory, fetchMeetings, createMeeting, respondToMeeting, BACKEND_URL, createResearchArea, fetchKMeansNeighbors, publishProject, unpublishProject, fetchAcademicians, syncAvesisProfile, inviteToProject, sendForgotPasswordCode, resetForgotPassword } from '../services/api';
 import { useAuth } from '../context/AuthContext';
 import { LayoutDashboard, FolderGit2, Mail, Bell, CheckCircle2, XCircle, ArrowRight, Sparkles, Building2, Edit3, Save, X, Plus, BookOpen, AlertCircle, MessageSquare, Trash2, Paperclip, Calendar, FileText, Image, Download, MapPin, Video, Clock, UserCheck, Search, RefreshCw, Lock, Send } from 'lucide-react';
 
@@ -97,6 +97,68 @@ export default function DashboardPage({ onNavigate, routeParam }) {
 
   // Meeting Link State
   const [meetingLink, setMeetingLink] = useState('');
+
+  // Password Update States & Handlers
+  const [pwdStep, setPwdStep] = useState('initial'); // 'initial' | 'verify'
+  const [pwdCode, setPwdCode] = useState('');
+  const [newPwd, setNewPwd] = useState('');
+  const [confirmNewPwd, setConfirmNewPwd] = useState('');
+  const [pwdLoading, setPwdLoading] = useState(false);
+  const [pwdMsg, setPwdMsg] = useState(null);
+  const [pwdError, setPwdError] = useState(null);
+
+  const handleSendPwdCode = async () => {
+    if (!user?.email) return;
+    setPwdLoading(true);
+    setPwdError(null);
+    setPwdMsg(null);
+    try {
+      const res = await sendForgotPasswordCode(user.email);
+      if (res.simulatedCode) {
+        setPwdCode(res.simulatedCode);
+        setPwdMsg(`6 haneli doğrulama kodu e-postanıza gönderildi! (Simülasyon Kodu: ${res.simulatedCode})`);
+      } else {
+        setPwdMsg('6 haneli şifre sıfırlama kodu e-posta adresinize gönderildi!');
+      }
+      setPwdStep('verify');
+    } catch (err) {
+      setPwdError(err.message || 'Kod gönderilemedi.');
+    } finally {
+      setPwdLoading(false);
+    }
+  };
+
+  const handleUpdatePassword = async () => {
+    if (!user?.email) return;
+    if (!pwdCode || !newPwd || !confirmNewPwd) {
+      return setPwdError('Lütfen tüm alanları doldurunuz.');
+    }
+    if (newPwd !== confirmNewPwd) {
+      return setPwdError('Girdiğiniz yeni şifreler birbirleriyle eşleşmiyor.');
+    }
+    if (newPwd.length < 6) {
+      return setPwdError('Yeni şifreniz en az 6 karakter olmalıdır.');
+    }
+
+    setPwdLoading(true);
+    setPwdError(null);
+    setPwdMsg(null);
+    try {
+      const res = await resetForgotPassword(user.email, pwdCode, newPwd);
+      setPwdMsg(res.message || '✓ Şifreniz başarıyla güncellendi!');
+      setPwdCode('');
+      setNewPwd('');
+      setConfirmNewPwd('');
+      setTimeout(() => {
+        setPwdStep('initial');
+        setPwdMsg(null);
+      }, 3000);
+    } catch (err) {
+      setPwdError(err.message || 'Şifre güncellenemedi.');
+    } finally {
+      setPwdLoading(false);
+    }
+  };
 
   // New Chat Search States
   const [chatSearchQuery, setChatSearchQuery] = useState('');
@@ -779,7 +841,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
               style={{ fontSize: '0.9rem', padding: '0.65rem 1.25rem' }}
             >
               <Edit3 size={17} />
-              <span>Araştırma Alanlarımı Düzenle</span>
+              <span>Profilimi Düzenle</span>
             </button>
 
             <button
@@ -1632,7 +1694,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
           <div style={{ marginBottom: '2rem' }}>
             <h2 style={{ fontSize: '1.75rem', marginBottom: '0.4rem', display: 'flex', alignItems: 'center', gap: '0.6rem' }}>
               <BookOpen size={24} color="var(--accent-primary)" />
-              <span>Araştırma & Uzmanlık Alanlarını ve Bilgileri Düzenle</span>
+              <span>Profilimi Düzenle</span>
             </h2>
             <p style={{ color: 'var(--text-secondary)' }}>
               AVESİS veritabanından aktarılan veya eksik olan araştırma alanlarınızı ekleyebilir, gereksiz etiketleri çıkarabilirsiniz. Akıllı eşleştirme algoritması buradaki etiketlerinizi baz alır.
@@ -1876,6 +1938,119 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                 value={editBio}
                 onChange={e => setEditBio(e.target.value)}
               />
+            </div>
+
+            {/* ŞİFRE DEĞİŞTİRME & GÜVENLİK SEKSİYONU */}
+            <div style={{
+              background: 'var(--bg-secondary)',
+              border: '1px solid var(--border-color)',
+              borderRadius: 'var(--radius-lg)',
+              padding: '1.75rem',
+              marginBottom: '2.5rem'
+            }}>
+              <div style={{ marginBottom: '1.25rem' }}>
+                <h3 style={{ fontSize: '1.15rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <Lock size={20} color="var(--accent-primary)" />
+                  <span>Şifre Değiştirme & Güvenlik</span>
+                </h3>
+                <p style={{ fontSize: '0.84rem', color: 'var(--text-secondary)', marginTop: '0.25rem' }}>
+                  Güvenliğiniz için şifre değişikliği öncesinde e-posta adresinize (<strong>{user?.email}</strong>) 6 haneli doğrulama kodu gönderilir.
+                </p>
+              </div>
+
+              {pwdMsg && (
+                <div style={{ padding: '0.75rem 1rem', background: 'var(--success-bg)', color: 'var(--success)', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.88rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <CheckCircle2 size={18} />
+                  <span>{pwdMsg}</span>
+                </div>
+              )}
+
+              {pwdError && (
+                <div style={{ padding: '0.75rem 1rem', background: 'rgba(239, 68, 68, 0.12)', color: '#f87171', border: '1px solid rgba(239, 68, 68, 0.3)', borderRadius: '8px', marginBottom: '1rem', fontSize: '0.88rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
+                  <AlertCircle size={18} />
+                  <span>{pwdError}</span>
+                </div>
+              )}
+
+              {/* Step 1: Send Code Button */}
+              {pwdStep === 'initial' ? (
+                <button
+                  type="button"
+                  onClick={handleSendPwdCode}
+                  disabled={pwdLoading}
+                  className="btn-secondary"
+                  style={{ gap: '0.5rem', fontSize: '0.88rem', padding: '0.65rem 1.25rem' }}
+                >
+                  <Mail size={17} color="var(--accent-primary)" />
+                  <span>{pwdLoading ? 'Kod Gönderiliyor...' : '📩 E-Postama Şifre Değiştirme Kodu Gönder'}</span>
+                </button>
+              ) : (
+                /* Step 2: Enter Code and New Password */
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '1.25rem', alignItems: 'flex-end' }}>
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.4rem' }}>
+                      6 Haneli Doğrulama Kodu *
+                    </label>
+                    <input
+                      type="text"
+                      maxLength={6}
+                      className="form-input"
+                      placeholder="Örn: 482910"
+                      value={pwdCode}
+                      onChange={e => setPwdCode(e.target.value)}
+                      style={{ letterSpacing: '3px', fontWeight: 700 }}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.4rem' }}>
+                      Yeni Şifreniz *
+                    </label>
+                    <input
+                      type="password"
+                      className="form-input"
+                      placeholder="En az 6 karakter"
+                      value={newPwd}
+                      onChange={e => setNewPwd(e.target.value)}
+                    />
+                  </div>
+
+                  <div>
+                    <label style={{ display: 'block', fontWeight: 600, fontSize: '0.85rem', marginBottom: '0.4rem' }}>
+                      Yeni Şifre (Tekrar) *
+                    </label>
+                    <input
+                      type="password"
+                      className="form-input"
+                      placeholder="Yeni şifrenizi tekrar girin"
+                      value={confirmNewPwd}
+                      onChange={e => setConfirmNewPwd(e.target.value)}
+                    />
+                  </div>
+
+                  <div style={{ display: 'flex', gap: '0.5rem' }}>
+                    <button
+                      type="button"
+                      onClick={handleUpdatePassword}
+                      disabled={pwdLoading}
+                      className="btn-primary"
+                      style={{ flex: 1, padding: '0.65rem 1.25rem', fontSize: '0.88rem' }}
+                    >
+                      <Save size={16} />
+                      <span>{pwdLoading ? 'Güncelleniyor...' : '🔑 Şifremi Güncelle'}</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => { setPwdStep('initial'); setPwdError(null); setPwdMsg(null); }}
+                      className="btn-secondary"
+                      style={{ padding: '0.65rem' }}
+                      title="İptal"
+                    >
+                      <X size={16} />
+                    </button>
+                  </div>
+                </div>
+              )}
             </div>
 
             {/* Submit Button */}
