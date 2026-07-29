@@ -446,9 +446,9 @@ export default function DashboardPage({ onNavigate, routeParam }) {
   };
 
   const filteredProjTagSuggestions = editProjTagSearch.trim()
-    ? allTags.filter(t => 
-        t.label.toLowerCase().includes(editProjTagSearch.toLowerCase()) &&
-        !editProjTags.some(st => st.id === t.id)
+    ? (allTags || []).filter(t => 
+        t && t.label && t.label.toLowerCase().includes(editProjTagSearch.toLowerCase()) &&
+        !(editProjTags || []).some(st => st && st.id === t.id)
       ).slice(0, 8)
     : [];
 
@@ -2467,9 +2467,9 @@ export default function DashboardPage({ onNavigate, routeParam }) {
       )}
 
       {/* EDIT PROJECT MODAL */}
-      {editingProject && ReactDOM.createPortal(
-        <div className="modal-overlay" onClick={() => setEditingProject(null)} style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '780px', width: '95%', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', background: '#141824', color: '#f8fafc', border: '1px solid rgba(56, 149, 255, 0.3)', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75), 0 0 30px rgba(56, 149, 255, 0.15)', position: 'relative', zIndex: 100000 }}>
+      {editingProject && (
+        <div className="modal-overlay" onClick={() => setEditingProject(null)}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '780px', width: '95%', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', background: '#1e293b', color: '#f8fafc', border: '1px solid rgba(56, 149, 255, 0.3)', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75)' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
               <h3 style={{ fontSize: '1.35rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <FolderGit2 size={20} color="var(--accent-primary)" />
@@ -2529,7 +2529,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                 </label>
                 
                 <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.4rem', marginBottom: '0.6rem' }}>
-                  {editProjTags.map(t => (
+                  {(editProjTags || []).map(t => (
                     <span
                       key={t.id}
                       style={{
