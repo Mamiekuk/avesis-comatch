@@ -117,6 +117,8 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
         <div className="nav-desktop-links" style={{ display: 'flex', alignItems: 'center', gap: '0.4rem' }}>
           <button
             onClick={() => onNavigate('academicians')}
+            onMouseDown={(e) => { if (e.button === 1) { e.preventDefault(); onNavigate('academicians'); } }}
+            onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); onNavigate('academicians'); } }}
             style={{
               padding: '0.55rem 0.95rem',
               borderRadius: 'var(--radius-md)',
@@ -127,7 +129,8 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
               display: 'flex',
               alignItems: 'center',
               gap: '0.4rem',
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              cursor: 'pointer'
             }}
           >
             <Users size={17} />
@@ -136,6 +139,8 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
 
           <button
             onClick={() => onNavigate('projects')}
+            onMouseDown={(e) => { if (e.button === 1) { e.preventDefault(); onNavigate('projects'); } }}
+            onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); onNavigate('projects'); } }}
             style={{
               padding: '0.55rem 0.95rem',
               borderRadius: 'var(--radius-md)',
@@ -146,7 +151,8 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
               display: 'flex',
               alignItems: 'center',
               gap: '0.4rem',
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              cursor: 'pointer'
             }}
           >
             <FolderGit2 size={17} />
@@ -155,6 +161,8 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
 
           <button
             onClick={() => onNavigate('announcements')}
+            onMouseDown={(e) => { if (e.button === 1) { e.preventDefault(); onNavigate('announcements'); } }}
+            onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); onNavigate('announcements'); } }}
             style={{
               padding: '0.55rem 0.95rem',
               borderRadius: 'var(--radius-md)',
@@ -165,7 +173,8 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
               display: 'flex',
               alignItems: 'center',
               gap: '0.4rem',
-              transition: 'all 0.2s'
+              transition: 'all 0.2s',
+              cursor: 'pointer'
             }}
           >
             <Megaphone size={17} />
@@ -177,8 +186,15 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
               if (user) onNavigate('create-project');
               else onOpenLogin();
             }}
+            onMouseDown={(e) => {
+              if (e.button === 1) {
+                e.preventDefault();
+                if (user) onNavigate('create-project');
+                else onOpenLogin();
+              }
+            }}
             className="btn-primary"
-            style={{ padding: '0.55rem 1.1rem', fontSize: '0.88rem' }}
+            style={{ padding: '0.55rem 1.1rem', fontSize: '0.88rem', cursor: 'pointer' }}
           >
             <PlusCircle size={17} />
             <span>Proje Oluştur</span>

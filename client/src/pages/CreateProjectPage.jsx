@@ -73,7 +73,7 @@ export default function CreateProjectPage({ onNavigate }) {
     if (e) e.preventDefault();
     if (!token) return alert('Lütfen oturum açın.');
     if (!title.trim() || !description.trim()) {
-      return alert('Lütfen proje başlığını ve açıklamasını doldurun.');
+      return alert('Lütfen konu başlığını ve açıklamasını doldurun.');
     }
     if (selectedTags.length === 0) {
       return alert('Akıllı eşleştirme motorunun çalışması için en az 1 araştırma alanı etiketi seçmelisiniz.');
@@ -132,7 +132,7 @@ export default function CreateProjectPage({ onNavigate }) {
           {/* TITLE */}
           <div style={{ marginBottom: '1.5rem' }}>
             <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.4rem' }}>
-              Proje Başlığı *
+              Konu Başlığı *
             </label>
             <input
               type="text"

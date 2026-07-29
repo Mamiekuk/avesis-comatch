@@ -798,7 +798,8 @@ export default function DashboardPage({ onNavigate, routeParam }) {
       <div ref={tabBarRef} style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', borderBottom: '2px solid var(--border-color)', marginBottom: '2.5rem' }}>
         <button
           onClick={() => handleTabClick('projects')}
-          onAuxClick={(e) => handleTabAuxClick(e, 'projects')}
+          onMouseDown={(e) => { if (e.button === 1) { e.preventDefault(); handleTabClick('projects'); } }}
+          onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); handleTabClick('projects'); } }}
           style={{
             padding: '0.85rem 1.5rem',
             fontWeight: 700,
@@ -817,7 +818,8 @@ export default function DashboardPage({ onNavigate, routeParam }) {
 
         <button
           onClick={() => handleTabClick('requests')}
-          onAuxClick={(e) => handleTabAuxClick(e, 'requests')}
+          onMouseDown={(e) => { if (e.button === 1) { e.preventDefault(); handleTabClick('requests'); } }}
+          onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); handleTabClick('requests'); } }}
           style={{
             padding: '0.85rem 1.5rem',
             fontWeight: 700,
@@ -848,7 +850,8 @@ export default function DashboardPage({ onNavigate, routeParam }) {
 
         <button
           onClick={() => handleTabClick('chat')}
-          onAuxClick={(e) => handleTabAuxClick(e, 'chat')}
+          onMouseDown={(e) => { if (e.button === 1) { e.preventDefault(); handleTabClick('chat'); } }}
+          onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); handleTabClick('chat'); } }}
           style={{
             padding: '0.85rem 1.5rem',
             fontWeight: 700,
@@ -879,7 +882,8 @@ export default function DashboardPage({ onNavigate, routeParam }) {
 
         <button
           onClick={() => handleTabClick('calendar')}
-          onAuxClick={(e) => handleTabAuxClick(e, 'calendar')}
+          onMouseDown={(e) => { if (e.button === 1) { e.preventDefault(); handleTabClick('calendar'); } }}
+          onAuxClick={(e) => { if (e.button === 1) { e.preventDefault(); handleTabClick('calendar'); } }}
           style={{
             padding: '0.85rem 1.5rem',
             fontWeight: 700,
