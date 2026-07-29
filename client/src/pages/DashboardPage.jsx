@@ -345,10 +345,20 @@ export default function DashboardPage({ onNavigate, routeParam }) {
     }
   };
 
+  const [editProjLoadingDetail, setEditProjLoadingDetail] = useState(null);
+
   const handleOpenEditProject = async (p) => {
     try {
-      const detail = await fetchProjectById(p.id, token);
-      const fullProj = detail.project;
+      setEditProjLoadingDetail(p.id);
+      let fullProj = p;
+      try {
+        const detail = await fetchProjectById(p.id, token);
+        if (detail && detail.project) {
+          fullProj = detail.project;
+        }
+      } catch (e) {
+        console.warn("Project detail fetch fallback to card data:", e);
+      }
       setEditingProject(fullProj);
       setEditProjTitle(fullProj.title || '');
       setEditProjDesc(fullProj.description || '');
@@ -360,7 +370,9 @@ export default function DashboardPage({ onNavigate, routeParam }) {
       setEditProjTagSearch('');
       setEditProjSuccess(false);
     } catch (err) {
-      alert('Proje detayları alınamadı: ' + err.message);
+      alert('Proje düzenleme penceresi açılamadı: ' + err.message);
+    } finally {
+      setEditProjLoadingDetail(null);
     }
   };
 
@@ -1037,11 +1049,12 @@ export default function DashboardPage({ onNavigate, routeParam }) {
                               e.stopPropagation();
                               handleOpenEditProject(p);
                             }}
+                            disabled={editProjLoadingDetail === p.id}
                             className="btn-secondary"
                             style={{ padding: '0.3rem 0.6rem', fontSize: '0.75rem', display: 'flex', alignItems: 'center', gap: '0.2rem', margin: 0 }}
                           >
                             <Edit3 size={12} />
-                            <span>Düzenle</span>
+                            <span>{editProjLoadingDetail === p.id ? 'Açılıyor...' : 'Düzenle'}</span>
                           </button>
                         </div>
 
@@ -2453,7 +2466,7 @@ export default function DashboardPage({ onNavigate, routeParam }) {
       {/* EDIT PROJECT MODAL */}
       {editingProject && ReactDOM.createPortal(
         <div className="modal-overlay" onClick={() => setEditingProject(null)} style={{ position: 'fixed', inset: 0, zIndex: 99999, background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '1rem' }}>
-          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '780px', width: '95%', maxHeight: '90vh', overflowY: 'auto', padding: '2rem' }}>
+          <div className="modal-content" onClick={e => e.stopPropagation()} style={{ maxWidth: '780px', width: '95%', maxHeight: '90vh', overflowY: 'auto', padding: '2rem', background: '#141824', color: '#f8fafc', border: '1px solid rgba(56, 149, 255, 0.3)', borderRadius: '16px', boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.75), 0 0 30px rgba(56, 149, 255, 0.15)', position: 'relative', zIndex: 100000 }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1.5rem', borderBottom: '1px solid var(--border-color)', paddingBottom: '0.75rem' }}>
               <h3 style={{ fontSize: '1.35rem', margin: 0, display: 'flex', alignItems: 'center', gap: '0.5rem' }}>
                 <FolderGit2 size={20} color="var(--accent-primary)" />
