@@ -1351,8 +1351,9 @@ app.post('/api/projects/:id/invite', authMiddleware, async (req, res) => {
       return res.status(400).json({ error: 'Bu akademisyen zaten bu projenin üyesidir.' });
     }
 
-    const inviterName = `${req.user.title || ''} ${req.user.full_name}`.trim();
-    const privacyMsg = `Dr. / Prof. ${inviterName} sizi bir akademik projede görev almaya davet etti. Projeye ait başlık, özet ve detaylar gizlilik nedeniyle davet kabul edilene kadar gösterilmeyecektir.`;
+    const inviter = db.prepare('SELECT title, full_name FROM users WHERE id = ?').get(req.user.id);
+    const inviterName = inviter ? `${inviter.title || ''} ${inviter.full_name}`.trim() : (req.user.name || 'Bir akademisyen');
+    const privacyMsg = `${inviterName} sizi bir akademik projede görev almaya davet etti. Projeye ait başlık, özet ve detaylar gizlilik nedeniyle davet kabul edilene kadar gösterilmeyecektir.`;
 
     db.prepare(`
       INSERT INTO applications_invitations (project_id, sender_id, receiver_id, type, status, message)
@@ -1427,13 +1428,16 @@ app.post('/api/projects/:id/apply', authMiddleware, (req, res) => {
     VALUES (?, ?, ?, 'application', 'pending', ?)
   `).run(projectId, req.user.id, project.owner_id, message || `${project.title} projenize katılmak istiyorum.`);
 
+  const applicant = db.prepare('SELECT title, full_name FROM users WHERE id = ?').get(req.user.id);
+  const applicantName = applicant ? `${applicant.title || ''} ${applicant.full_name}`.trim() : (req.user.name || 'Bir akademisyen');
+
   db.prepare(`
     INSERT INTO notifications (user_id, title, body, link)
     VALUES (?, ?, ?, ?)
   `).run(
     project.owner_id,
     'Projenize Yeni Başvuru Var!',
-    `${req.user.name}, "${project.title}" projesine katılma talebinde bulundu.`,
+    `${applicantName}, "${project.title}" projesine katılma talebinde bulundu.`,
     '/dashboard'
   );
 
