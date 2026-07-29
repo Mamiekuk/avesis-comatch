@@ -79,6 +79,21 @@ export default function DashboardPage({ onNavigate, routeParam }) {
   // File Upload State & Ref
   const [uploadingFile, setUploadingFile] = useState(false);
   const fileInputRef = useRef(null);
+  const tabBarRef = useRef(null);
+
+  const handleTabClick = (tabName) => {
+    setActiveTab(tabName);
+    if (tabBarRef.current) {
+      tabBarRef.current.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    }
+  };
+
+  const handleTabAuxClick = (e, tabName) => {
+    if (e.button === 1 || e.button === 0) {
+      e.preventDefault();
+      handleTabClick(tabName);
+    }
+  };
 
   // Meeting Link State
   const [meetingLink, setMeetingLink] = useState('');
@@ -780,9 +795,10 @@ export default function DashboardPage({ onNavigate, routeParam }) {
       </div>
 
       {/* TABS */}
-      <div style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', borderBottom: '2px solid var(--border-color)', marginBottom: '2.5rem' }}>
+      <div ref={tabBarRef} style={{ display: 'flex', flexWrap: 'wrap', gap: '0.5rem', borderBottom: '2px solid var(--border-color)', marginBottom: '2.5rem' }}>
         <button
-          onClick={() => setActiveTab('projects')}
+          onClick={() => handleTabClick('projects')}
+          onAuxClick={(e) => handleTabAuxClick(e, 'projects')}
           style={{
             padding: '0.85rem 1.5rem',
             fontWeight: 700,
@@ -791,7 +807,8 @@ export default function DashboardPage({ onNavigate, routeParam }) {
             marginBottom: '-2px',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem'
+            gap: '0.5rem',
+            cursor: 'pointer'
           }}
         >
           <FolderGit2 size={18} />
@@ -799,7 +816,8 @@ export default function DashboardPage({ onNavigate, routeParam }) {
         </button>
 
         <button
-          onClick={() => setActiveTab('requests')}
+          onClick={() => handleTabClick('requests')}
+          onAuxClick={(e) => handleTabAuxClick(e, 'requests')}
           style={{
             padding: '0.85rem 1.5rem',
             fontWeight: 700,
@@ -808,7 +826,8 @@ export default function DashboardPage({ onNavigate, routeParam }) {
             marginBottom: '-2px',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem'
+            gap: '0.5rem',
+            cursor: 'pointer'
           }}
         >
           <Mail size={18} />
@@ -827,10 +846,9 @@ export default function DashboardPage({ onNavigate, routeParam }) {
           )}
         </button>
 
-
-
         <button
-          onClick={() => setActiveTab('chat')}
+          onClick={() => handleTabClick('chat')}
+          onAuxClick={(e) => handleTabAuxClick(e, 'chat')}
           style={{
             padding: '0.85rem 1.5rem',
             fontWeight: 700,
@@ -839,7 +857,8 @@ export default function DashboardPage({ onNavigate, routeParam }) {
             marginBottom: '-2px',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem'
+            gap: '0.5rem',
+            cursor: 'pointer'
           }}
         >
           <MessageSquare size={18} />
@@ -859,7 +878,8 @@ export default function DashboardPage({ onNavigate, routeParam }) {
         </button>
 
         <button
-          onClick={() => setActiveTab('calendar')}
+          onClick={() => handleTabClick('calendar')}
+          onAuxClick={(e) => handleTabAuxClick(e, 'calendar')}
           style={{
             padding: '0.85rem 1.5rem',
             fontWeight: 700,
@@ -868,7 +888,8 @@ export default function DashboardPage({ onNavigate, routeParam }) {
             marginBottom: '-2px',
             display: 'flex',
             alignItems: 'center',
-            gap: '0.5rem'
+            gap: '0.5rem',
+            cursor: 'pointer'
           }}
         >
           <Calendar size={18} />

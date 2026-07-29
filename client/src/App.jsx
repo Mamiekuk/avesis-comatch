@@ -19,9 +19,35 @@ export default function App() {
   const [routeParam, setRouteParam] = useState(null); // ID for detail pages
   const [authModalOpen, setAuthModalOpen] = useState(false);
 
+  // Initialize and listen to Browser History (PopState)
+  useEffect(() => {
+    // Initial history state setup
+    if (!window.history.state) {
+      window.history.replaceState({ page: 'home', param: null }, '', '#/home');
+    }
+
+    const handlePopState = (event) => {
+      if (event.state && event.state.page) {
+        setRoute(event.state.page);
+        setRouteParam(event.state.param || null);
+      } else {
+        // If user presses back and reaches start, always send to home (Ana Sayfa) instead of exiting site!
+        setRoute('home');
+        setRouteParam(null);
+        window.history.pushState({ page: 'home', param: null }, '', '#/home');
+      }
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, []);
+
   const handleNavigate = (page, param = null) => {
     setRoute(page);
     setRouteParam(param);
+    const hash = `#/${page}` + (param ? `/${param}` : '');
+    window.history.pushState({ page, param }, '', hash);
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
