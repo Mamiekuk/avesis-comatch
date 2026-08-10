@@ -724,19 +724,24 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
                         <CheckCircle2 size={13} />
                         Aktif Hesap
                       </span>
-                      {(!item.collaboration_status || item.collaboration_status === 'open') && (
+                      {(!item.collaboration_status || item.collaboration_status === 'open' || item.collaboration_status === 'Projelere Açık') && (
                         <span className="badge" style={{ margin: 0, padding: '0.15rem 0.5rem', fontSize: '0.72rem', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--success)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
                           ● Açık
                         </span>
                       )}
-                      {item.collaboration_status === 'looking' && (
-                        <span className="badge" style={{ margin: 0, padding: '0.15rem 0.5rem', fontSize: '0.72rem', background: 'rgba(56, 149, 255, 0.15)', color: 'var(--accent-primary)', border: '1px solid rgba(56, 149, 255, 0.3)' }}>
-                          ● İş Birliği
-                        </span>
-                      )}
-                      {item.collaboration_status === 'busy' && (
+                      {(item.collaboration_status === 'busy' || item.collaboration_status === 'Yoğun (Yeni projelere kapalı)') && (
                         <span className="badge" style={{ margin: 0, padding: '0.15rem 0.5rem', fontSize: '0.72rem', background: 'rgba(239, 68, 68, 0.15)', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
                           ● Yoğun
+                        </span>
+                      )}
+                      {item.collaboration_status &&
+                        item.collaboration_status !== 'open' &&
+                        item.collaboration_status !== 'Projelere Açık' &&
+                        item.collaboration_status !== 'busy' &&
+                        item.collaboration_status !== 'Yoğun (Yeni projelere kapalı)' &&
+                        item.collaboration_status !== 'looking' && (
+                        <span className="badge" style={{ margin: 0, padding: '0.15rem 0.5rem', fontSize: '0.72rem', background: 'rgba(56, 149, 255, 0.15)', color: 'var(--accent-primary)', border: '1px solid rgba(56, 149, 255, 0.3)' }}>
+                          ● {item.collaboration_status}
                         </span>
                       )}
                     </div>
@@ -926,19 +931,24 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
                     {item.is_claimed ? (
                       <div style={{ display: 'flex', gap: '0.35rem', alignItems: 'center' }}>
                         <span className="badge badge-claimed" style={{ fontSize: '0.7rem' }}>Aktif</span>
-                        {(!item.collaboration_status || item.collaboration_status === 'open') && (
+                        {(!item.collaboration_status || item.collaboration_status === 'open' || item.collaboration_status === 'Projelere Açık') && (
                           <span className="badge" style={{ padding: '0.1rem 0.4rem', fontSize: '0.68rem', background: 'rgba(16, 185, 129, 0.15)', color: 'var(--success)' }}>
                             ● Açık
                           </span>
                         )}
-                        {item.collaboration_status === 'looking' && (
-                          <span className="badge" style={{ padding: '0.1rem 0.4rem', fontSize: '0.68rem', background: 'rgba(56, 149, 255, 0.15)', color: 'var(--accent-primary)' }}>
-                            ● İş Birliği
-                          </span>
-                        )}
-                        {item.collaboration_status === 'busy' && (
+                        {(item.collaboration_status === 'busy' || item.collaboration_status === 'Yoğun (Yeni projelere kapalı)') && (
                           <span className="badge" style={{ padding: '0.1rem 0.4rem', fontSize: '0.68rem', background: 'rgba(239, 68, 68, 0.15)', color: 'var(--danger)' }}>
                             ● Yoğun
+                          </span>
+                        )}
+                        {item.collaboration_status &&
+                          item.collaboration_status !== 'open' &&
+                          item.collaboration_status !== 'Projelere Açık' &&
+                          item.collaboration_status !== 'busy' &&
+                          item.collaboration_status !== 'Yoğun (Yeni projelere kapalı)' &&
+                          item.collaboration_status !== 'looking' && (
+                          <span className="badge" style={{ padding: '0.1rem 0.4rem', fontSize: '0.68rem', background: 'rgba(56, 149, 255, 0.15)', color: 'var(--accent-primary)' }}>
+                            ● {item.collaboration_status}
                           </span>
                         )}
                       </div>

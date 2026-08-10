@@ -772,19 +772,24 @@ export default function DashboardPage({ onNavigate, routeParam }) {
               <span className="badge badge-claimed" style={{ margin: 0 }}>
                 Aktif Akademisyen Hesabı
               </span>
-              {(!user.collaboration_status || user.collaboration_status === 'open') && (
+              {(!user.collaboration_status || user.collaboration_status === 'open' || user.collaboration_status === 'Projelere Açık') && (
                 <span className="badge" style={{ margin: 0, background: 'rgba(16, 185, 129, 0.15)', color: 'var(--success)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
                   ● Projelere Açık
                 </span>
               )}
-              {user.collaboration_status === 'looking' && (
-                <span className="badge" style={{ margin: 0, background: 'rgba(56, 149, 255, 0.15)', color: 'var(--accent-primary)', border: '1px solid rgba(56, 149, 255, 0.3)' }}>
-                  ● İş Birliğine Hazır
-                </span>
-              )}
-              {user.collaboration_status === 'busy' && (
+              {(user.collaboration_status === 'busy' || user.collaboration_status === 'Yoğun (Yeni projelere kapalı)') && (
                 <span className="badge" style={{ margin: 0, background: 'rgba(239, 68, 68, 0.15)', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
                   ● Yoğun (Projeye Kapalı)
+                </span>
+              )}
+              {user.collaboration_status &&
+                user.collaboration_status !== 'open' &&
+                user.collaboration_status !== 'Projelere Açık' &&
+                user.collaboration_status !== 'busy' &&
+                user.collaboration_status !== 'Yoğun (Yeni projelere kapalı)' &&
+                user.collaboration_status !== 'looking' && (
+                <span className="badge" style={{ margin: 0, background: 'rgba(56, 149, 255, 0.15)', color: 'var(--accent-primary)', border: '1px solid rgba(56, 149, 255, 0.3)' }}>
+                  ● {user.collaboration_status}
                 </span>
               )}
               {(data?.user || user).metric_cluster && (
@@ -1919,15 +1924,53 @@ export default function DashboardPage({ onNavigate, routeParam }) {
               <label style={{ display: 'block', fontWeight: 600, fontSize: '0.9rem', marginBottom: '0.4rem' }}>
                 İş Birliği & Projelere Katılım Durumu
               </label>
-              <select
-                className="form-select"
-                value={editCollaborationStatus}
+              
+              <div style={{ display: 'flex', gap: '0.5rem', marginBottom: '0.6rem', flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => setEditCollaborationStatus('open')}
+                  style={{
+                    padding: '0.4rem 0.8rem',
+                    fontSize: '0.82rem',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    background: (editCollaborationStatus === 'open' || editCollaborationStatus === 'Projelere Açık') ? 'rgba(16, 185, 129, 0.25)' : 'var(--bg-secondary)',
+                    color: (editCollaborationStatus === 'open' || editCollaborationStatus === 'Projelere Açık') ? 'var(--success)' : 'var(--text-secondary)',
+                    border: (editCollaborationStatus === 'open' || editCollaborationStatus === 'Projelere Açık') ? '1px solid var(--success)' : '1px solid var(--border-color)'
+                  }}
+                >
+                  ● Projelere Açık
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditCollaborationStatus('busy')}
+                  style={{
+                    padding: '0.4rem 0.8rem',
+                    fontSize: '0.82rem',
+                    borderRadius: '6px',
+                    cursor: 'pointer',
+                    fontWeight: 600,
+                    background: (editCollaborationStatus === 'busy' || editCollaborationStatus === 'Yoğun (Yeni projelere kapalı)') ? 'rgba(239, 68, 68, 0.25)' : 'var(--bg-secondary)',
+                    color: (editCollaborationStatus === 'busy' || editCollaborationStatus === 'Yoğun (Yeni projelere kapalı)') ? 'var(--danger)' : 'var(--text-secondary)',
+                    border: (editCollaborationStatus === 'busy' || editCollaborationStatus === 'Yoğun (Yeni projelere kapalı)') ? '1px solid var(--danger)' : '1px solid var(--border-color)'
+                  }}
+                >
+                  ● Yoğun (Yeni projelere kapalı)
+                </button>
+              </div>
+
+              <input
+                type="text"
+                className="form-input"
+                placeholder="Veya kendi durumunuzu yazarak özelleştirin (Örn: TÜBİTAK Projelerine Açık, BAP Danışmanı...)"
+                value={
+                  editCollaborationStatus === 'open' ? 'Projelere Açık' :
+                  editCollaborationStatus === 'busy' ? 'Yoğun (Yeni projelere kapalı)' :
+                  editCollaborationStatus
+                }
                 onChange={e => setEditCollaborationStatus(e.target.value)}
-              >
-                <option value="open">Projelere Açık (Yeni teklif ve davetleri kabul ediyor)</option>
-                <option value="looking">İş Birliğine Hazır (Aktif proje ortağı arıyor)</option>
-                <option value="busy">Yoğun (Yeni projelere kapalı)</option>
-              </select>
+              />
             </div>
 
             <div style={{ marginBottom: '1.5rem' }}>

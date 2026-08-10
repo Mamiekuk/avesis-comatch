@@ -126,19 +126,24 @@ export default function AcademicianDetailPage({ id, onNavigate, onOpenClaimModal
                     <CheckCircle2 size={14} />
                     Doğrulanmış Aktif Profil
                   </span>
-                  {(!academician.collaboration_status || academician.collaboration_status === 'open') && (
+                  {(!academician.collaboration_status || academician.collaboration_status === 'open' || academician.collaboration_status === 'Projelere Açık') && (
                     <span className="badge" style={{ margin: 0, background: 'rgba(16, 185, 129, 0.15)', color: 'var(--success)', border: '1px solid rgba(16, 185, 129, 0.3)' }}>
                       ● Projelere Açık
                     </span>
                   )}
-                  {academician.collaboration_status === 'looking' && (
-                    <span className="badge" style={{ margin: 0, background: 'rgba(56, 149, 255, 0.15)', color: 'var(--accent-primary)', border: '1px solid rgba(56, 149, 255, 0.3)' }}>
-                      ● İş Birliğine Hazır
-                    </span>
-                  )}
-                  {academician.collaboration_status === 'busy' && (
+                  {(academician.collaboration_status === 'busy' || academician.collaboration_status === 'Yoğun (Yeni projelere kapalı)') && (
                     <span className="badge" style={{ margin: 0, background: 'rgba(239, 68, 68, 0.15)', color: 'var(--danger)', border: '1px solid rgba(239, 68, 68, 0.3)' }}>
                       ● Yoğun (Projeye Kapalı)
+                    </span>
+                  )}
+                  {academician.collaboration_status &&
+                    academician.collaboration_status !== 'open' &&
+                    academician.collaboration_status !== 'Projelere Açık' &&
+                    academician.collaboration_status !== 'busy' &&
+                    academician.collaboration_status !== 'Yoğun (Yeni projelere kapalı)' &&
+                    academician.collaboration_status !== 'looking' && (
+                    <span className="badge" style={{ margin: 0, background: 'rgba(56, 149, 255, 0.15)', color: 'var(--accent-primary)', border: '1px solid rgba(56, 149, 255, 0.3)' }}>
+                      ● {academician.collaboration_status}
                     </span>
                   )}
                 </div>
