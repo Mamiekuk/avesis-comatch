@@ -90,7 +90,7 @@ export default function HomePage({ onNavigate, onOpenLogin, user }) {
               style={{ padding: '0.95rem 2.25rem', fontSize: '1.05rem', borderRadius: '14px' }}
             >
               <FolderGit2 size={20} />
-              <span>Proje Oluştur</span>
+              <span>Akademisyen İlanı</span>
             </button>
           </div>
         </div>

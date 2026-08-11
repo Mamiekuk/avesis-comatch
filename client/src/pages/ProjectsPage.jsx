@@ -49,7 +49,7 @@ export default function ProjectsPage({ onNavigate, onOpenLogin, user }) {
           className="btn-primary"
         >
           <PlusCircle size={18} />
-          <span>Yeni Proje Oluştur</span>
+          <span>Akademisyen İlanı Oluştur</span>
         </button>
       </div>
 

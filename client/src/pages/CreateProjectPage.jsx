@@ -95,11 +95,11 @@ export default function CreateProjectPage({ onNavigate }) {
       }, token);
 
       if (projStatus === 'open') {
-        alert('🚀 Projeniz panelim kısmında yayınlandı!');
-        onNavigate('dashboard', { tab: 'projects' });
+        alert('🚀 İlanınız Akademik Projeler kısmında başarıyla yayınlandı!');
+        onNavigate('projects');
       } else {
-        alert('🚀 Projeniz panelim kısmında yayınlandı!');
-        onNavigate('dashboard', { tab: 'projects' });
+        alert('🚀 İlanınız Akademik Projeler kısmında başarıyla yayınlandı!');
+        onNavigate('projects');
       }
     } catch (err) {
       alert(err.message);
@@ -122,7 +122,7 @@ export default function CreateProjectPage({ onNavigate }) {
 
       <div className="card-glass" style={{ padding: '2.5rem' }}>
         <div style={{ marginBottom: '2rem' }}>
-          <h1 style={{ fontSize: '2.1rem', marginBottom: '0.4rem' }}>Yeni Akademik Proje İlanı</h1>
+          <h1 style={{ fontSize: '2.1rem', marginBottom: '0.4rem' }}>Akademisyen İlanı</h1>
           <p style={{ color: 'var(--text-secondary)' }}>
             Projenizin ihtiyaçlarını belirleyin, AVESİS Akıllı Eşleştirme Motoru en doğru araştırmacılarımızı önersin.
           </p>
@@ -427,7 +427,7 @@ export default function CreateProjectPage({ onNavigate }) {
               style={{ width: '100%', padding: '0.95rem', justifyContent: 'center', fontSize: '1rem' }}
             >
               <PlusCircle size={20} />
-              <span>{loading ? 'Kaydediliyor...' : '💾 Projeyi Kaydet (Panelimde Oluştur)'}</span>
+              <span>{loading ? 'Yayınlanıyor...' : 'Akademik Projeler Kısmında Yayınla'}</span>
             </button>
           </div>
         </form>

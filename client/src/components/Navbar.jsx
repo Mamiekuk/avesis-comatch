@@ -197,7 +197,7 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
             style={{ padding: '0.55rem 1.1rem', fontSize: '0.88rem', cursor: 'pointer' }}
           >
             <PlusCircle size={17} />
-            <span>Proje Oluştur</span>
+            <span>Akademisyen İlanı</span>
           </button>
         </div>
 
@@ -475,7 +475,7 @@ export default function Navbar({ currentRoute, onNavigate, onOpenLogin }) {
             style={{ padding: '0.75rem 1rem', fontSize: '0.92rem', width: '100%', justifyContent: 'center' }}
           >
             <PlusCircle size={18} />
-            <span>Proje Oluştur</span>
+            <span>Akademisyen İlanı</span>
           </button>
 
           <div style={{ borderTop: '1px solid var(--border-color)', paddingTop: '0.65rem', marginTop: '0.25rem', display: 'flex', gap: '0.65rem' }}>
