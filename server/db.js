@@ -163,7 +163,7 @@ try {
         const rawJson = fs.readFileSync(jsonPath, 'utf8');
         const researchers = JSON.parse(rawJson);
         const insertTagStmt = db.prepare('INSERT OR IGNORE INTO research_areas (label) VALUES (?)');
-        const getTagStmt = db.prepare('SELECT id FROM research_areas WHERE label = ?');
+        const getTagStmt = db.prepare('SELECT id FROM research_areas WHERE LOWER(TRIM(label)) = LOWER(TRIM(?)) LIMIT 1');
         const linkStmt = db.prepare('INSERT OR IGNORE INTO user_research_areas (user_id, research_area_id) VALUES (?, ?)');
         const updateHasFieldsStmt = db.prepare('UPDATE users SET has_research_fields = 1 WHERE id = ?');
 

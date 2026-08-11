@@ -85,8 +85,26 @@ function attachUserTags(user) {
     FROM user_research_areas ura
     JOIN research_areas ra ON ra.id = ura.research_area_id
     WHERE ura.user_id = ?
+    ORDER BY ra.label ASC
   `).all(user.id);
-  user.research_areas = tags;
+
+  // Case-insensitive deduplication
+  const seenNorm = new Set();
+  const uniqueTags = [];
+  for (const t of tags) {
+    const norm = (t.label || '').trim().toLowerCase()
+      .replace(/İ/g, 'i').replace(/I/g, 'ı').replace(/ı/g, 'i')
+      .replace(/Ğ/g, 'g').replace(/ğ/g, 'g').replace(/Ü/g, 'u').replace(/ü/g, 'u')
+      .replace(/Ş/g, 's').replace(/ş/g, 's').replace(/Ö/g, 'o').replace(/ö/g, 'o')
+      .replace(/Ç/g, 'c').replace(/ç/g, 'c');
+
+    if (norm && !seenNorm.has(norm)) {
+      seenNorm.add(norm);
+      uniqueTags.push(t);
+    }
+  }
+
+  user.research_areas = uniqueTags;
 
   // Attach K-Means cluster data
   const clusterInfo = kmeansEngine.getUserClusterInfo(user.id);
