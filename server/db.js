@@ -155,6 +155,46 @@ try {
     } catch (e) {
       console.error('⚠️ Test hesapları oluşturulurken hata:', e);
     }
+
+    // Auto-sync research tags from avesis_researchers_output.json on server startup
+    try {
+      const jsonPath = path.join(__dirname, 'data', 'avesis_researchers_output.json');
+      if (fs.existsSync(jsonPath)) {
+        const rawJson = fs.readFileSync(jsonPath, 'utf8');
+        const researchers = JSON.parse(rawJson);
+        const insertTagStmt = db.prepare('INSERT OR IGNORE INTO research_areas (label) VALUES (?)');
+        const getTagStmt = db.prepare('SELECT id FROM research_areas WHERE label = ?');
+        const linkStmt = db.prepare('INSERT OR IGNORE INTO user_research_areas (user_id, research_area_id) VALUES (?, ?)');
+        const updateHasFieldsStmt = db.prepare('UPDATE users SET has_research_fields = 1 WHERE id = ?');
+
+        const dbUsers = db.prepare('SELECT id, full_name, avesis_profile_url FROM users').all();
+        const slugMap = new Map();
+        for (const u of dbUsers) {
+          if (u.avesis_profile_url) {
+            const slug = u.avesis_profile_url.split('/').pop().toLowerCase();
+            slugMap.set(slug, u.id);
+          }
+        }
+
+        for (const r of researchers) {
+          const slug = (r.AvesisURL || '').split('/').pop().toLowerCase();
+          const userId = slugMap.get(slug);
+          if (userId && r.ResearchAreas) {
+            const tags = r.ResearchAreas.split(',').map(s => s.trim()).filter(s => s.length > 2);
+            for (const tagLabel of tags) {
+              insertTagStmt.run(tagLabel);
+              const tagRow = getTagStmt.get(tagLabel);
+              if (tagRow) {
+                linkStmt.run(userId, tagRow.id);
+              }
+            }
+            updateHasFieldsStmt.run(userId);
+          }
+        }
+      }
+    } catch (syncErr) {
+      console.warn('⚠️ Startup tag sync notice:', syncErr.message);
+    }
   }
 } catch (error) {
   console.error("❌ VERİTABANI BAŞLATILIRKEN HATA OLUŞTU:");
