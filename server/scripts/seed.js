@@ -226,6 +226,10 @@ async function seed() {
   );
 
   // Seed sample projects
+  const murat = db.prepare("SELECT id FROM users WHERE full_name LIKE '%MURAT YAYLACI%'").get();
+  const zeynep = db.prepare("SELECT id FROM users WHERE full_name LIKE '%ZEYNEP GÜMRÜKÇÜ%'").get();
+  const veli = db.prepare("SELECT id FROM users WHERE full_name LIKE '%VELİ SÜME%'").get();
+
   const anyUser = db.prepare("SELECT id FROM users LIMIT 1").get();
   const fallbackUserId = anyUser ? anyUser.id : 1;
 
