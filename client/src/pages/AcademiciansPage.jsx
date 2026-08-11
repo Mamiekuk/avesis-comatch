@@ -185,7 +185,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
               <input
                 type="text"
                 className="form-input"
-                placeholder="Örn: Murat Yaylacı..."
+                placeholder="Örn: Aslı Boyraz..."
                 value={search}
                 onChange={e => setSearch(e.target.value)}
               />
