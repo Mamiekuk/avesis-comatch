@@ -37,7 +37,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
   const [selectedFaculty, setSelectedFaculty] = useState('');
   const [selectedDept, setSelectedDept] = useState('');
   const [selectedTitle, setSelectedTitle] = useState('');
-  const [claimedOnly, setClaimedOnly] = useState(false);
+  const [projectOpenOnly, setProjectOpenOnly] = useState(false);
   const [selectedTags, setSelectedTags] = useState([]); // Array of tag objects {id, label}
   const [tagSearchInput, setTagSearchInput] = useState('');
   const [selectedMetricCluster, setSelectedMetricCluster] = useState('');
@@ -76,7 +76,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
       department_id: selectedDept,
       title: selectedTitle,
       tag_ids: tagIds,
-      claimed_only: claimedOnly ? '1' : '',
+      open_only: projectOpenOnly ? '1' : '',
       metric_cluster: selectedMetricCluster,
       tag_cluster: selectedTagCluster,
       sort,
@@ -93,7 +93,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
 
   useEffect(() => {
     loadData(1);
-  }, [selectedFaculty, selectedDept, selectedTitle, claimedOnly, sort, selectedTags, selectedMetricCluster, selectedTagCluster]);
+  }, [selectedFaculty, selectedDept, selectedTitle, projectOpenOnly, sort, selectedTags, selectedMetricCluster, selectedTagCluster]);
 
   const handleSearchSubmit = (e) => {
     e.preventDefault();
@@ -654,21 +654,21 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
           </div>
         )}
 
-        {/* Toggle Claimed Only Switch */}
+        {/* Toggle Open To Projects Filter */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', borderTop: '1px solid var(--border-color)', paddingTop: '1rem' }}>
           <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', cursor: 'pointer' }}>
             <input
               type="checkbox"
-              checked={claimedOnly}
-              onChange={e => setClaimedOnly(e.target.checked)}
+              checked={projectOpenOnly}
+              onChange={e => setProjectOpenOnly(e.target.checked)}
               style={{ width: 18, height: 18, accentColor: 'var(--accent-primary)' }}
             />
             <span style={{ fontSize: '0.9rem', fontWeight: 600 }}>
-              Sadece Doğrulanmış / Sahiplenilmiş Aktif Profilleri Göster
+              Projeye açık seçeneği olan hocaları göster
             </span>
           </label>
 
-          {(search || selectedFaculty || selectedDept || selectedTitle || selectedTags.length > 0 || claimedOnly) && (
+          {(search || selectedFaculty || selectedDept || selectedTitle || selectedTags.length > 0 || projectOpenOnly) && (
             <button
               type="button"
               onClick={() => {
@@ -677,7 +677,7 @@ export default function AcademiciansPage({ onNavigate, onOpenLogin, user }) {
                 setSelectedDept('');
                 setSelectedTitle('');
                 setSelectedTags([]);
-                setClaimedOnly(false);
+                setProjectOpenOnly(false);
               }}
               style={{ fontSize: '0.85rem', color: 'var(--danger)', fontWeight: 600 }}
             >

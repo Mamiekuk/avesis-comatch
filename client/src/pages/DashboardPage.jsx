@@ -263,15 +263,32 @@ export default function DashboardPage({ onNavigate, routeParam }) {
     setEditTags(prev => prev.filter(t => t.id !== tagId));
   };
 
-  const filteredTagSuggestions = tagSearchInput.trim()
-    ? allTags.filter(t => 
-        t.label.toLowerCase().includes(tagSearchInput.toLowerCase()) &&
-        !editTags.some(st => st.id === t.id)
-      ).slice(0, 10)
-    : [];
+  const normalizeTag = (str) => (str || '').trim().toLowerCase()
+    .replace(/İ/g, 'i').replace(/I/g, 'ı').replace(/ı/g, 'i')
+    .replace(/Ğ/g, 'g').replace(/ğ/g, 'g').replace(/Ü/g, 'u').replace(/ü/g, 'u')
+    .replace(/Ş/g, 's').replace(/ş/g, 's').replace(/Ö/g, 'o').replace(/ö/g, 'o')
+    .replace(/Ç/g, 'c').replace(/ç/g, 'c');
+
+  const filteredTagSuggestions = (() => {
+    if (!tagSearchInput.trim()) return [];
+    const searchNorm = normalizeTag(tagSearchInput);
+    const seenNorm = new Set();
+    const suggestions = [];
+
+    for (const t of allTags) {
+      const tNorm = normalizeTag(t.label);
+      if (tNorm.includes(searchNorm) && !editTags.some(st => st.id === t.id || normalizeTag(st.label) === tNorm)) {
+        if (!seenNorm.has(tNorm)) {
+          seenNorm.add(tNorm);
+          suggestions.push(t);
+        }
+      }
+    }
+    return suggestions.slice(0, 10);
+  })();
 
   const exactMatch = tagSearchInput.trim()
-    ? allTags.some(t => t.label.toLowerCase() === tagSearchInput.trim().toLowerCase())
+    ? allTags.some(t => normalizeTag(t.label) === normalizeTag(tagSearchInput))
     : true;
 
   const handleCreateCustomTag = async () => {

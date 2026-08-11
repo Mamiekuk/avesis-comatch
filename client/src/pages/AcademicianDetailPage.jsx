@@ -413,38 +413,7 @@ export default function AcademicianDetailPage({ id, onNavigate, onOpenClaimModal
 
 
 
-      {/* PROJECTS SECTION */}
-      <div className="card-glass">
-        <h2 style={{ fontSize: '1.5rem', marginBottom: '1.25rem' }}>Yer Aldığı veya Yürüttüğü Projeler</h2>
-        {projects.length === 0 ? (
-          <p style={{ color: 'var(--text-muted)' }}>Sistemde kayıtlı henüz bir proje kaydı bulunmamaktadır.</p>
-        ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(300px, 1fr))', gap: '1.25rem' }}>
-            {projects.map(p => (
-              <div
-                key={p.id}
-                onClick={() => onNavigate('project-detail', p.id)}
-                style={{
-                  background: 'var(--bg-secondary)',
-                  border: '1px solid var(--border-color)',
-                  borderRadius: 'var(--radius-md)',
-                  padding: '1.25rem',
-                  cursor: 'pointer'
-                }}
-              >
-                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '0.5rem' }}>
-                  <span className="badge" style={{ background: 'rgba(56,149,255,0.15)', color: 'var(--accent-primary)' }}>
-                    {p.member_role === 'leader' ? 'Proje Lideri' : 'Araştırmacı'}
-                  </span>
-                  <span style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>{p.duration || ''}</span>
-                </div>
-                <h4 style={{ fontSize: '1.1rem', marginBottom: '0.5rem' }}>{p.title}</h4>
-                <p style={{ fontSize: '0.88rem', color: 'var(--text-secondary)' }}>{p.description}</p>
-              </div>
-            ))}
-          </div>
-        )}
-      </div>
+
 
       {/* INVITE MODAL PORTAL */}
       {inviteModalOpen && ReactDOM.createPortal(

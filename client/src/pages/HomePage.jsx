@@ -66,36 +66,10 @@ export default function HomePage({ onNavigate, onOpenLogin, user }) {
             <span>Recep Tayyip Erdoğan Üniversitesi — AVESİS V2 Entegrasyonlu</span>
           </div>
 
-          <h1 style={{
-            fontSize: '3.3rem',
-            fontWeight: 800,
-            letterSpacing: '-1.2px',
-            marginBottom: '1.25rem',
-            lineHeight: 1.15
-          }}>
-            Akademik Projeleriniz İçin Doğru Ekip Arkadaşlarımı{' '}
-            <span style={{
-              background: 'var(--accent-gradient)',
-              WebkitBackgroundClip: 'text',
-              WebkitTextFillColor: 'transparent'
-            }}>
-              Akıllı Eşleştirme
-            </span>{' '}
-            ile Keşfedin
-          </h1>
+          {/* AI SMART PROMPT MATCHING BAR */}
+          <AIPromptSection onNavigate={onNavigate} />
 
-          <p style={{
-            fontSize: '1.2rem',
-            color: 'var(--text-secondary)',
-            maxWidth: '740px',
-            margin: '0 auto 2.5rem',
-            lineHeight: 1.6
-          }}>
-            Proje yazmadan da üniversitemizdeki <strong>1.233 kayıtlı akademisyeni</strong> ve yaklaşık{' '}
-            <strong>1.400 araştırma alanını</strong> anında filtreleyip inceleyin veya projenizi açarak yapay zeka destekli öneriler alın.
-          </p>
-
-          {/* TWO PROMINENT CTAs (Prompt requirement 3.1) */}
+          {/* TWO PROMINENT CTAs */}
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', justifyContent: 'center', marginBottom: '2.5rem' }}>
             <button
               onClick={() => onNavigate('academicians')}
@@ -119,9 +93,6 @@ export default function HomePage({ onNavigate, onOpenLogin, user }) {
               <span>Proje Oluştur</span>
             </button>
           </div>
-
-          {/* AI SMART PROMPT MATCHING BAR */}
-          <AIPromptSection onNavigate={onNavigate} />
         </div>
       </section>
 

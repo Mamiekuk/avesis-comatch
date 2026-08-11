@@ -121,8 +121,23 @@ app.get('/api/metadata', (req, res) => {
   try {
     const faculties = db.prepare('SELECT id, name FROM faculties ORDER BY name ASC').all();
     const departments = db.prepare('SELECT id, faculty_id, name FROM departments ORDER BY name ASC').all();
-    const research_areas = db.prepare('SELECT id, label FROM research_areas ORDER BY label ASC').all();
+    const raw_research_areas = db.prepare('SELECT id, label FROM research_areas ORDER BY label ASC').all();
     const titles = db.prepare('SELECT DISTINCT title FROM users WHERE title IS NOT NULL ORDER BY title ASC').all().map(r => r.title);
+
+    // Case-insensitive deduplication for research areas using Turkish normalization
+    const seenNorm = new Set();
+    const research_areas = [];
+    for (const ra of raw_research_areas) {
+      const norm = (ra.label || '').trim().toLowerCase()
+        .replace(/İ/g, 'i').replace(/I/g, 'ı').replace(/ı/g, 'i')
+        .replace(/Ğ/g, 'g').replace(/ğ/g, 'g').replace(/Ü/g, 'u').replace(/ü/g, 'u')
+        .replace(/Ş/g, 's').replace(/ş/g, 's').replace(/Ö/g, 'o').replace(/ö/g, 'o')
+        .replace(/Ç/g, 'c').replace(/ç/g, 'c');
+      if (norm && !seenNorm.has(norm)) {
+        seenNorm.add(norm);
+        research_areas.push(ra);
+      }
+    }
 
     const totalUsers = db.prepare('SELECT COUNT(*) as count FROM users').get().count;
     const claimedUsers = db.prepare('SELECT COUNT(*) as count FROM users WHERE is_claimed = 1').get().count;
@@ -156,8 +171,8 @@ app.post('/api/metadata/research-areas', authMiddleware, (req, res) => {
 
     const cleanLabel = label.trim();
 
-    // Check if it already exists case-insensitively
-    let existing = db.prepare('SELECT id, label FROM research_areas WHERE LOWER(label) = LOWER(?)').get(cleanLabel);
+    // Check if it already exists case-insensitively using Turkish lower-casing
+    let existing = db.prepare('SELECT id, label FROM research_areas WHERE turkish_lower(label) = turkish_lower(?)').get(cleanLabel);
     if (existing) {
       return res.json({ success: true, tag: existing });
     }
@@ -756,6 +771,7 @@ app.get('/api/academicians', (req, res) => {
       title,
       tag_ids,
       claimed_only,
+      open_only,
       metric_cluster,
       tag_cluster,
       sort = 'name_asc',
@@ -790,6 +806,10 @@ app.get('/api/academicians', (req, res) => {
 
     if (claimed_only === '1' || claimed_only === 'true') {
       whereClauses.push('u.is_claimed = 1');
+    }
+
+    if (open_only === '1' || open_only === 'true') {
+      whereClauses.push("(u.collaboration_status IS NULL OR u.collaboration_status = 'open' OR u.collaboration_status = 'Projelere Açık' OR u.collaboration_status = 'looking' OR (u.collaboration_status NOT LIKE '%Yoğun%' AND u.collaboration_status NOT LIKE '%busy%'))");
     }
 
     if (tag_ids) {
@@ -833,7 +853,7 @@ app.get('/api/academicians', (req, res) => {
     // Data query
     const users = db.prepare(`
       SELECT u.id, u.full_name, u.title, u.faculty_id, u.department_id, u.avesis_profile_url,
-             u.bio, u.photo_url, u.is_claimed, u.is_active, u.has_research_fields,
+             u.bio, u.photo_url, u.is_claimed, u.is_active, u.has_research_fields, u.collaboration_status,
              f.name as faculty_name, d.name as department_name
       FROM users u
       LEFT JOIN faculties f ON f.id = u.faculty_id
