@@ -25,6 +25,23 @@ export async function fetchKMeansNeighbors(userId) {
   return res.json();
 }
 
+export async function postPromptMatch(prompt) {
+  const res = await fetch(`${API_BASE}/recommendations/prompt-match`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ prompt })
+  });
+  if (!res.ok) {
+    let errMsg = 'Akıllı eşleştirme önerisi alınamadı.';
+    try {
+      const errJson = await res.json();
+      if (errJson.error) errMsg = errJson.error;
+    } catch (_) {}
+    throw new Error(errMsg);
+  }
+  return res.json();
+}
+
 export async function createResearchArea(label, token) {
   const res = await fetch(`${API_BASE}/metadata/research-areas`, {
     method: 'POST',

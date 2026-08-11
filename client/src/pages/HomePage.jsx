@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { fetchMetadata, fetchProjects } from '../services/api';
 import { Users, FolderGit2, Sparkles, ArrowRight, CheckCircle2, Search, Zap, ShieldCheck } from 'lucide-react';
+import AIPromptSection from '../components/AIPromptSection';
 
 export default function HomePage({ onNavigate, onOpenLogin, user }) {
   const [stats, setStats] = useState({
@@ -95,7 +96,7 @@ export default function HomePage({ onNavigate, onOpenLogin, user }) {
           </p>
 
           {/* TWO PROMINENT CTAs (Prompt requirement 3.1) */}
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', justifyContent: 'center' }}>
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: '1.25rem', justifyContent: 'center', marginBottom: '2.5rem' }}>
             <button
               onClick={() => onNavigate('academicians')}
               className="btn-primary"
@@ -118,6 +119,9 @@ export default function HomePage({ onNavigate, onOpenLogin, user }) {
               <span>Proje Oluştur</span>
             </button>
           </div>
+
+          {/* AI SMART PROMPT MATCHING BAR */}
+          <AIPromptSection onNavigate={onNavigate} />
         </div>
       </section>
 

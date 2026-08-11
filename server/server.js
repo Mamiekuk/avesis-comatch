@@ -1339,6 +1339,109 @@ app.get('/api/projects/:id/match', authMiddleware, (req, res) => {
   }
 });
 
+// AI Smart Prompt Matcher Endpoint (/api/recommendations/prompt-match)
+app.post('/api/recommendations/prompt-match', (req, res) => {
+  try {
+    const { prompt } = req.body;
+    if (!prompt || typeof prompt !== 'string' || prompt.trim().length < 3) {
+      return res.status(400).json({ error: 'Lütfen geçerli bir proje/fikir açıklaması yazın.' });
+    }
+
+    const cleanPrompt = prompt.trim();
+    const promptLower = cleanPrompt.toLowerCase()
+      .replace(/İ/g, 'i').replace(/I/g, 'ı').replace(/ı/g, 'i')
+      .replace(/Ğ/g, 'g').replace(/ğ/g, 'g').replace(/Ü/g, 'u').replace(/ü/g, 'u')
+      .replace(/Ş/g, 's').replace(/ş/g, 's').replace(/Ö/g, 'o').replace(/ö/g, 'o')
+      .replace(/Ç/g, 'c').replace(/ç/g, 'c');
+
+    const allResearchAreas = db.prepare('SELECT id, label FROM research_areas').all();
+
+    const matchedTagIds = [];
+    const matchedTagLabels = [];
+
+    for (const ra of allResearchAreas) {
+      const labelLower = (ra.label || '').toLowerCase()
+        .replace(/İ/g, 'i').replace(/I/g, 'ı').replace(/ı/g, 'i')
+        .replace(/Ğ/g, 'g').replace(/ğ/g, 'g').replace(/Ü/g, 'u').replace(/ü/g, 'u')
+        .replace(/Ş/g, 's').replace(/ş/g, 's').replace(/Ö/g, 'o').replace(/ö/g, 'o')
+        .replace(/Ç/g, 'c').replace(/ç/g, 'c');
+
+      if (promptLower.includes(labelLower) || (labelLower.length > 3 && promptLower.split(/\s+/).some(w => w.length > 3 && labelLower.includes(w)))) {
+        matchedTagIds.push(ra.id);
+        matchedTagLabels.push(ra.label);
+      }
+    }
+
+    const tokens = promptLower
+      .replace(/[^a-z0-9çğıöşü\s]/gi, ' ')
+      .split(/\s+/)
+      .filter(w => w.length > 3 && !['böyle', 'bana', 'bir', 'projem', 'var', 'hocaları', 'öner', 'şeklinde', 'istiyorum', 'gıda', 'yapacak', 'arıyorum', 'uyumlu', 'ekip', 'üzerine', 'için', 'olan'].includes(w));
+
+    const users = db.prepare(`
+      SELECT u.id, u.full_name, u.title, u.faculty_id, u.department_id,
+             u.photo_url, u.is_claimed, u.is_active, u.bio, u.avesis_profile_url,
+             f.name as faculty_name, d.name as department_name
+      FROM users u
+      LEFT JOIN faculties f ON f.id = u.faculty_id
+      LEFT JOIN departments d ON d.id = u.department_id
+    `).all();
+
+    const results = [];
+
+    for (const u of users) {
+      attachUserTags(u);
+
+      const uTags = u.research_areas || [];
+      let commonCount = 0;
+      const matchedUserTags = [];
+
+      for (const ut of uTags) {
+        const utNorm = (ut.label || '').toLowerCase();
+        const isMatch = matchedTagIds.includes(ut.id) || tokens.some(tok => utNorm.includes(tok));
+        if (isMatch) {
+          commonCount++;
+          matchedUserTags.push(ut.label);
+        }
+      }
+
+      let titleDeptBonus = 0;
+      if (tokens.some(tok => (u.department_name || '').toLowerCase().includes(tok) || (u.faculty_name || '').toLowerCase().includes(tok))) {
+        titleDeptBonus += 15;
+      }
+
+      if (commonCount > 0 || titleDeptBonus > 0) {
+        let baseScore = Math.min(99, Math.max(65, (commonCount * 22) + titleDeptBonus + (u.is_claimed ? 8 : 0)));
+        if (commonCount >= 3) baseScore = Math.min(99, Math.max(90, baseScore));
+
+        let reason = '';
+        if (matchedUserTags.length > 0) {
+          reason = `Proje tanımınızdaki "${matchedUserTags.slice(0, 3).join(', ')}" konularında uzmanlaşmış yayın ve araştırma kaydı bulunmaktadır.`;
+        } else {
+          reason = `${u.department_name || u.faculty_name} bünyesinde projenizle ilgili akademik çalışmalarda bulunmaktadır.`;
+        }
+
+        results.push({
+          academician: u,
+          match_score: baseScore,
+          matched_tags: matchedUserTags,
+          match_reason: reason
+        });
+      }
+    }
+
+    results.sort((a, b) => b.match_score - a.match_score || b.matched_tags.length - a.matched_tags.length);
+
+    res.json({
+      prompt: cleanPrompt,
+      detected_keywords: matchedTagLabels.slice(0, 8),
+      total_matches: results.length,
+      recommendations: results.slice(0, 20)
+    });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Invite Academician to Project with Privacy & Email Notification
 app.post('/api/projects/:id/invite', authMiddleware, async (req, res) => {
   try {
